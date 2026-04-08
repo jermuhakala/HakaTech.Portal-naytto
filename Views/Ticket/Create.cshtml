@@ -1,0 +1,93 @@
+@model HakaTech.Portal.Models.ViewModels.TicketCreateViewModel
+@using HakaTech.Portal.Models.Domain
+@{
+    ViewData["Title"] = "Uusi tiketti";
+    bool isAdmin = User.IsInRole("Admin");
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Tiketit</a></li>
+        <li class="breadcrumb-item active">Uusi tiketti</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white py-3">
+                <h5 class="mb-0"><i class="bi bi-ticket-perforated me-2"></i>Luo uusi tiketti</h5>
+            </div>
+            <div class="card-body p-4">
+
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    @if (isAdmin)
+                    {
+                        <div class="mb-3">
+                            <label asp-for="CustomerId" class="form-label fw-semibold"></label>
+                            <select asp-for="CustomerId" asp-items="Model.CustomerOptions"
+                                    id="create-customer" class="form-select">
+                                <option value="">— Valitse asiakas —</option>
+                            </select>
+                            <span asp-validation-for="CustomerId" class="text-danger small"></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="hidden" asp-for="CustomerId" />
+                    }
+
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label fw-semibold"></label>
+                        <input asp-for="Title" class="form-control" id="create-title"
+                               placeholder="Lyhyt ja kuvaava otsikko" />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label fw-semibold"></label>
+                        <textarea asp-for="Description" class="form-control" id="create-description"
+                                  rows="6"
+                                  placeholder="Kuvaile ongelma tarkasti: mitä tapahtui, milloin, miten se voidaan toistaa…"></textarea>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Category" class="form-label fw-semibold"></label>
+                            <select asp-for="Category" id="create-category" class="form-select">
+                                @foreach (var c in Enum.GetValues<TicketCategory>())
+                                {
+                                    <option value="@c">@c</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Priority" class="form-label fw-semibold"></label>
+                            <select asp-for="Priority" id="create-priority" class="form-select">
+                                @foreach (var p in Enum.GetValues<TicketPriority>())
+                                {
+                                    <option value="@p">@p</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" id="create-submit" class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i>Lähetä tiketti
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Peruuta</a>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

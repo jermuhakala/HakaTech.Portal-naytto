@@ -1,0 +1,185 @@
+@model HakaTech.Portal.Models.Domain.Customer
+@{
+    ViewData["Title"] = Model.CompanyName;
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Asiakkaat</a></li>
+        <li class="breadcrumb-item active">@Model.CompanyName</li>
+    </ol>
+</nav>
+
+@if (TempData["SuccessMessage"] is string sMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-1"></i>@sMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] is string eMsg)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i>@eMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h2 class="mb-0">
+            <i class="bi bi-building me-2"></i>@Model.CompanyName
+            @if (!Model.IsActive)
+            {
+                <span class="badge bg-secondary fs-6 ms-2">Epäaktiivinen</span>
+            }
+        </h2>
+        <small class="text-muted">Y-tunnus: @Model.BusinessId</small>
+    </div>
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id"
+               id="btn-customer-edit" class="btn btn-outline-secondary">
+                <i class="bi bi-pencil me-1"></i>Muokkaa
+            </a>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post"
+                  onsubmit="return confirm('Haluatko varmasti poistaa asiakkaan @Model.CompanyName?');">
+                <button type="submit" id="btn-customer-delete" class="btn btn-outline-danger">
+                    <i class="bi bi-trash me-1"></i>Poista
+                </button>
+            </form>
+        </div>
+    }
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i>Yhteystiedot</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Sähköposti</dt>
+                    <dd class="col-sm-7">
+                        <a href="mailto:@Model.ContactEmail">@Model.ContactEmail</a>
+                    </dd>
+                    <dt class="col-sm-5">Puhelin</dt>
+                    <dd class="col-sm-7">@(Model.Phone ?? "—")</dd>
+                    <dt class="col-sm-5">Osoite</dt>
+                    <dd class="col-sm-7">@(Model.Address ?? "—")</dd>
+                    <dt class="col-sm-5">Luotu</dt>
+                    <dd class="col-sm-7">@Model.CreatedAt.ToString("dd.MM.yyyy")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-file-text me-2"></i>Sopimukset</div>
+            <div class="card-body">
+                @if (!Model.Contracts.Any())
+                {
+                    <span class="text-muted">Ei sopimuksia.</span>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var con in Model.Contracts)
+                        {
+                            <li class="list-group-item px-0">
+                                <span class="fw-semibold">@con.Type</span>
+                                <span class="badge @(con.IsActive ? "bg-success" : "bg-secondary") ms-2">
+                                    @(con.IsActive ? "Aktiivinen" : "Päättynyt")
+                                </span>
+                                <br />
+                                <small class="text-muted">
+                                    @con.StartDate.ToString("dd.MM.yyyy") – @con.EndDate.ToString("dd.MM.yyyy") |
+                                    @con.MonthlyPrice.ToString("C")
+                                </small>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Viimeisimmät tiketit -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-ticket me-2"></i>Viimeisimmät tiketit</span>
+                <a asp-controller="Ticket" asp-action="Index" asp-route-customerId="@Model.Id"
+                   class="btn btn-sm btn-outline-primary">Kaikki</a>
+            </div>
+            <div class="card-body p-0">
+                @if (!Model.Tickets.Any())
+                {
+                    <p class="text-muted p-3 mb-0">Ei tikettejä.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var t in Model.Tickets)
+                        {
+                            <li class="list-group-item">
+                                <a asp-controller="Ticket" asp-action="Details" asp-route-id="@t.Id"
+                                   class="text-decoration-none fw-semibold">
+                                    #@t.Id @t.Title
+                                </a>
+                                <br />
+                                <small class="text-muted">
+                                    @t.Status | @t.Priority | @t.CreatedAt.ToString("dd.MM.yyyy")
+                                </small>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Viimeisimmät laskut -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-receipt me-2"></i>Viimeisimmät laskut</span>
+                <a asp-controller="Invoice" asp-action="Index" asp-route-customerId="@Model.Id"
+                   class="btn btn-sm btn-outline-primary">Kaikki</a>
+            </div>
+            <div class="card-body p-0">
+                @if (!Model.Invoices.Any())
+                {
+                    <p class="text-muted p-3 mb-0">Ei laskuja.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var inv in Model.Invoices)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <a asp-controller="Invoice" asp-action="Details" asp-route-id="@inv.Id"
+                                       class="text-decoration-none fw-semibold">
+                                        @inv.InvoiceNumber
+                                    </a>
+                                    <br />
+                                    <small class="text-muted">@inv.InvoiceDate.ToString("dd.MM.yyyy") | @inv.Status</small>
+                                </div>
+                                <span class="badge @(inv.Status == HakaTech.Portal.Models.Domain.InvoiceStatus.Paid
+                                    ? "bg-success"
+                                    : inv.Status == HakaTech.Portal.Models.Domain.InvoiceStatus.Overdue
+                                        ? "bg-danger"
+                                        : "bg-warning text-dark")">
+                                    @inv.Status
+                                </span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>

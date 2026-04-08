@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\jermu\\.gemini\\antigravity\\scratch\\HakaTech.Portal\\HakaTech.Portal.csproj": {}
+    "C:\\Users\\jermu\\source\\repos\\HakaTech.Portal\\HakaTech.Portal.csproj": {}
   },
   "projects": {
-    "C:\\Users\\jermu\\.gemini\\antigravity\\scratch\\HakaTech.Portal\\HakaTech.Portal.csproj": {
+    "C:\\Users\\jermu\\source\\repos\\HakaTech.Portal\\HakaTech.Portal.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\jermu\\.gemini\\antigravity\\scratch\\HakaTech.Portal\\HakaTech.Portal.csproj",
+        "projectUniqueName": "C:\\Users\\jermu\\source\\repos\\HakaTech.Portal\\HakaTech.Portal.csproj",
         "projectName": "HakaTech.Portal",
-        "projectPath": "C:\\Users\\jermu\\.gemini\\antigravity\\scratch\\HakaTech.Portal\\HakaTech.Portal.csproj",
+        "projectPath": "C:\\Users\\jermu\\source\\repos\\HakaTech.Portal\\HakaTech.Portal.csproj",
         "packagesPath": "C:\\Users\\jermu\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\jermu\\.gemini\\antigravity\\scratch\\HakaTech.Portal\\obj\\",
+        "outputPath": "C:\\Users\\jermu\\source\\repos\\HakaTech.Portal\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -64,6 +64,10 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[9.0.4, )"
+            },
+            "QuestPDF": {
+              "target": "Package",
+              "version": "[2026.2.4, )"
             }
           },
           "imports": [

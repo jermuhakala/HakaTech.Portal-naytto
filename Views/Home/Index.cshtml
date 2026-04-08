@@ -1,8 +1,321 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model HakaTech.Portal.Models.ViewModels.DashboardViewModel
+@using HakaTech.Portal.Models.Domain
+@{
+    ViewData["Title"] = "Dashboard";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="dashboard-wrapper">
+
+    @* ── Tervetuloa-palkki ─────────────────────────────────────── *@
+    <div class="welcome-bar mb-4">
+        <div>
+            <h1 class="welcome-title">
+                <i class="bi bi-speedometer2"></i>
+                Dashboard
+            </h1>
+            <p class="welcome-sub">Tervetuloa, <strong>@Model.WelcomeName</strong> &mdash; @DateTime.Now.ToString("dddd d. MMMM yyyy", new System.Globalization.CultureInfo("fi-FI"))</p>
+        </div>
+        @if (Model.IsAdmin)
+        {
+            <span class="badge-role"><i class="bi bi-shield-check"></i> Admin</span>
+        }
+        else
+        {
+            <span class="badge-role badge-customer"><i class="bi bi-person"></i> Asiakas</span>
+        }
+    </div>
+
+    @* ── KPI-kortit ───────────────────────────────────────────── *@
+    <div class="kpi-grid mb-4">
+
+        @if (Model.IsAdmin)
+        {
+            <div class="kpi-card kpi-blue">
+                <div class="kpi-icon"><i class="bi bi-building"></i></div>
+                <div class="kpi-body">
+                    <span class="kpi-value">@Model.TotalCustomers</span>
+                    <span class="kpi-label">Asiakasta yht.</span>
+                </div>
+                <div class="kpi-sub">@Model.ActiveCustomers aktiivista</div>
+            </div>
+        }
+
+        <div class="kpi-card kpi-orange">
+            <div class="kpi-icon"><i class="bi bi-ticket-detailed"></i></div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.OpenTickets</span>
+                <span class="kpi-label">Avoimet tiketit</span>
+            </div>
+            <div class="kpi-sub">@Model.InProgressTickets käsittelyssä</div>
+        </div>
+
+        @if (Model.IsAdmin)
+        {
+            <div class="kpi-card kpi-red">
+                <div class="kpi-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="kpi-body">
+                    <span class="kpi-value">@Model.CriticalTickets</span>
+                    <span class="kpi-label">Kriittiset tiketit</span>
+                </div>
+                <div class="kpi-sub">@Model.HighTickets korkea prioriteetti</div>
+            </div>
+        }
+
+        <div class="kpi-card kpi-yellow">
+            <div class="kpi-icon"><i class="bi bi-receipt"></i></div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.OverdueCount</span>
+                <span class="kpi-label">Erääntyneet laskut</span>
+            </div>
+            <div class="kpi-sub">@Model.TotalInvoices laskua yhteensä</div>
+        </div>
+
+        <div class="kpi-card kpi-green">
+            <div class="kpi-icon"><i class="bi bi-currency-euro"></i></div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.UnpaidTotal.ToString("N0") €</span>
+                <span class="kpi-label">Maksamatta</span>
+            </div>
+            <div class="kpi-sub">avoimet laskut yhteensä</div>
+        </div>
+
+    </div>
+
+    @* ── Pääsisältöalue: kaavio + listat ─────────────────────── *@
+    <div class="dashboard-main-grid">
+
+        @* Vasen sarake *@
+        <div class="dashboard-col-left">
+
+            @* Tikettien tilakaavio (Admin only) *@
+            @if (Model.IsAdmin && Model.TicketsByStatus.Any())
+            {
+                <div class="dash-card mb-4">
+                    <div class="dash-card-header">
+                        <i class="bi bi-pie-chart-fill"></i> Tikettien tilajakauma
+                    </div>
+                    <div class="dash-card-body chart-container">
+                        <canvas id="ticketStatusChart"></canvas>
+                    </div>
+                </div>
+            }
+
+            @* Avoimet tiketit -taulukko *@
+            @if (Model.RecentOpenTickets.Any())
+            {
+                <div class="dash-card">
+                    <div class="dash-card-header">
+                        <i class="bi bi-list-check"></i>
+                        @(Model.IsAdmin ? "Avoimet tiketit (prioriteetti)" : "Omat tiketit")
+                    </div>
+                    <div class="dash-card-body p-0">
+                        <div class="table-responsive">
+                            <table class="dash-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Otsikko</th>
+                                        @if (Model.IsAdmin) { <th>Asiakas</th> }
+                                        <th>Prioriteetti</th>
+                                        <th>Tila</th>
+                                        <th>Luotu</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var t in Model.RecentOpenTickets)
+                                    {
+                                        <tr>
+                                            <td><a href="/Ticket/Details/@t.Id" class="link-subtle">#@t.Id</a></td>
+                                            <td class="text-truncate-cell"><a href="/Ticket/Details/@t.Id" class="link-subtle">@t.Title</a></td>
+                                            @if (Model.IsAdmin)
+                                            {
+                                                <td>@(t.Customer?.CompanyName ?? "-")</td>
+                                            }
+                                            <td>
+                                                <span class="badge-priority badge-@t.Priority.ToString().ToLower()">
+                                                    @PriorityLabel(t.Priority)
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge-status badge-status-@t.Status.ToString().ToLower()">
+                                                    @StatusLabel(t.Status)
+                                                </span>
+                                            </td>
+                                            <td class="text-nowrap">@t.CreatedAt.ToString("dd.MM.yyyy")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="dash-card-footer">
+                        <a href="/Ticket" class="btn-link-more"><i class="bi bi-arrow-right-circle"></i> Kaikki tiketit</a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="dash-card">
+                    <div class="dash-card-body text-center text-muted py-5">
+                        <i class="bi bi-check-circle display-4"></i>
+                        <p class="mt-2">Ei avoimia tikettejä.</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @* Oikea sarake *@
+        <div class="dashboard-col-right">
+
+            @* Erääntyvät laskut *@
+            @if (Model.UpcomingDueInvoices.Any())
+            {
+                <div class="dash-card mb-4">
+                    <div class="dash-card-header text-warning">
+                        <i class="bi bi-calendar-event"></i> Erääntyvät pian (7 pv)
+                    </div>
+                    <div class="dash-card-body p-0">
+                        <ul class="invoice-list">
+                            @foreach (var inv in Model.UpcomingDueInvoices)
+                            {
+                                var daysLeft = (inv.DueDate.Date - DateTime.UtcNow.Date).Days;
+                                <li>
+                                    <div class="inv-left">
+                                        <span class="inv-num"><a href="/Invoice/Details/@inv.Id" class="link-subtle">@inv.InvoiceNumber</a></span>
+                                        @if (Model.IsAdmin)
+                                        {
+                                            <span class="inv-customer">@(inv.Customer?.CompanyName ?? "-")</span>
+                                        }
+                                    </div>
+                                    <div class="inv-right">
+                                        <span class="inv-amount">@inv.TotalAmount.ToString("N2") €</span>
+                                        <span class="inv-days @(daysLeft <= 2 ? "text-danger" : "text-warning")">
+                                            @(daysLeft == 0 ? "Tänään!" : $"{daysLeft} pv")
+                                        </span>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="dash-card-footer">
+                        <a href="/Invoice" class="btn-link-more"><i class="bi bi-arrow-right-circle"></i> Kaikki laskut</a>
+                    </div>
+                </div>
+            }
+
+            @* Erääntyneet laskut *@
+            @if (Model.OverdueInvoices.Any())
+            {
+                <div class="dash-card dash-card-danger">
+                    <div class="dash-card-header text-danger">
+                        <i class="bi bi-exclamation-circle-fill"></i> Erääntyneet laskut
+                    </div>
+                    <div class="dash-card-body p-0">
+                        <ul class="invoice-list">
+                            @foreach (var inv in Model.OverdueInvoices)
+                            {
+                                var overdueDays = (DateTime.UtcNow.Date - inv.DueDate.Date).Days;
+                                <li>
+                                    <div class="inv-left">
+                                        <span class="inv-num"><a href="/Invoice/Details/@inv.Id" class="link-subtle">@inv.InvoiceNumber</a></span>
+                                        @if (Model.IsAdmin)
+                                        {
+                                            <span class="inv-customer">@(inv.Customer?.CompanyName ?? "-")</span>
+                                        }
+                                    </div>
+                                    <div class="inv-right">
+                                        <span class="inv-amount text-danger">@inv.TotalAmount.ToString("N2") €</span>
+                                        <span class="inv-days text-danger">-@overdueDays pv</span>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+
+            @* Tyhjä tila jos ei laskuja *@
+            @if (!Model.UpcomingDueInvoices.Any() && !Model.OverdueInvoices.Any())
+            {
+                <div class="dash-card">
+                    <div class="dash-card-body text-center text-muted py-5">
+                        <i class="bi bi-check2-all display-4"></i>
+                        <p class="mt-2">Ei avoimia laskuja.</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
 </div>
+
+@* ── Chart.js ─────────────────────────────────────────────────── *@
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    @if (Model.IsAdmin && Model.TicketsByStatus.Any())
+    {
+        <script>
+            (function () {
+                const labels = [@Html.Raw(string.Join(",", Model.TicketsByStatus.Keys.Select(k => $"'{StatusLabel(k)}'")))]
+                const data   = [@string.Join(",", Model.TicketsByStatus.Values)]
+                const colors = ['#3b82f6','#f59e0b','#8b5cf6','#22c55e','#6b7280']
+
+                const ctx = document.getElementById('ticketStatusChart')
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data,
+                            backgroundColor: colors,
+                            borderColor: '#ffffff',
+                            borderWidth: 3,
+                            hoverOffset: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        cutout: '65%',
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    color: '#475569',
+                                    font: { size: 13 },
+                                    padding: 16
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => ` ${ctx.label}: ${ctx.parsed} tiketti${ctx.parsed !== 1 ? 'ä' : ''}`
+                                }
+                            }
+                        }
+                    }
+                })
+            })()
+        </script>
+    }
+}
+
+@* ── Helper-funktiot ─────────────────────────────────────────── *@
+@functions {
+    static string PriorityLabel(TicketPriority p) => p switch
+    {
+        TicketPriority.Low      => "Matala",
+        TicketPriority.Normal   => "Normaali",
+        TicketPriority.High     => "Korkea",
+        TicketPriority.Critical => "Kriittinen",
+        _                       => p.ToString()
+    };
+
+    static string StatusLabel(TicketStatus s) => s switch
+    {
+        TicketStatus.Open            => "Avoin",
+        TicketStatus.InProgress      => "Käsittelyssä",
+        TicketStatus.WaitingCustomer => "Odottaa",
+        TicketStatus.Resolved        => "Ratkaistu",
+        TicketStatus.Closed          => "Suljettu",
+        _                            => s.ToString()
+    };
+}

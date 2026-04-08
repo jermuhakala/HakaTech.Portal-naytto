@@ -1,0 +1,126 @@
+@model IEnumerable<HakaTech.Portal.Models.Domain.Invoice>
+@using HakaTech.Portal.Models.Domain
+@{
+    ViewData["Title"] = "Laskut";
+    bool isAdmin        = (bool)(ViewBag.IsAdmin ?? false);
+    var statusFilter    = ViewBag.StatusFilter as InvoiceStatus?;
+    int? customerFilter = ViewBag.CustomerFilter;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="bi bi-receipt me-2"></i>Laskut</h2>
+    @if (isAdmin)
+    {
+        <a asp-action="Create" id="btn-invoice-create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Uusi lasku
+        </a>
+    }
+</div>
+
+@if (TempData["SuccessMessage"] is string sMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-1"></i>@sMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Suodatin -->
+<form asp-action="Index" method="get" class="row g-2 mb-3 align-items-end">
+    @if (customerFilter.HasValue)
+    {
+        <input type="hidden" name="customerId" value="@customerFilter" />
+    }
+    <div class="col-md-3">
+        <select name="status" id="invoice-status-filter" class="form-select">
+            <option value="">Kaikki tilat</option>
+            @foreach (var s in Enum.GetValues<InvoiceStatus>())
+            {
+                if (statusFilter == s)
+                {
+                    <option value="@s" selected>@s</option>
+                }
+                else
+                {
+                    <option value="@s">@s</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-secondary">
+            <i class="bi bi-funnel"></i> Suodata
+        </button>
+        <a asp-action="Index" class="btn btn-outline-danger ms-1" title="Tyhjennä">
+            <i class="bi bi-x-lg"></i>
+        </a>
+    </div>
+</form>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-1"></i>Ei laskuja valituilla suodattimilla.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Laskunumero</th>
+                    @if (isAdmin) { <th>Asiakas</th> }
+                    <th>Päivämäärä</th>
+                    <th>Eräpäivä</th>
+                    <th class="text-end">Yhteensä (ALV)</th>
+                    <th>Tila</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var inv in Model)
+                {
+                    string badgeCss = inv.Status switch {
+                        InvoiceStatus.Paid    => "bg-success",
+                        InvoiceStatus.Overdue => "bg-danger",
+                        InvoiceStatus.Sent    => "bg-primary",
+                        InvoiceStatus.Unpaid  => "bg-warning text-dark",
+                        _                     => "bg-secondary"
+                    };
+                    <tr class="@(inv.Status == InvoiceStatus.Overdue ? "table-danger" : "")">
+                        <td>
+                            <a asp-action="Details" asp-route-id="@inv.Id"
+                               class="fw-semibold text-decoration-none">
+                                @inv.InvoiceNumber
+                            </a>
+                        </td>
+                        @if (isAdmin)
+                        {
+                            <td class="small text-muted">@(inv.Customer?.CompanyName ?? "—")</td>
+                        }
+                        <td class="small">@inv.InvoiceDate.ToString("dd.MM.yyyy")</td>
+                        <td class="small @(inv.DueDate < DateTime.Today && inv.Status != InvoiceStatus.Paid ? "text-danger fw-semibold" : "")">
+                            @inv.DueDate.ToString("dd.MM.yyyy")
+                        </td>
+                        <td class="text-end fw-semibold">@inv.TotalAmount.ToString("C")</td>
+                        <td><span class="badge @badgeCss">@inv.Status</span></td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@inv.Id"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot class="table-light fw-semibold">
+                <tr>
+                    <td colspan="@(isAdmin ? 4 : 3)">Yhteensä (@Model.Count() laskua)</td>
+                    <td class="text-end">@Model.Sum(i => i.TotalAmount).ToString("C")</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}

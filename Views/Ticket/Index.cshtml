@@ -1,0 +1,150 @@
+@model IEnumerable<HakaTech.Portal.Models.Domain.Ticket>
+@using HakaTech.Portal.Models.Domain
+@{
+    ViewData["Title"] = "Tiketit";
+    bool isAdmin      = (bool)(ViewBag.IsAdmin ?? false);
+    var statusFilter  = ViewBag.StatusFilter  as TicketStatus?;
+    var priorityFilter= ViewBag.PriorityFilter as TicketPriority?;
+    string? search    = ViewBag.Search;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="bi bi-ticket-perforated me-2"></i>Tiketit</h2>
+    <a asp-action="Create" id="btn-ticket-create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Uusi tiketti
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] is string sMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-1"></i>@sMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Suodatuspalkki -->
+<form asp-action="Index" method="get" class="row g-2 mb-3 align-items-end">
+    <div class="col-md-4">
+        <input type="text" name="search" value="@search"
+               class="form-control" id="ticket-search"
+               placeholder="Hae otsikolla tai kuvauksella…" />
+    </div>
+    <div class="col-md-2">
+        <select name="status" id="ticket-status" class="form-select">
+            <option value="">Kaikki tilat</option>
+            @foreach (var s in Enum.GetValues<TicketStatus>())
+            {
+                if (statusFilter == s)
+                {
+                    <option value="@s" selected>@s</option>
+                }
+                else
+                {
+                    <option value="@s">@s</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="priority" id="ticket-priority" class="form-select">
+            <option value="">Kaikki prioriteetit</option>
+            @foreach (var p in Enum.GetValues<TicketPriority>())
+            {
+                if (priorityFilter == p)
+                {
+                    <option value="@p" selected>@p</option>
+                }
+                else
+                {
+                    <option value="@p">@p</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="col-md-auto">
+        <button type="submit" class="btn btn-outline-secondary">
+            <i class="bi bi-funnel"></i> Suodata
+        </button>
+        <a asp-action="Index" class="btn btn-outline-danger ms-1" title="Tyhjennä">
+            <i class="bi bi-x-lg"></i>
+        </a>
+    </div>
+</form>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-1"></i>Ei tikettejä valituilla suodattimilla.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:60px">#</th>
+                    <th>Otsikko</th>
+                    @if (isAdmin) { <th>Asiakas</th> }
+                    <th>Kategoria</th>
+                    <th>Prioriteetti</th>
+                    <th>Tila</th>
+                    <th>Luotu</th>
+                    <th>Vastuuhenkilö</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in Model)
+                {
+                    <tr>
+                        <td class="text-muted small">#@t.Id</td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@t.Id"
+                               class="fw-semibold text-decoration-none">@t.Title</a>
+                        </td>
+                        @if (isAdmin)
+                        {
+                            <td class="small text-muted">@(t.Customer?.CompanyName ?? "—")</td>
+                        }
+                        <td class="small">@t.Category</td>
+                        <td>
+                            @{
+                                var pBadge = t.Priority switch {
+                                    TicketPriority.Critical => "bg-danger",
+                                    TicketPriority.High     => "bg-warning text-dark",
+                                    TicketPriority.Normal   => "bg-primary",
+                                    _                       => "bg-secondary"
+                                };
+                            }
+                            <span class="badge @pBadge">@t.Priority</span>
+                        </td>
+                        <td>
+                            @{
+                                var sBadge = t.Status switch {
+                                    TicketStatus.Open            => "bg-primary",
+                                    TicketStatus.InProgress      => "bg-info text-dark",
+                                    TicketStatus.WaitingCustomer => "bg-warning text-dark",
+                                    TicketStatus.Resolved        => "bg-success",
+                                    TicketStatus.Closed          => "bg-secondary",
+                                    _                            => "bg-light text-dark"
+                                };
+                            }
+                            <span class="badge @sBadge">@t.Status</span>
+                        </td>
+                        <td class="small text-muted">@t.CreatedAt.ToString("dd.MM.yy")</td>
+                        <td class="small text-muted">@(t.AssignedToUser?.FullName ?? "—")</td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@t.Id"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted small">Yhteensä @Model.Count() tiketti(ä).</p>
+}

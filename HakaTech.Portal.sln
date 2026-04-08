@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37111.16 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HakaTech.Portal", "HakaTech.Portal.csproj", "{1C097BA0-7D62-FE19-015B-2E140DB93026}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1C097BA0-7D62-FE19-015B-2E140DB93026}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C097BA0-7D62-FE19-015B-2E140DB93026}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C097BA0-7D62-FE19-015B-2E140DB93026}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C097BA0-7D62-FE19-015B-2E140DB93026}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8FAB3AE1-6A50-4032-A61F-E976D530326C}
+	EndGlobalSection
+EndGlobal

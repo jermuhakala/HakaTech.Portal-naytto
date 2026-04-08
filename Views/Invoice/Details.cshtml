@@ -1,0 +1,253 @@
+@model HakaTech.Portal.Models.Domain.Invoice
+@using HakaTech.Portal.Models.Domain
+@using HakaTech.Portal.Models.ViewModels
+@{
+    ViewData["Title"] = Model.InvoiceNumber;
+    bool isAdmin       = (bool)(ViewBag.IsAdmin ?? false);
+    var statusModel    = ViewBag.StatusModel as InvoiceStatusViewModel;
+    var history        = ViewBag.CustomerHistory as List<Invoice> ?? new List<Invoice>();
+
+    string badgeCss = Model.Status switch {
+        InvoiceStatus.Paid    => "bg-success",
+        InvoiceStatus.Overdue => "bg-danger",
+        InvoiceStatus.Sent    => "bg-primary",
+        InvoiceStatus.Unpaid  => "bg-warning text-dark",
+        _                     => "bg-secondary"
+    };
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Laskut</a></li>
+        @if (isAdmin && Model.Customer is not null)
+        {
+            <li class="breadcrumb-item">
+                <a asp-controller="Customer" asp-action="Details" asp-route-id="@Model.CustomerId">
+                    @Model.Customer.CompanyName
+                </a>
+            </li>
+        }
+        <li class="breadcrumb-item active">@Model.InvoiceNumber</li>
+    </ol>
+</nav>
+
+@if (TempData["SuccessMessage"] is string sMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-1"></i>@sMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row g-3">
+    <!-- Laskun pääsisältö -->
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center py-3">
+                <div>
+                    <h5 class="mb-0">
+                        <i class="bi bi-receipt me-2"></i>@Model.InvoiceNumber
+                    </h5>
+                    <small class="text-muted">@(Model.Customer?.CompanyName)</small>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge @badgeCss fs-6">@Model.Status</span>
+                    <a asp-action="DownloadPdf" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary rounded-pill">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Lataa PDF
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <!-- Perustiedot -->
+                <div class="row mb-3">
+                    <div class="col-sm-6">
+                        <dl class="row mb-0 small">
+                            <dt class="col-5">Laskun pvm</dt>
+                            <dd class="col-7">@Model.InvoiceDate.ToString("dd.MM.yyyy")</dd>
+                            <dt class="col-5">Eräpäivä</dt>
+                            <dd class="col-7 @(Model.DueDate < DateTime.Today && Model.Status != InvoiceStatus.Paid ? "text-danger fw-semibold" : "")">
+                                @Model.DueDate.ToString("dd.MM.yyyy")
+                            </dd>
+                            @if (Model.PaidAt.HasValue)
+                            {
+                                <dt class="col-5">Maksettu</dt>
+                                <dd class="col-7 text-success fw-semibold">@Model.PaidAt.Value.ToLocalTime().ToString("dd.MM.yyyy")</dd>
+                            }
+                        </dl>
+                    </div>
+                    <div class="col-sm-6">
+                        <dl class="row mb-0 small">
+                            <dt class="col-5">ALV-%</dt>
+                            <dd class="col-7">@((Model.VatRate * 100).ToString("0.#")) %</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Notes))
+                {
+                    <div class="alert alert-secondary small mb-3">
+                        <i class="bi bi-sticky me-1"></i>@Model.Notes
+                    </div>
+                }
+
+                <!-- Laskurivit -->
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Kuvaus</th>
+                                <th class="text-end" style="width:90px">Määrä</th>
+                                <th class="text-end" style="width:120px">À-hinta</th>
+                                <th class="text-end" style="width:120px">Yhteensä</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var line in Model.Lines)
+                            {
+                                <tr>
+                                    <td>@line.Description</td>
+                                    <td class="text-end">@line.Quantity.ToString("G")</td>
+                                    <td class="text-end">@line.UnitPrice.ToString("C")</td>
+                                    <td class="text-end fw-semibold">@((line.Quantity * line.UnitPrice).ToString("C"))</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="3" class="text-end">Veroton yhteensä</td>
+                                <td class="text-end">@Model.SubTotal.ToString("C")</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end">
+                                    ALV @((Model.VatRate * 100).ToString("0.#")) %
+                                </td>
+                                <td class="text-end">@Model.VatAmount.ToString("C")</td>
+                            </tr>
+                            <tr class="fw-bold fs-6">
+                                <td colspan="3" class="text-end">Yhteensä</td>
+                                <td class="text-end text-primary">@Model.TotalAmount.ToString("C")</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin-paneeli -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Yhteenveto</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted small">Veroton</span>
+                    <span class="fw-semibold small">@Model.SubTotal.ToString("C")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted small">ALV</span>
+                    <span class="fw-semibold small">@Model.VatAmount.ToString("C")</span>
+                </div>
+                <hr class="my-2" />
+                <div class="d-flex justify-content-between">
+                    <span class="fw-bold">Maksettava</span>
+                    <span class="fw-bold text-primary fs-5">@Model.TotalAmount.ToString("C")</span>
+                </div>
+            </div>
+        </div>
+
+        @if (isAdmin && statusModel is not null)
+        {
+            <div class="card border-warning">
+                <div class="card-header bg-warning bg-opacity-25">
+                    <i class="bi bi-sliders me-2"></i>Hallinta
+                </div>
+                <div class="card-body">
+                    <form asp-action="UpdateStatus" method="post">
+                        <input type="hidden" asp-for="@statusModel.Id" name="Id" />
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Tila</label>
+                            <select name="Status" id="invoice-status-admin" class="form-select form-select-sm"
+                                    onchange="togglePaidDate(this.value)">
+                                @foreach (var s in Enum.GetValues<InvoiceStatus>())
+                                {
+                                    if (statusModel.Status == s)
+                                    {
+                                        <option value="@s" selected>@s</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@s">@s</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div id="paid-date-row" class="mb-3"
+                             style="display:@(statusModel.Status == InvoiceStatus.Paid ? "block" : "none")">
+                            <label class="form-label small fw-semibold">Maksupäivä</label>
+                            <input type="date" name="PaidAt" id="invoice-paid-at"
+                                   class="form-control form-control-sm"
+                                   value="@(statusModel.PaidAt?.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" />
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" id="btn-invoice-save" class="btn btn-warning btn-sm fw-semibold">
+                                <i class="bi bi-check-lg me-1"></i>Tallenna
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (history.Any())
+        {
+            <div class="card mt-3">
+                <div class="card-header bg-surface2">
+                    <i class="bi bi-clock-history me-2"></i>Asiakkaan historia
+                </div>
+                <div class="card-body p-0">
+                    <ul class="invoice-list">
+                        @foreach (var inv in history)
+                        {
+                            var hCss = inv.Status switch {
+                                InvoiceStatus.Paid    => "text-success",
+                                InvoiceStatus.Overdue => "text-danger",
+                                InvoiceStatus.Sent    => "text-primary",
+                                InvoiceStatus.Unpaid  => "text-warning",
+                                _                     => "text-muted"
+                            };
+
+                            <li>
+                                <div class="inv-left">
+                                    <span class="inv-num">
+                                        <a asp-action="Details" asp-route-id="@inv.Id" class="link-subtle">
+                                            @inv.InvoiceNumber
+                                        </a>
+                                    </span>
+                                    <span class="inv-customer">@inv.InvoiceDate.ToString("dd.MM.yyyy")</span>
+                                </div>
+                                <div class="inv-right d-flex align-items-center gap-2">
+                                    <span class="inv-amount">@inv.TotalAmount.ToString("N2") €</span>
+                                    <i class="bi bi-circle-fill @hCss" style="font-size: 0.5rem;" title="@inv.Status"></i>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function togglePaidDate(status) {
+    document.getElementById('paid-date-row').style.display =
+        status === 'Paid' ? 'block' : 'none';
+}
+</script>
+}

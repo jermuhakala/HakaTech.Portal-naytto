@@ -1,0 +1,334 @@
+using HakaTech.Portal.Data;
+using HakaTech.Portal.Models.Domain;
+using HakaTech.Portal.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+
+namespace HakaTech.Portal.Controllers;
+
+[Authorize]
+public class TicketController : Controller
+{
+    private readonly ApplicationDbContext          _db;
+    private readonly UserManager<ApplicationUser>  _userManager;
+    private readonly ILogger<TicketController>     _logger;
+    private readonly HakaTech.Portal.Services.IEmailService _emailService;
+
+    public TicketController(
+        ApplicationDbContext         db,
+        UserManager<ApplicationUser> userManager,
+        ILogger<TicketController>    logger,
+        HakaTech.Portal.Services.IEmailService emailService)
+    {
+        _db          = db;
+        _userManager = userManager;
+        _logger      = logger;
+        _emailService = emailService;
+    }
+
+    // ── GET /Ticket ──────────────────────────────────────────────────
+    // Admin näkee kaikki; asiakas vain omansa
+    public async Task<IActionResult> Index(
+        int?          customerId,
+        TicketStatus? status,
+        TicketPriority? priority,
+        string?       search)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        bool isAdmin    = User.IsInRole("Admin");
+
+        var query = _db.Tickets
+            .Include(t => t.Customer)
+            .Include(t => t.CreatedByUser)
+            .Include(t => t.AssignedToUser)
+            .AsQueryable();
+
+        // Asiakaskäyttäjä näkee vain oman asiakkaansa tiketit
+        if (!isAdmin)
+        {
+            if (currentUser?.CustomerId is null)
+                return View(Enumerable.Empty<Ticket>());
+
+            query = query.Where(t => t.CustomerId == currentUser.CustomerId);
+        }
+        else if (customerId.HasValue)
+        {
+            query = query.Where(t => t.CustomerId == customerId.Value);
+        }
+
+        if (status.HasValue)
+            query = query.Where(t => t.Status == status.Value);
+
+        if (priority.HasValue)
+            query = query.Where(t => t.Priority == priority.Value);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            search = search.Trim();
+            query  = query.Where(t =>
+                t.Title.Contains(search) ||
+                t.Description.Contains(search));
+        }
+
+        var tickets = await query
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+
+        // Suodatusvalinnat näkymää varten
+        ViewBag.StatusFilter   = status;
+        ViewBag.PriorityFilter = priority;
+        ViewBag.Search         = search;
+        ViewBag.CustomerFilter = customerId;
+        ViewBag.IsAdmin        = isAdmin;
+
+        return View(tickets);
+    }
+
+    // ── GET /Ticket/Details/5 ────────────────────────────────────────
+    public async Task<IActionResult> Details(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        bool isAdmin    = User.IsInRole("Admin");
+
+        var ticket = await _db.Tickets
+            .Include(t => t.Customer)
+            .Include(t => t.CreatedByUser)
+            .Include(t => t.AssignedToUser)
+            .Include(t => t.Comments.OrderBy(c => c.CreatedAt))
+                .ThenInclude(c => c.Author)
+            .FirstOrDefaultAsync(t => t.Id == id);
+
+        if (ticket is null)
+            return NotFound();
+
+        // Asiakaskäyttäjä saa nähdä vain oman asiakkaansa tiketit
+        if (!isAdmin && ticket.CustomerId != currentUser?.CustomerId)
+            return Forbid();
+
+        ViewBag.IsAdmin      = isAdmin;
+        ViewBag.CurrentUser  = currentUser;
+        ViewBag.CommentModel = new TicketCommentViewModel { TicketId = id };
+        ViewBag.EditModel    = isAdmin ? await BuildEditViewModel(ticket) : null;
+
+        return View(ticket);
+    }
+
+    // ── GET /Ticket/Create ───────────────────────────────────────────
+    public async Task<IActionResult> Create(int? customerId)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        bool isAdmin    = User.IsInRole("Admin");
+
+        var model = new TicketCreateViewModel
+        {
+            Category       = TicketCategory.Other,
+            Priority       = TicketPriority.Normal,
+            CustomerOptions = []
+        };
+
+        if (isAdmin)
+        {
+            model.CustomerId      = customerId;
+            model.CustomerOptions = await BuildCustomerOptions();
+        }
+        else
+        {
+            // Asiakas luo oman yrityksensä tiketin – ei valintaa
+            model.CustomerId = currentUser?.CustomerId;
+        }
+
+        return View(model);
+    }
+
+    // ── POST /Ticket/Create ──────────────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(TicketCreateViewModel model)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        bool isAdmin    = User.IsInRole("Admin");
+
+        // Asiakaskäyttäjä: aseta customerId automaattisesti
+        if (!isAdmin)
+            model.CustomerId = currentUser?.CustomerId;
+
+        if (model.CustomerId is null)
+            ModelState.AddModelError(nameof(model.CustomerId), "Asiakas on valittava.");
+
+        if (!ModelState.IsValid)
+        {
+            if (isAdmin) model.CustomerOptions = await BuildCustomerOptions();
+            return View(model);
+        }
+
+        var ticket = new Ticket
+        {
+            Title            = model.Title,
+            Description      = model.Description,
+            Category         = model.Category,
+            Priority         = model.Priority,
+            Status           = TicketStatus.Open,
+            CustomerId       = model.CustomerId!.Value,
+            CreatedByUserId  = currentUser!.Id,
+            CreatedAt        = DateTime.UtcNow,
+            UpdatedAt        = DateTime.UtcNow
+        };
+
+        _db.Tickets.Add(ticket);
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Tiketti #{Id} '{Title}' luotu.", ticket.Id, ticket.Title);
+        TempData["SuccessMessage"] = $"Tiketti #{ticket.Id} luotu onnistuneesti.";
+        return RedirectToAction(nameof(Details), new { id = ticket.Id });
+    }
+
+    // ── POST /Ticket/UpdateStatus (Admin) ────────────────────────────
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateStatus(TicketEditViewModel model)
+    {
+        var ticket = await _db.Tickets.Include(t => t.CreatedByUser).FirstOrDefaultAsync(t => t.Id == model.Id);
+        if (ticket is null) return NotFound();
+
+        var oldStatus = ticket.Status;
+
+        ticket.Status          = model.Status;
+        ticket.Priority        = model.Priority;
+        ticket.AssignedToUserId= model.AssignedToUserId;
+        ticket.UpdatedAt       = DateTime.UtcNow;
+
+        if (model.Status == TicketStatus.Resolved && ticket.ResolvedAt is null)
+            ticket.ResolvedAt = DateTime.UtcNow;
+        else if (model.Status != TicketStatus.Resolved && model.Status != TicketStatus.Closed)
+            ticket.ResolvedAt = null;
+
+        await _db.SaveChangesAsync();
+
+        if (oldStatus != model.Status && (model.Status == TicketStatus.InProgress || model.Status == TicketStatus.Closed))
+        {
+            await SendTicketStatusEmailAsync(ticket, model.Status == TicketStatus.InProgress ? "Otettu työn alle" : "Suljettu");
+        }
+
+        _logger.LogInformation("Tiketin #{Id} tila muutettu → {Status}.", ticket.Id, ticket.Status);
+        TempData["SuccessMessage"] = "Tiketin tila päivitetty.";
+        return RedirectToAction(nameof(Details), new { id = model.Id });
+    }
+
+    // ── POST /Ticket/AddComment ──────────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddComment(TicketCommentViewModel model)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        bool isAdmin    = User.IsInRole("Admin");
+
+        var ticket = await _db.Tickets.FindAsync(model.TicketId);
+        if (ticket is null) return NotFound();
+
+        // Asiakaskäyttäjä ei voi lisätä sisäistä kommenttia
+        if (!isAdmin) model.IsInternal = false;
+
+        if (!ModelState.IsValid)
+            return RedirectToAction(nameof(Details), new { id = model.TicketId });
+
+        var comment = new TicketComment
+        {
+            TicketId  = model.TicketId,
+            Content   = model.Content,
+            IsInternal= model.IsInternal,
+            AuthorId  = currentUser!.Id,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        ticket.UpdatedAt = DateTime.UtcNow;
+
+        // Jos asiakas vastaa ja tiketti odottaa asiakasta → takaisin käsittelyyn
+        if (!isAdmin && ticket.Status == TicketStatus.WaitingCustomer)
+            ticket.Status = TicketStatus.InProgress;
+
+        _db.TicketComments.Add(comment);
+        await _db.SaveChangesAsync();
+
+        return RedirectToAction(nameof(Details), new { id = model.TicketId });
+    }
+
+    // ── POST /Ticket/Close ───────────────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Close(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        bool isAdmin    = User.IsInRole("Admin");
+
+        var ticket = await _db.Tickets.Include(t => t.CreatedByUser).FirstOrDefaultAsync(t => t.Id == id);
+        if (ticket is null) return NotFound();
+
+        // Vain admin tai tiketin luonut käyttäjä voi sulkea
+        if (!isAdmin && ticket.CreatedByUserId != currentUser?.Id)
+            return Forbid();
+
+        var oldStatus = ticket.Status;
+        ticket.Status    = TicketStatus.Closed;
+        ticket.UpdatedAt = DateTime.UtcNow;
+        ticket.ResolvedAt ??= DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        if (oldStatus != TicketStatus.Closed && isAdmin)
+        {
+            await SendTicketStatusEmailAsync(ticket, "Suljettu");
+        }
+
+        TempData["SuccessMessage"] = $"Tiketti #{id} suljettu.";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    // ── Apumetodit ───────────────────────────────────────────────────
+
+    private async Task SendTicketStatusEmailAsync(Ticket ticket, string statusText)
+    {
+        if (ticket.CreatedByUser == null || string.IsNullOrWhiteSpace(ticket.CreatedByUser.Email))
+            return;
+
+        string name = !string.IsNullOrWhiteSpace(ticket.CreatedByUser.FullName) 
+            ? ticket.CreatedByUser.FullName 
+            : ticket.CreatedByUser.Email;
+            
+        string subject = $"Tiketti #{ticket.Id} on {statusText.ToLower()}";
+        string htmlMessage = $@"
+            <div style=""font-family: Arial, sans-serif; color: #333;"">
+                <h3 style=""color: #2b5797;"">Hei {name}!</h3>
+                <p>Tukipyyntösi (Tiketti #{ticket.Id}: <strong>{ticket.Title}</strong>) tila on muuttunut.</p>
+                <p>Uusi tila: <strong style=""padding: 3px 6px; background-color: #f1f5f9; border-radius: 4px;"">{statusText}</strong></p>
+                <p>Kirjaudu HakaTech Portaaliin tarkastellaksesi tiketin tietoja ja mahdollisia vastauksia.</p>
+                <br/><hr style=""border: none; border-top: 1px solid #ddd;""/><p style=""font-size: 0.9em; color: #777;"">Ystävällisin terveisin,<br/><strong>HakaTech Asiakastuki</strong></p>
+            </div>";
+
+        await _emailService.SendEmailAsync(ticket.CreatedByUser.Email, subject, htmlMessage);
+    }
+
+    private async Task<IEnumerable<SelectListItem>> BuildCustomerOptions() =>
+        (await _db.Customers
+            .Where(c => c.IsActive)
+            .OrderBy(c => c.CompanyName)
+            .ToListAsync())
+        .Select(c => new SelectListItem(c.CompanyName, c.Id.ToString()));
+
+    private async Task<TicketEditViewModel> BuildEditViewModel(Ticket ticket)
+    {
+        var staff = await _userManager.GetUsersInRoleAsync("Admin");
+        return new TicketEditViewModel
+        {
+            Id               = ticket.Id,
+            Status           = ticket.Status,
+            Priority         = ticket.Priority,
+            AssignedToUserId = ticket.AssignedToUserId,
+            StaffOptions     = staff.Select(u =>
+                new SelectListItem(u.FullName.Length > 0 ? u.FullName : u.Email, u.Id))
+        };
+    }
+}

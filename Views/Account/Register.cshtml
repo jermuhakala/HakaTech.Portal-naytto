@@ -1,0 +1,68 @@
+@model HakaTech.Portal.Models.ViewModels.RegisterViewModel
+@{
+    ViewData["Title"] = "Luo käyttäjätili";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm mt-4">
+            <div class="card-header text-center py-3">
+                <img src="~/img/logo.png" alt="HakaTech Logo" style="height: 36px; width: 36px; border-radius: 8px; object-fit: cover;" class="mb-2" />
+                <h4 class="mb-0"><i class="bi bi-person-plus me-2"></i>Luo uusi käyttäjätili</h4>
+            </div>
+            <div class="card-body p-4">
+
+                @if (TempData["SuccessMessage"] is string successMsg)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>@successMsg
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+
+                <form asp-action="Register" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label fw-semibold"></label>
+                        <input asp-for="FullName" class="form-control" placeholder="Etunimi Sukunimi"
+                               id="register-fullname" />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold"></label>
+                        <input asp-for="Email" class="form-control" placeholder="esimerkki@yritys.fi"
+                               id="register-email" autocomplete="username" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold"></label>
+                        <input asp-for="Password" class="form-control" placeholder="Vähintään 8 merkkiä"
+                               id="register-password" autocomplete="new-password" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="ConfirmPassword" class="form-label fw-semibold"></label>
+                        <input asp-for="ConfirmPassword" class="form-control" placeholder="Toista salasana"
+                               id="register-confirm" autocomplete="new-password" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" id="register-submit" class="btn btn-success btn-lg">
+                            Luo tili
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

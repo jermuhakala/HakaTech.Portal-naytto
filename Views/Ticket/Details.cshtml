@@ -1,0 +1,264 @@
+@model HakaTech.Portal.Models.Domain.Ticket
+@using HakaTech.Portal.Models.Domain
+@using HakaTech.Portal.Models.ViewModels
+@{
+    ViewData["Title"] = $"Tiketti #{Model.Id}";
+    bool isAdmin             = (bool)(ViewBag.IsAdmin ?? false);
+    var commentModel         = ViewBag.CommentModel as TicketCommentViewModel;
+    var editModel            = ViewBag.EditModel    as TicketEditViewModel;
+    var currentUser          = ViewBag.CurrentUser  as HakaTech.Portal.Models.Domain.ApplicationUser;
+
+    string statusBadge = Model.Status switch {
+        TicketStatus.Open            => "bg-primary",
+        TicketStatus.InProgress      => "bg-info text-dark",
+        TicketStatus.WaitingCustomer => "bg-warning text-dark",
+        TicketStatus.Resolved        => "bg-success",
+        TicketStatus.Closed          => "bg-secondary",
+        _                            => "bg-light text-dark"
+    };
+    string priorityBadge = Model.Priority switch {
+        TicketPriority.Critical => "bg-danger",
+        TicketPriority.High     => "bg-warning text-dark",
+        TicketPriority.Normal   => "bg-primary",
+        _                       => "bg-secondary"
+    };
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Tiketit</a></li>
+        @if (isAdmin && Model.Customer is not null)
+        {
+            <li class="breadcrumb-item">
+                <a asp-controller="Customer" asp-action="Details" asp-route-id="@Model.CustomerId">
+                    @Model.Customer.CompanyName
+                </a>
+            </li>
+        }
+        <li class="breadcrumb-item active">Tiketti #@Model.Id</li>
+    </ol>
+</nav>
+
+@if (TempData["SuccessMessage"] is string sMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-1"></i>@sMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Otsikkorivi -->
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+        <h2 class="mb-1">
+            <span class="text-muted fw-light">#@Model.Id</span>
+            @Model.Title
+        </h2>
+        <span class="badge @statusBadge me-1">@Model.Status</span>
+        <span class="badge @priorityBadge me-1">@Model.Priority</span>
+        <span class="badge bg-light text-dark border">@Model.Category</span>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        @if (Model.Status != TicketStatus.Closed)
+        {
+            <form asp-action="Close" asp-route-id="@Model.Id" method="post"
+                  onsubmit="return confirm('Suljetaanko tiketti #@Model.Id?');">
+                <button type="submit" id="btn-ticket-close" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i>Sulje tiketti
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Vasen palkki: tiketin tiedot + kommentit -->
+    <div class="col-md-8">
+
+        <!-- Kuvaus -->
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-card-text me-2"></i>Kuvaus</div>
+            <div class="card-body">
+                <p class="mb-0" style="white-space:pre-wrap;">@Model.Description</p>
+            </div>
+        </div>
+
+        <!-- Kommentit -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-chat-left-text me-2"></i>
+                Kommentit (@Model.Comments.Count(c => !c.IsInternal || isAdmin))
+            </div>
+            <div class="card-body p-0">
+                @{
+                    var visibleComments = isAdmin
+                        ? Model.Comments.OrderBy(c => c.CreatedAt).ToList()
+                        : Model.Comments.Where(c => !c.IsInternal).OrderBy(c => c.CreatedAt).ToList();
+                }
+                @if (!visibleComments.Any())
+                {
+                    <p class="text-muted p-3 mb-0">Ei vielä kommentteja.</p>
+                }
+                @foreach (var c in visibleComments)
+                {
+                    <div class="p-3 border-bottom @(c.IsInternal ? "bg-warning bg-opacity-10" : "")">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-semibold">
+                                <i class="bi bi-person-circle me-1"></i>
+                                @(c.Author?.FullName.Length > 0 ? c.Author.FullName : c.Author?.Email ?? "—")
+                            </span>
+                            <span class="text-muted small">
+                                @c.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                @if (c.IsInternal)
+                                {
+                                    <span class="badge bg-warning text-dark ms-2">Sisäinen</span>
+                                }
+                            </span>
+                        </div>
+                        <p class="mb-0" style="white-space:pre-wrap;">@c.Content</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Uusi kommentti -->
+        @if (Model.Status != TicketStatus.Closed && commentModel is not null)
+        {
+            <div class="card">
+                <div class="card-header"><i class="bi bi-reply me-2"></i>Lisää kommentti</div>
+                <div class="card-body">
+                    <form asp-action="AddComment" method="post">
+                        <input type="hidden" asp-for="@commentModel.TicketId" name="TicketId" />
+                        <div class="mb-2">
+                            <textarea name="Content" id="comment-content" rows="4"
+                                      class="form-control"
+                                      placeholder="Kirjoita kommenttisi…" required></textarea>
+                        </div>
+                        @if (isAdmin)
+                        {
+                            <div class="form-check mb-2">
+                                <input type="checkbox" name="IsInternal" value="true"
+                                       class="form-check-input" id="comment-internal" />
+                                <label class="form-check-label" for="comment-internal">
+                                    Sisäinen muistiinpano (vain admin näkee)
+                                </label>
+                            </div>
+                        }
+                        <button type="submit" id="btn-comment-submit" class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i>Lähetä
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+
+    </div>
+
+    <!-- Oikea palkki: metatiedot + admin-toiminnot -->
+    <div class="col-md-4">
+
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i>Tiedot</div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-6">Asiakas</dt>
+                    <dd class="col-6">
+                        @if (isAdmin && Model.Customer is not null)
+                        {
+                            <a asp-controller="Customer" asp-action="Details"
+                               asp-route-id="@Model.CustomerId">@Model.Customer.CompanyName</a>
+                        }
+                        else { @(Model.Customer?.CompanyName ?? "—") }
+                    </dd>
+                    <dt class="col-6">Luonut</dt>
+                    <dd class="col-6">@(Model.CreatedByUser?.FullName ?? Model.CreatedByUser?.Email ?? "—")</dd>
+                    <dt class="col-6">Luotu</dt>
+                    <dd class="col-6">@Model.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
+                    <dt class="col-6">Päivitetty</dt>
+                    <dd class="col-6">@Model.UpdatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
+                    @if (Model.ResolvedAt.HasValue)
+                    {
+                        <dt class="col-6">Ratkaistu</dt>
+                        <dd class="col-6">@Model.ResolvedAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
+                    }
+                    <dt class="col-6">Vastuuhenkilö</dt>
+                    <dd class="col-6">@(Model.AssignedToUser?.FullName ?? "Ei osoitettu")</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Admin: muuta tila/vastuuhenkilö -->
+        @if (isAdmin && editModel is not null && Model.Status != TicketStatus.Closed)
+        {
+            <div class="card border-warning">
+                <div class="card-header bg-warning bg-opacity-25">
+                    <i class="bi bi-sliders me-2"></i>Admin-toiminnot
+                </div>
+                <div class="card-body">
+                    <form asp-action="UpdateStatus" method="post">
+                        <input type="hidden" asp-for="@editModel.Id" name="Id" />
+
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Tila</label>
+                            <select name="Status" id="admin-status" class="form-select form-select-sm">
+                                @foreach (var s in Enum.GetValues<TicketStatus>())
+                                {
+                                    if (editModel.Status == s)
+                                    {
+                                        <option value="@s" selected>@s</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@s">@s</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Prioriteetti</label>
+                            <select name="Priority" id="admin-priority" class="form-select form-select-sm">
+                                @foreach (var p in Enum.GetValues<TicketPriority>())
+                                {
+                                    if (editModel.Priority == p)
+                                    {
+                                        <option value="@p" selected>@p</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@p">@p</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Vastuuhenkilö</label>
+                            <select name="AssignedToUserId" id="admin-assign" class="form-select form-select-sm">
+                                <option value="">— Ei osoitettu —</option>
+                                @foreach (var opt in editModel.StaffOptions)
+                                {
+                                    if (editModel.AssignedToUserId == opt.Value)
+                                    {
+                                        <option value="@opt.Value" selected>@opt.Text</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@opt.Value">@opt.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" id="btn-admin-save" class="btn btn-warning btn-sm fw-semibold">
+                                <i class="bi bi-check-lg me-1"></i>Tallenna muutokset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
+    </div>
+</div>

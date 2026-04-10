@@ -6,6 +6,45 @@
 
 <div class="dashboard-wrapper">
 
+    @* ── Tiedotteet & huoltoikkunat ────────────────────────────── *@
+    @if (Model.ActiveAnnouncements.Any())
+    {
+        <div class="mb-3">
+            @foreach (var ann in Model.ActiveAnnouncements)
+            {
+                var alertClass = ann.Type switch
+                {
+                    AnnouncementType.Maintenance => "alert-warning",
+                    AnnouncementType.Warning     => "alert-danger",
+                    _                            => "alert-info"
+                };
+                var icon = ann.Type switch
+                {
+                    AnnouncementType.Maintenance => "bi-tools",
+                    AnnouncementType.Warning     => "bi-exclamation-triangle-fill",
+                    _                            => "bi-info-circle-fill"
+                };
+                <div class="alert @alertClass alert-dismissible fade show mb-2" role="alert">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="bi @icon mt-1 flex-shrink-0"></i>
+                        <div>
+                            <strong>@ann.Title</strong>
+                            @if (!string.IsNullOrWhiteSpace(ann.Content))
+                            {
+                                <span class="ms-1">— @ann.Content</span>
+                            }
+                            @if (ann.ValidUntil.HasValue)
+                            {
+                                <span class="text-muted small ms-2">(voimassa @ann.ValidUntil.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm") asti)</span>
+                            }
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+        </div>
+    }
+
     @* ── Tervetuloa-palkki ─────────────────────────────────────── *@
     <div class="welcome-bar mb-4">
         <div>

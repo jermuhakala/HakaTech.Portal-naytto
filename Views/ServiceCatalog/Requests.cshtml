@@ -1,0 +1,104 @@
+@model IEnumerable<HakaTech.Portal.Models.Domain.QuoteRequest>
+@using HakaTech.Portal.Models.Domain
+@{
+    ViewData["Title"] = "Tarjouspyynnöt";
+    var statusFilter = ViewBag.StatusFilter as QuoteRequestStatus?;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="bi bi-envelope-open me-2"></i>Tarjouspyynnöt</h2>
+    <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-grid me-1"></i>Palvelut
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] is string sMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-1"></i>@sMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@* Suodattimet *@
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a asp-action="Requests" class="btn btn-sm @(statusFilter == null ? "btn-dark" : "btn-outline-secondary")">Kaikki</a>
+    @foreach (QuoteRequestStatus s in Enum.GetValues<QuoteRequestStatus>())
+    {
+        <a asp-action="Requests" asp-route-status="@s"
+           class="btn btn-sm @(statusFilter == s ? "btn-dark" : "btn-outline-secondary")">
+            @StatusLabel(s)
+        </a>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-1"></i>Ei tarjouspyyntöjä valituilla suodattimilla.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Palvelu</th>
+                    <th>Asiakas</th>
+                    <th>Pyytäjä</th>
+                    <th>Tila</th>
+                    <th>Päivämäärä</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var q in Model)
+                {
+                    <tr>
+                        <td>@q.Id</td>
+                        <td class="fw-semibold">@(q.Service?.Name ?? "—")</td>
+                        <td>@(q.Customer?.CompanyName ?? "—")</td>
+                        <td class="small text-muted">
+                            @(q.CreatedByUser?.FullName.Length > 0 ? q.CreatedByUser.FullName : q.CreatedByUser?.Email ?? "—")
+                        </td>
+                        <td>
+                            <span class="badge @BadgeClass(q.Status)">@StatusLabel(q.Status)</span>
+                        </td>
+                        <td class="small text-nowrap">@q.CreatedAt.ToString("dd.MM.yyyy")</td>
+                        <td>
+                            <a asp-action="RequestDetails" asp-route-id="@q.Id"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted small">Yhteensä @Model.Count() tarjouspyyntöä.</p>
+}
+
+@functions {
+    static string StatusLabel(QuoteRequestStatus s) => s switch
+    {
+        QuoteRequestStatus.Pending    => "Odottaa",
+        QuoteRequestStatus.InProgress => "Käsittelyssä",
+        QuoteRequestStatus.Sent       => "Lähetetty",
+        QuoteRequestStatus.Accepted   => "Hyväksytty",
+        QuoteRequestStatus.Declined   => "Hylätty",
+        _                             => s.ToString()
+    };
+
+    static string BadgeClass(QuoteRequestStatus s) => s switch
+    {
+        QuoteRequestStatus.Pending    => "bg-warning text-dark",
+        QuoteRequestStatus.InProgress => "bg-primary",
+        QuoteRequestStatus.Sent       => "bg-info text-dark",
+        QuoteRequestStatus.Accepted   => "bg-success",
+        QuoteRequestStatus.Declined   => "bg-secondary",
+        _                             => "bg-secondary"
+    };
+}

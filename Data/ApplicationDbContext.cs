@@ -17,6 +17,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Contract>       Contracts      { get; set; }
     public DbSet<TicketAttachment>   TicketAttachments   { get; set; }
     public DbSet<InvoiceAttachment>  InvoiceAttachments  { get; set; }
+    public DbSet<ServiceCatalogItem> ServiceCatalogItems { get; set; }
+    public DbSet<QuoteRequest>       QuoteRequests       { get; set; }
+    public DbSet<Announcement>       Announcements       { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -146,6 +149,49 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasOne(a => a.UploadedByUser)
              .WithMany()
              .HasForeignKey(a => a.UploadedByUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── ServiceCatalogItem ─────────────────────────────────
+        builder.Entity<ServiceCatalogItem>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.Property(s => s.Name).IsRequired().HasMaxLength(200);
+            e.Property(s => s.Category).HasMaxLength(100);
+            e.Property(s => s.Price).HasPrecision(18, 2);
+        });
+
+        // ── QuoteRequest ───────────────────────────────────────
+        builder.Entity<QuoteRequest>(e =>
+        {
+            e.HasKey(q => q.Id);
+
+            e.HasOne(q => q.Service)
+             .WithMany(s => s.QuoteRequests)
+             .HasForeignKey(q => q.ServiceCatalogItemId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(q => q.Customer)
+             .WithMany()
+             .HasForeignKey(q => q.CustomerId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(q => q.CreatedByUser)
+             .WithMany()
+             .HasForeignKey(q => q.CreatedByUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Announcement ───────────────────────────────────────
+        builder.Entity<Announcement>(e =>
+        {
+            e.HasKey(a => a.Id);
+            e.Property(a => a.Title).IsRequired().HasMaxLength(300);
+            e.Property(a => a.Content).IsRequired();
+
+            e.HasOne(a => a.CreatedByUser)
+             .WithMany()
+             .HasForeignKey(a => a.CreatedByUserId)
              .OnDelete(DeleteBehavior.Restrict);
         });
     }

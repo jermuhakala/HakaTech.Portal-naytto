@@ -43,6 +43,14 @@ public class HomeController : Controller
                             : currentUser?.Email ?? string.Empty
         };
 
+        // ── Aktiiviset tiedotteet (kaikille käyttäjille) ───────────────
+        vm.ActiveAnnouncements = await _db.Announcements
+            .Where(a => a.IsPublished &&
+                        (a.ValidFrom  == null || a.ValidFrom  <= DateTime.UtcNow) &&
+                        (a.ValidUntil == null || a.ValidUntil >= DateTime.UtcNow))
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync();
+
         if (isAdmin)
         {
             // ── Asiakkaat ──────────────────────────────────────────

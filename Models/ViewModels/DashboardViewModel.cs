@@ -32,6 +32,9 @@ public class DashboardViewModel
     // ── Tikettien tilajakauma (piirakkaa varten) ─────────────────────
     public Dictionary<TicketStatus, int> TicketsByStatus { get; set; } = new();
 
+    // ── Tiedotteet & huoltoikkunat ───────────────────────────────────
+    public IList<Announcement> ActiveAnnouncements { get; set; } = [];
+
     // ── Rooli ────────────────────────────────────────────────────────
     public bool IsAdmin { get; set; }
     public string WelcomeName { get; set; } = string.Empty;

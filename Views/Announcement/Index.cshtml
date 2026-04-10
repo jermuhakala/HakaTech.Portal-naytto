@@ -1,0 +1,132 @@
+@model IEnumerable<HakaTech.Portal.Models.Domain.Announcement>
+@using HakaTech.Portal.Models.Domain
+@{
+    ViewData["Title"] = "Tiedotteet";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="bi bi-megaphone me-2"></i>Tiedotteet & huoltoikkunat</h2>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Uusi tiedote
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] is string sMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-1"></i>@sMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-1"></i>Ei tiedotteita. Luo ensimmäinen tiedote yllä.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Otsikko</th>
+                    <th>Tyyppi</th>
+                    <th>Voimassa</th>
+                    <th class="text-center">Julkaistu</th>
+                    <th>Luoja</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in Model)
+                {
+                    var now = DateTime.UtcNow;
+                    bool isActive = a.IsPublished &&
+                                    (a.ValidFrom  == null || a.ValidFrom  <= now) &&
+                                    (a.ValidUntil == null || a.ValidUntil >= now);
+                    <tr>
+                        <td class="fw-semibold">
+                            <span class="@(TypeIcon(a.Type)) me-1 @(TypeColor(a.Type))"></span>
+                            @a.Title
+                            @if (isActive)
+                            {
+                                <span class="badge bg-success ms-1 small">Näkyy</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @TypeBadge(a.Type)">@TypeLabel(a.Type)</span>
+                        </td>
+                        <td class="small text-muted">
+                            @if (a.ValidFrom.HasValue || a.ValidUntil.HasValue)
+                            {
+                                <span>
+                                    @(a.ValidFrom?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "—")
+                                    –
+                                    @(a.ValidUntil?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "∞")
+                                </span>
+                            }
+                            else
+                            {
+                                <span>Aina</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <form asp-action="TogglePublish" asp-route-id="@a.Id" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(a.IsPublished ? "btn-success" : "btn-outline-secondary")"
+                                        title="@(a.IsPublished ? "Piilota" : "Julkaise")">
+                                    <i class="bi @(a.IsPublished ? "bi-eye-fill" : "bi-eye-slash")"></i>
+                                </button>
+                            </form>
+                        </td>
+                        <td class="small text-muted">
+                            @(a.CreatedByUser?.FullName.Length > 0 ? a.CreatedByUser.FullName : a.CreatedByUser?.Email ?? "—")
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@a.Id"
+                               class="btn btn-sm btn-outline-secondary me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@a.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('Poistetaanko tiedote?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@functions {
+    static string TypeLabel(AnnouncementType t) => t switch
+    {
+        AnnouncementType.Maintenance => "Huoltokatko",
+        AnnouncementType.Warning     => "Varoitus",
+        _                            => "Tiedote"
+    };
+    static string TypeBadge(AnnouncementType t) => t switch
+    {
+        AnnouncementType.Maintenance => "bg-warning text-dark",
+        AnnouncementType.Warning     => "bg-danger",
+        _                            => "bg-info text-dark"
+    };
+    static string TypeIcon(AnnouncementType t) => t switch
+    {
+        AnnouncementType.Maintenance => "bi bi-tools",
+        AnnouncementType.Warning     => "bi bi-exclamation-triangle-fill",
+        _                            => "bi bi-info-circle-fill"
+    };
+    static string TypeColor(AnnouncementType t) => t switch
+    {
+        AnnouncementType.Maintenance => "text-warning",
+        AnnouncementType.Warning     => "text-danger",
+        _                            => "text-info"
+    };
+}

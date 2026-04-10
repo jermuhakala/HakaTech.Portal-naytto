@@ -1,0 +1,133 @@
+@model IEnumerable<HakaTech.Portal.Models.Domain.ServiceCatalogItem>
+@using HakaTech.Portal.Models.ViewModels
+@{
+    ViewData["Title"] = "Palvelukatalogi";
+    bool isAdmin = User.IsInRole("Admin");
+    var grouped = Model.GroupBy(s => s.Category ?? "Muut").OrderBy(g => g.Key);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="bi bi-grid me-2"></i>Palvelukatalogi</h2>
+    @if (isAdmin)
+    {
+        <div class="d-flex gap-2">
+            <a asp-action="Requests" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-envelope-open me-1"></i>Tarjouspyynnöt
+            </a>
+            <a asp-action="Manage" class="btn btn-primary btn-sm">
+                <i class="bi bi-gear me-1"></i>Hallinnoi palveluja
+            </a>
+        </div>
+    }
+</div>
+
+@if (TempData["SuccessMessage"] is string sMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-1"></i>@sMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] is string eMsg)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i>@eMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-1"></i>Palveluluettelossa ei ole vielä palveluja.
+    </div>
+}
+else
+{
+    @foreach (var group in grouped)
+    {
+        <h5 class="text-muted mb-3 mt-4 text-uppercase small fw-semibold">
+            <i class="bi bi-tag me-1"></i>@group.Key
+        </h5>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-2">
+            @foreach (var service in group)
+            {
+                <div class="col">
+                    <div class="card h-100 shadow-sm border-0">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title fw-semibold mb-1">@service.Name</h5>
+                            <p class="card-text text-muted small flex-grow-1">@service.Description</p>
+                            @if (service.Price.HasValue)
+                            {
+                                <p class="mb-2">
+                                    <span class="badge bg-light text-dark border">
+                                        Alkaen @service.Price.Value.ToString("N0") €
+                                    </span>
+                                </p>
+                            }
+                            @if (!isAdmin)
+                            {
+                                <button type="button"
+                                        class="btn btn-primary btn-sm mt-auto"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#quoteModal"
+                                        data-service-id="@service.Id"
+                                        data-service-name="@service.Name">
+                                    <i class="bi bi-send me-1"></i>Pyydä tarjous
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+}
+
+@* ── Tarjouspyyntö-modal (vain asiakkaille) ──────────────────── *@
+@if (!isAdmin)
+{
+    <div class="modal fade" id="quoteModal" tabindex="-1" aria-labelledby="quoteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quoteModalLabel">
+                        <i class="bi bi-send me-2"></i>Pyydä tarjous
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form asp-action="RequestQuote" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-body">
+                        <input type="hidden" name="ServiceCatalogItemId" id="modalServiceId" value="" />
+                        <p class="mb-3">
+                            Palvelu: <strong id="modalServiceName"></strong>
+                        </p>
+                        <div class="mb-3">
+                            <label for="quoteMessage" class="form-label">Viesti / lisätietoja <span class="text-muted">(valinnainen)</span></label>
+                            <textarea id="quoteMessage" name="Message" class="form-control" rows="4"
+                                      placeholder="Kerro lisää tarpeistasi, aikatauluista tai muista toiveista…"
+                                      maxlength="2000"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Peruuta</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i>Lähetä tarjouspyyntö
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.getElementById('quoteModal')?.addEventListener('show.bs.modal', function (event) {
+            const btn = event.relatedTarget;
+            document.getElementById('modalServiceId').value = btn.dataset.serviceId;
+            document.getElementById('modalServiceName').textContent = btn.dataset.serviceName;
+        });
+    </script>
+}

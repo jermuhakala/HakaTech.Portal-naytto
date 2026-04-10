@@ -101,6 +101,49 @@ public static class SeedData
             new InvoiceLine { InvoiceId = inv4.Id, Description = "Palvelintilamaksu", Quantity = 1, UnitPrice = 500.00m }
         );
         await dbContext.SaveChangesAsync();
+
+        // 8. Palvelukatalogi
+        var svc1 = new ServiceCatalogItem { Name = "Palvelinhuolto", Category = "Ylläpito", Description = "Palvelinympäristön huolto ja päivitykset. Sisältää käyttöjärjestelmäpäivitykset, varmuuskopioinnin tarkistuksen ja suorituskyvyn optimoinnin.", Price = 290.00m };
+        var svc2 = new ServiceCatalogItem { Name = "Tietoturva-auditointi", Category = "Tietoturva", Description = "Kattava tietoturva-auditointi organisaatiollesi. Selvitämme haavoittuvuudet ja annamme toimenpidesuositukset.", Price = 1200.00m };
+        var svc3 = new ServiceCatalogItem { Name = "Verkon suunnittelu ja toteutus", Category = "Verkko", Description = "Uuden verkkoinfrastruktuurin suunnittelu ja käyttöönotto. Langallinen ja langaton verkko, palomuurit ja VPN-ratkaisut." };
+        var svc4 = new ServiceCatalogItem { Name = "Microsoft 365 -käyttöönotto", Category = "Pilvipalvelut", Description = "M365-ympäristön suunnittelu, lisensointi ja käyttöönotto käyttäjäkoulutuksineen.", Price = 850.00m };
+        var svc5 = new ServiceCatalogItem { Name = "Varmuuskopiointiratkaisu", Category = "Ylläpito", Description = "Automaattinen varmuuskopiointiratkaisu kriittiselle datalle. Pilvi- tai paikallinen tallennus, testattava palautus." };
+        var svc6 = new ServiceCatalogItem { Name = "IT-strategia konsultointi", Category = "Konsultointi", Description = "Autetaan yritystä IT-strategian luomisessa ja digitalisaatiossa. Toteutamme teknologiakartoituksen ja tiekartan.", Price = 200.00m };
+
+        dbContext.ServiceCatalogItems.AddRange(svc1, svc2, svc3, svc4, svc5, svc6);
+        await dbContext.SaveChangesAsync();
+
+        // Demo-tarjouspyynnöt
+        dbContext.QuoteRequests.AddRange(
+            new QuoteRequest { ServiceCatalogItemId = svc1.Id, CustomerId = digimolli.Id, CreatedByUserId = matti.Id, Message = "Tarvitsemme vuosittaisen palvelinhuollon sopimuksemme piiriin.", Status = QuoteRequestStatus.Pending, CreatedAt = DateTime.UtcNow.AddDays(-2) },
+            new QuoteRequest { ServiceCatalogItemId = svc2.Id, CustomerId = techsol.Id, CreatedByUserId = miia.Id, Message = "Haluaisimme auditoinnin ennen vuoden loppua, onko mahdollista?", Status = QuoteRequestStatus.InProgress, AdminNotes = "Sovitaan ajankohta viikolla 20.", CreatedAt = DateTime.UtcNow.AddDays(-7) }
+        );
+        await dbContext.SaveChangesAsync();
+
+        // 9. Tiedotteet
+        dbContext.Announcements.AddRange(
+            new Announcement
+            {
+                Title           = "Huoltokatko pe 23.5. klo 22:00–01:00",
+                Content         = "Suoritamme palvelinpäivityksiä. Portaali ja sähköpostipalvelut voivat olla tilapäisesti poissa käytöstä.",
+                Type            = AnnouncementType.Maintenance,
+                ValidFrom       = new DateTime(2026, 5, 23, 19, 0, 0, DateTimeKind.Utc),
+                ValidUntil      = new DateTime(2026, 5, 24,  1, 0, 0, DateTimeKind.Utc),
+                IsPublished     = true,
+                CreatedByUserId = admin1.Id,
+                CreatedAt       = DateTime.UtcNow.AddDays(-1)
+            },
+            new Announcement
+            {
+                Title           = "Uusi palvelukatalogi käytössä",
+                Content         = "Voit nyt pyytää tarjouksia palveluistamme suoraan portaalista.",
+                Type            = AnnouncementType.Info,
+                IsPublished     = true,
+                CreatedByUserId = admin1.Id,
+                CreatedAt       = DateTime.UtcNow
+            }
+        );
+        await dbContext.SaveChangesAsync();
     }
 
     private static async Task<ApplicationUser> CreateUserAsync(UserManager<ApplicationUser> userManager, string email, string fullName, int? customerId, string role, string password)

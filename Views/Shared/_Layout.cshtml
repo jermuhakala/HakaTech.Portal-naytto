@@ -38,6 +38,10 @@
                    asp-controller="Invoice" asp-action="Index">
                     <i class="bi bi-receipt"></i><span>Laskut</span>
                 </a>
+                <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ServiceCatalog" ? "active" : "")"
+                   asp-controller="ServiceCatalog" asp-action="Index">
+                    <i class="bi bi-grid"></i><span>Palvelut</span>
+                </a>
 
                 @if (User.IsInRole("Admin"))
                 {
@@ -53,6 +57,10 @@
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Report" ? "active" : "")"
                        asp-controller="Report" asp-action="Index">
                         <i class="bi bi-bar-chart-line"></i><span>Raportit</span>
+                    </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Announcement" ? "active" : "")"
+                       asp-controller="Announcement" asp-action="Index">
+                        <i class="bi bi-megaphone"></i><span>Tiedotteet</span>
                     </a>
                 }
             }

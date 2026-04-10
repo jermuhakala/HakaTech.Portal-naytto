@@ -1,10 +1,12 @@
 using HakaTech.Portal.Data;
 using HakaTech.Portal.Models.Domain;
 using HakaTech.Portal.Models.ViewModels;
+using HakaTech.Portal.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
@@ -15,22 +17,27 @@ public class TicketController : Controller
     private readonly ApplicationDbContext          _db;
     private readonly UserManager<ApplicationUser>  _userManager;
     private readonly ILogger<TicketController>     _logger;
-    private readonly HakaTech.Portal.Services.IEmailService _emailService;
+    private readonly IEmailService                 _emailService;
+    private readonly IFileStorageService           _fileStorage;
+    private readonly IWebHostEnvironment           _env;
 
     public TicketController(
         ApplicationDbContext         db,
         UserManager<ApplicationUser> userManager,
         ILogger<TicketController>    logger,
-        HakaTech.Portal.Services.IEmailService emailService)
+        IEmailService                emailService,
+        IFileStorageService          fileStorage,
+        IWebHostEnvironment          env)
     {
-        _db          = db;
-        _userManager = userManager;
-        _logger      = logger;
+        _db           = db;
+        _userManager  = userManager;
+        _logger       = logger;
         _emailService = emailService;
+        _fileStorage  = fileStorage;
+        _env          = env;
     }
 
     // ── GET /Ticket ──────────────────────────────────────────────────
-    // Admin näkee kaikki; asiakas vain omansa
     public async Task<IActionResult> Index(
         int?          customerId,
         TicketStatus? status,
@@ -46,7 +53,6 @@ public class TicketController : Controller
             .Include(t => t.AssignedToUser)
             .AsQueryable();
 
-        // Asiakaskäyttäjä näkee vain oman asiakkaansa tiketit
         if (!isAdmin)
         {
             if (currentUser?.CustomerId is null)
@@ -77,7 +83,6 @@ public class TicketController : Controller
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
 
-        // Suodatusvalinnat näkymää varten
         ViewBag.StatusFilter   = status;
         ViewBag.PriorityFilter = priority;
         ViewBag.Search         = search;
@@ -99,12 +104,13 @@ public class TicketController : Controller
             .Include(t => t.AssignedToUser)
             .Include(t => t.Comments.OrderBy(c => c.CreatedAt))
                 .ThenInclude(c => c.Author)
+            .Include(t => t.Attachments.OrderBy(a => a.UploadedAt))
+                .ThenInclude(a => a.UploadedByUser)
             .FirstOrDefaultAsync(t => t.Id == id);
 
         if (ticket is null)
             return NotFound();
 
-        // Asiakaskäyttäjä saa nähdä vain oman asiakkaansa tiketit
         if (!isAdmin && ticket.CustomerId != currentUser?.CustomerId)
             return Forbid();
 
@@ -124,8 +130,8 @@ public class TicketController : Controller
 
         var model = new TicketCreateViewModel
         {
-            Category       = TicketCategory.Other,
-            Priority       = TicketPriority.Normal,
+            Category        = TicketCategory.Other,
+            Priority        = TicketPriority.Normal,
             CustomerOptions = []
         };
 
@@ -136,7 +142,6 @@ public class TicketController : Controller
         }
         else
         {
-            // Asiakas luo oman yrityksensä tiketin – ei valintaa
             model.CustomerId = currentUser?.CustomerId;
         }
 
@@ -151,7 +156,6 @@ public class TicketController : Controller
         var currentUser = await _userManager.GetUserAsync(User);
         bool isAdmin    = User.IsInRole("Admin");
 
-        // Asiakaskäyttäjä: aseta customerId automaattisesti
         if (!isAdmin)
             model.CustomerId = currentUser?.CustomerId;
 
@@ -196,10 +200,10 @@ public class TicketController : Controller
 
         var oldStatus = ticket.Status;
 
-        ticket.Status          = model.Status;
-        ticket.Priority        = model.Priority;
-        ticket.AssignedToUserId= model.AssignedToUserId;
-        ticket.UpdatedAt       = DateTime.UtcNow;
+        ticket.Status           = model.Status;
+        ticket.Priority         = model.Priority;
+        ticket.AssignedToUserId = model.AssignedToUserId;
+        ticket.UpdatedAt        = DateTime.UtcNow;
 
         if (model.Status == TicketStatus.Resolved && ticket.ResolvedAt is null)
             ticket.ResolvedAt = DateTime.UtcNow;
@@ -209,9 +213,7 @@ public class TicketController : Controller
         await _db.SaveChangesAsync();
 
         if (oldStatus != model.Status && (model.Status == TicketStatus.InProgress || model.Status == TicketStatus.Closed))
-        {
             await SendTicketStatusEmailAsync(ticket, model.Status == TicketStatus.InProgress ? "Otettu työn alle" : "Suljettu");
-        }
 
         _logger.LogInformation("Tiketin #{Id} tila muutettu → {Status}.", ticket.Id, ticket.Status);
         TempData["SuccessMessage"] = "Tiketin tila päivitetty.";
@@ -229,7 +231,6 @@ public class TicketController : Controller
         var ticket = await _db.Tickets.FindAsync(model.TicketId);
         if (ticket is null) return NotFound();
 
-        // Asiakaskäyttäjä ei voi lisätä sisäistä kommenttia
         if (!isAdmin) model.IsInternal = false;
 
         if (!ModelState.IsValid)
@@ -237,16 +238,15 @@ public class TicketController : Controller
 
         var comment = new TicketComment
         {
-            TicketId  = model.TicketId,
-            Content   = model.Content,
-            IsInternal= model.IsInternal,
-            AuthorId  = currentUser!.Id,
-            CreatedAt = DateTime.UtcNow
+            TicketId   = model.TicketId,
+            Content    = model.Content,
+            IsInternal = model.IsInternal,
+            AuthorId   = currentUser!.Id,
+            CreatedAt  = DateTime.UtcNow
         };
 
         ticket.UpdatedAt = DateTime.UtcNow;
 
-        // Jos asiakas vastaa ja tiketti odottaa asiakasta → takaisin käsittelyyn
         if (!isAdmin && ticket.Status == TicketStatus.WaitingCustomer)
             ticket.Status = TicketStatus.InProgress;
 
@@ -267,11 +267,10 @@ public class TicketController : Controller
         var ticket = await _db.Tickets.Include(t => t.CreatedByUser).FirstOrDefaultAsync(t => t.Id == id);
         if (ticket is null) return NotFound();
 
-        // Vain admin tai tiketin luonut käyttäjä voi sulkea
         if (!isAdmin && ticket.CreatedByUserId != currentUser?.Id)
             return Forbid();
 
-        var oldStatus = ticket.Status;
+        var oldStatus    = ticket.Status;
         ticket.Status    = TicketStatus.Closed;
         ticket.UpdatedAt = DateTime.UtcNow;
         ticket.ResolvedAt ??= DateTime.UtcNow;
@@ -279,12 +278,97 @@ public class TicketController : Controller
         await _db.SaveChangesAsync();
 
         if (oldStatus != TicketStatus.Closed && isAdmin)
-        {
             await SendTicketStatusEmailAsync(ticket, "Suljettu");
-        }
 
         TempData["SuccessMessage"] = $"Tiketti #{id} suljettu.";
         return RedirectToAction(nameof(Details), new { id });
+    }
+
+    // ── POST /Ticket/UploadAttachment ────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadAttachment(int ticketId, IFormFile file)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        bool isAdmin    = User.IsInRole("Admin");
+
+        var ticket = await _db.Tickets.FindAsync(ticketId);
+        if (ticket is null) return NotFound();
+
+        if (!isAdmin && ticket.CustomerId != currentUser?.CustomerId)
+            return Forbid();
+
+        if (file is null || file.Length == 0)
+        {
+            TempData["ErrorMessage"] = "Tiedosto on tyhjä tai puuttuu.";
+            return RedirectToAction(nameof(Details), new { id = ticketId });
+        }
+
+        if (file.Length > 20 * 1024 * 1024)
+        {
+            TempData["ErrorMessage"] = "Tiedosto on liian suuri (max 20 MB).";
+            return RedirectToAction(nameof(Details), new { id = ticketId });
+        }
+
+        var filePath = await _fileStorage.SaveFileAsync(file, "tickets");
+
+        _db.TicketAttachments.Add(new TicketAttachment
+        {
+            TicketId         = ticketId,
+            FileName         = Path.GetFileName(file.FileName),
+            FilePath         = filePath,
+            UploadedAt       = DateTime.UtcNow,
+            UploadedByUserId = currentUser!.Id
+        });
+        await _db.SaveChangesAsync();
+
+        TempData["SuccessMessage"] = $"Tiedosto '{Path.GetFileName(file.FileName)}' lisätty.";
+        return RedirectToAction(nameof(Details), new { id = ticketId });
+    }
+
+    // ── GET /Ticket/DownloadAttachment/5 ─────────────────────────────
+    [HttpGet]
+    public async Task<IActionResult> DownloadAttachment(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        bool isAdmin    = User.IsInRole("Admin");
+
+        var attachment = await _db.TicketAttachments
+            .Include(a => a.Ticket)
+            .FirstOrDefaultAsync(a => a.Id == id);
+
+        if (attachment is null) return NotFound();
+
+        if (!isAdmin && attachment.Ticket?.CustomerId != currentUser?.CustomerId)
+            return Forbid();
+
+        var fullPath = Path.Combine(_env.WebRootPath, attachment.FilePath.TrimStart('/'));
+        if (!System.IO.File.Exists(fullPath))
+            return NotFound();
+
+        var provider = new FileExtensionContentTypeProvider();
+        if (!provider.TryGetContentType(attachment.FileName, out var contentType))
+            contentType = "application/octet-stream";
+
+        return PhysicalFile(fullPath, contentType, attachment.FileName);
+    }
+
+    // ── POST /Ticket/DeleteAttachment/5 (Admin) ──────────────────────
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteAttachment(int id)
+    {
+        var attachment = await _db.TicketAttachments.FindAsync(id);
+        if (attachment is null) return NotFound();
+
+        int ticketId = attachment.TicketId;
+        _fileStorage.DeleteFile(attachment.FilePath);
+        _db.TicketAttachments.Remove(attachment);
+        await _db.SaveChangesAsync();
+
+        TempData["SuccessMessage"] = "Liite poistettu.";
+        return RedirectToAction(nameof(Details), new { id = ticketId });
     }
 
     // ── Apumetodit ───────────────────────────────────────────────────
@@ -294,11 +378,11 @@ public class TicketController : Controller
         if (ticket.CreatedByUser == null || string.IsNullOrWhiteSpace(ticket.CreatedByUser.Email))
             return;
 
-        string name = !string.IsNullOrWhiteSpace(ticket.CreatedByUser.FullName) 
-            ? ticket.CreatedByUser.FullName 
+        string name = !string.IsNullOrWhiteSpace(ticket.CreatedByUser.FullName)
+            ? ticket.CreatedByUser.FullName
             : ticket.CreatedByUser.Email;
-            
-        string subject = $"Tiketti #{ticket.Id} on {statusText.ToLower()}";
+
+        string subject     = $"Tiketti #{ticket.Id} on {statusText.ToLower()}";
         string htmlMessage = $@"
             <div style=""font-family: Arial, sans-serif; color: #333;"">
                 <h3 style=""color: #2b5797;"">Hei {name}!</h3>

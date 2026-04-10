@@ -26,8 +26,9 @@ public class Invoice
     public int CustomerId { get; set; }
     public Customer? Customer { get; set; }
 
-    // Laskurivit
+    // Laskurivit ja liitteet
     public ICollection<InvoiceLine> Lines { get; set; } = new List<InvoiceLine>();
+    public ICollection<InvoiceAttachment> Attachments { get; set; } = new List<InvoiceAttachment>();
 
     // Lasketut kentät (ei tallennu kantaan)
     public decimal SubTotal    => Lines.Sum(l => l.Quantity * l.UnitPrice);

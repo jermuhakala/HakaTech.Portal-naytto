@@ -21,9 +21,9 @@ public class SmtpEmailService : IEmailService
             var host = _config["SmtpSettings:Host"] ?? "127.0.0.1";
             var port = _config.GetValue<int?>("SmtpSettings:Port") ?? 25;
             var fromEmail = _config["SmtpSettings:FromEmail"] ?? "noreply@hakatech.fi";
-            
+
             using var client = new SmtpClient(host, port);
-            
+
             var mailMessage = new MailMessage
             {
                 From = new MailAddress(fromEmail, "HakaTech Asiakastuki"),
@@ -31,7 +31,7 @@ public class SmtpEmailService : IEmailService
                 Body = htmlMessage,
                 IsBodyHtml = true
             };
-            
+
             mailMessage.To.Add(toEmail);
 
             await client.SendMailAsync(mailMessage);

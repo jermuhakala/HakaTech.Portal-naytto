@@ -1,10 +1,12 @@
 using HakaTech.Portal.Data;
 using HakaTech.Portal.Models.Domain;
 using HakaTech.Portal.Models.ViewModels;
+using HakaTech.Portal.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
@@ -15,15 +17,21 @@ public class InvoiceController : Controller
     private readonly ApplicationDbContext         _db;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<InvoiceController>   _logger;
+    private readonly IFileStorageService           _fileStorage;
+    private readonly IWebHostEnvironment           _env;
 
     public InvoiceController(
         ApplicationDbContext         db,
         UserManager<ApplicationUser> userManager,
-        ILogger<InvoiceController>   logger)
+        ILogger<InvoiceController>   logger,
+        IFileStorageService          fileStorage,
+        IWebHostEnvironment          env)
     {
         _db          = db;
         _userManager = userManager;
         _logger      = logger;
+        _fileStorage = fileStorage;
+        _env         = env;
     }
 
     // ── GET /Invoice ─────────────────────────────────────────────────
@@ -72,6 +80,8 @@ public class InvoiceController : Controller
         var invoice = await _db.Invoices
             .Include(i => i.Customer)
             .Include(i => i.Lines)
+            .Include(i => i.Attachments.OrderBy(a => a.UploadedAt))
+                .ThenInclude(a => a.UploadedByUser)
             .FirstOrDefaultAsync(i => i.Id == id);
 
         if (invoice is null)
@@ -210,6 +220,90 @@ public class InvoiceController : Controller
         _logger.LogInformation("Laskun {Num} tila → {Status}.", invoice.InvoiceNumber, invoice.Status);
         TempData["SuccessMessage"] = "Laskun tila päivitetty.";
         return RedirectToAction(nameof(Details), new { id = model.Id });
+    }
+
+    // ── POST /Invoice/UploadAttachment (Admin) ───────────────────────
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadAttachment(int invoiceId, IFormFile file)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+
+        var invoice = await _db.Invoices.FindAsync(invoiceId);
+        if (invoice is null) return NotFound();
+
+        if (file is null || file.Length == 0)
+        {
+            TempData["ErrorMessage"] = "Tiedosto on tyhjä tai puuttuu.";
+            return RedirectToAction(nameof(Details), new { id = invoiceId });
+        }
+
+        if (file.Length > 20 * 1024 * 1024)
+        {
+            TempData["ErrorMessage"] = "Tiedosto on liian suuri (max 20 MB).";
+            return RedirectToAction(nameof(Details), new { id = invoiceId });
+        }
+
+        var filePath = await _fileStorage.SaveFileAsync(file, "invoices");
+
+        _db.InvoiceAttachments.Add(new InvoiceAttachment
+        {
+            InvoiceId        = invoiceId,
+            FileName         = Path.GetFileName(file.FileName),
+            FilePath         = filePath,
+            UploadedAt       = DateTime.UtcNow,
+            UploadedByUserId = currentUser!.Id
+        });
+        await _db.SaveChangesAsync();
+
+        TempData["SuccessMessage"] = $"Tiedosto '{Path.GetFileName(file.FileName)}' lisätty.";
+        return RedirectToAction(nameof(Details), new { id = invoiceId });
+    }
+
+    // ── GET /Invoice/DownloadAttachment/5 ────────────────────────────
+    [HttpGet]
+    public async Task<IActionResult> DownloadAttachment(int id)
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+        bool isAdmin    = User.IsInRole("Admin");
+
+        var attachment = await _db.InvoiceAttachments
+            .Include(a => a.Invoice)
+            .FirstOrDefaultAsync(a => a.Id == id);
+
+        if (attachment is null) return NotFound();
+
+        if (!isAdmin && attachment.Invoice?.CustomerId != currentUser?.CustomerId)
+            return Forbid();
+
+        var fullPath = Path.Combine(_env.WebRootPath, attachment.FilePath.TrimStart('/'));
+        if (!System.IO.File.Exists(fullPath))
+            return NotFound();
+
+        var provider = new FileExtensionContentTypeProvider();
+        if (!provider.TryGetContentType(attachment.FileName, out var contentType))
+            contentType = "application/octet-stream";
+
+        return PhysicalFile(fullPath, contentType, attachment.FileName);
+    }
+
+    // ── POST /Invoice/DeleteAttachment/5 (Admin) ─────────────────────
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteAttachment(int id)
+    {
+        var attachment = await _db.InvoiceAttachments.FindAsync(id);
+        if (attachment is null) return NotFound();
+
+        int invoiceId = attachment.InvoiceId;
+        _fileStorage.DeleteFile(attachment.FilePath);
+        _db.InvoiceAttachments.Remove(attachment);
+        await _db.SaveChangesAsync();
+
+        TempData["SuccessMessage"] = "Liite poistettu.";
+        return RedirectToAction(nameof(Details), new { id = invoiceId });
     }
 
     // ── Apumetodit ───────────────────────────────────────────────────

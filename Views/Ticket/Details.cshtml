@@ -22,6 +22,10 @@
         TicketPriority.Normal   => "bg-primary",
         _                       => "bg-secondary"
     };
+
+    var visibleComments = isAdmin
+        ? Model.Comments.OrderBy(c => c.CreatedAt).ToList()
+        : Model.Comments.Where(c => !c.IsInternal).OrderBy(c => c.CreatedAt).ToList();
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
@@ -46,6 +50,13 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
+@if (TempData["ErrorMessage"] is string eMsg)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-circle me-1"></i>@eMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
 
 <!-- Otsikkorivi -->
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
@@ -63,6 +74,7 @@
         {
             <form asp-action="Close" asp-route-id="@Model.Id" method="post"
                   onsubmit="return confirm('Suljetaanko tiketti #@Model.Id?');">
+                @Html.AntiForgeryToken()
                 <button type="submit" id="btn-ticket-close" class="btn btn-outline-secondary">
                     <i class="bi bi-x-circle me-1"></i>Sulje tiketti
                 </button>
@@ -72,7 +84,7 @@
 </div>
 
 <div class="row g-3">
-    <!-- Vasen palkki: tiketin tiedot + kommentit -->
+    <!-- Vasen palkki: kuvaus + chat + liitteet -->
     <div class="col-md-8">
 
         <!-- Kuvaus -->
@@ -83,29 +95,30 @@
             </div>
         </div>
 
-        <!-- Kommentit -->
+        <!-- Viestit (real-time chat) -->
         <div class="card mb-3">
-            <div class="card-header">
-                <i class="bi bi-chat-left-text me-2"></i>
-                Kommentit (@Model.Comments.Count(c => !c.IsInternal || isAdmin))
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="bi bi-chat-dots me-2"></i>Viestit
+                    <span class="badge bg-secondary ms-1">@visibleComments.Count</span>
+                </span>
+                <span id="chat-badge" class="badge bg-secondary" title="SignalR-yhteyden tila">Yhdistetään…</span>
             </div>
-            <div class="card-body p-0">
-                @{
-                    var visibleComments = isAdmin
-                        ? Model.Comments.OrderBy(c => c.CreatedAt).ToList()
-                        : Model.Comments.Where(c => !c.IsInternal).OrderBy(c => c.CreatedAt).ToList();
-                }
+
+            <div id="chat-messages"
+                 class="card-body p-0"
+                 style="max-height:500px; overflow-y:auto;">
                 @if (!visibleComments.Any())
                 {
-                    <p class="text-muted p-3 mb-0">Ei vielä kommentteja.</p>
+                    <p class="text-muted p-3 mb-0" id="chat-empty">Ei vielä viestejä.</p>
                 }
                 @foreach (var c in visibleComments)
                 {
                     <div class="p-3 border-bottom @(c.IsInternal ? "bg-warning bg-opacity-10" : "")">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-semibold">
+                            <span class="fw-semibold small">
                                 <i class="bi bi-person-circle me-1"></i>
-                                @(c.Author?.FullName.Length > 0 ? c.Author.FullName : c.Author?.Email ?? "—")
+                                @(c.Author?.FullName?.Length > 0 ? c.Author.FullName : c.Author?.Email ?? "—")
                             </span>
                             <span class="text-muted small">
                                 @c.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
@@ -119,38 +132,95 @@
                     </div>
                 }
             </div>
+
+            @if (Model.Status != TicketStatus.Closed && commentModel is not null)
+            {
+                <div class="card-footer p-2">
+                    <div class="d-flex gap-2 align-items-end">
+                        <div class="flex-grow-1">
+                            <textarea id="chat-input" rows="2"
+                                      class="form-control form-control-sm"
+                                      placeholder="Kirjoita viesti… (Enter lähettää, Shift+Enter rivinvaihto)"
+                                      maxlength="4000" disabled></textarea>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            @if (isAdmin)
+                            {
+                                <div class="form-check mb-1">
+                                    <input type="checkbox" id="chat-internal" class="form-check-input" />
+                                    <label class="form-check-label small" for="chat-internal">Sisäinen</label>
+                                </div>
+                            }
+                            <button id="btn-chat-send" class="btn btn-primary btn-sm" disabled>
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
         </div>
 
-        <!-- Uusi kommentti -->
-        @if (Model.Status != TicketStatus.Closed && commentModel is not null)
-        {
-            <div class="card">
-                <div class="card-header"><i class="bi bi-reply me-2"></i>Lisää kommentti</div>
-                <div class="card-body">
-                    <form asp-action="AddComment" method="post">
-                        <input type="hidden" asp-for="@commentModel.TicketId" name="TicketId" />
-                        <div class="mb-2">
-                            <textarea name="Content" id="comment-content" rows="4"
-                                      class="form-control"
-                                      placeholder="Kirjoita kommenttisi…" required></textarea>
-                        </div>
-                        @if (isAdmin)
-                        {
-                            <div class="form-check mb-2">
-                                <input type="checkbox" name="IsInternal" value="true"
-                                       class="form-check-input" id="comment-internal" />
-                                <label class="form-check-label" for="comment-internal">
-                                    Sisäinen muistiinpano (vain admin näkee)
-                                </label>
+        <!-- Liitteet -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-paperclip me-2"></i>Liitteet
+                <span class="badge bg-secondary ms-1">@Model.Attachments.Count</span>
+            </div>
+
+            @if (Model.Attachments.Any())
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var a in Model.Attachments)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <div class="text-truncate" style="max-width:70%">
+                                <i class="bi bi-file-earmark me-2 text-muted"></i>
+                                <a asp-action="DownloadAttachment" asp-route-id="@a.Id"
+                                   class="text-decoration-none">@a.FileName</a>
+                                <small class="text-muted ms-2 d-none d-sm-inline">
+                                    @a.UploadedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                    &ndash; @(a.UploadedByUser?.FullName?.Length > 0 ? a.UploadedByUser.FullName : a.UploadedByUser?.Email ?? "—")
+                                </small>
                             </div>
-                        }
-                        <button type="submit" id="btn-comment-submit" class="btn btn-primary">
-                            <i class="bi bi-send me-1"></i>Lähetä
-                        </button>
+                            @if (isAdmin)
+                            {
+                                <form asp-action="DeleteAttachment" asp-route-id="@a.Id" method="post"
+                                      onsubmit="return confirm('Poistetaanko liite?');"
+                                      class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-danger btn-sm py-0">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="card-body py-2">
+                    <p class="text-muted mb-0 small">Ei liitteitä.</p>
+                </div>
+            }
+
+            @if (Model.Status != TicketStatus.Closed)
+            {
+                <div class="card-footer p-2">
+                    <form asp-action="UploadAttachment" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="ticketId" value="@Model.Id" />
+                        <div class="input-group input-group-sm">
+                            <input type="file" name="file" class="form-control form-control-sm" required />
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-upload me-1"></i>Lataa
+                            </button>
+                        </div>
+                        <small class="text-muted">Max 20 MB</small>
                     </form>
                 </div>
-            </div>
-        }
+            }
+        </div>
 
     </div>
 
@@ -204,13 +274,9 @@
                                 @foreach (var s in Enum.GetValues<TicketStatus>())
                                 {
                                     if (editModel.Status == s)
-                                    {
-                                        <option value="@s" selected>@s</option>
-                                    }
+                                    { <option value="@s" selected>@s</option> }
                                     else
-                                    {
-                                        <option value="@s">@s</option>
-                                    }
+                                    { <option value="@s">@s</option> }
                                 }
                             </select>
                         </div>
@@ -221,13 +287,9 @@
                                 @foreach (var p in Enum.GetValues<TicketPriority>())
                                 {
                                     if (editModel.Priority == p)
-                                    {
-                                        <option value="@p" selected>@p</option>
-                                    }
+                                    { <option value="@p" selected>@p</option> }
                                     else
-                                    {
-                                        <option value="@p">@p</option>
-                                    }
+                                    { <option value="@p">@p</option> }
                                 }
                             </select>
                         </div>
@@ -239,13 +301,9 @@
                                 @foreach (var opt in editModel.StaffOptions)
                                 {
                                     if (editModel.AssignedToUserId == opt.Value)
-                                    {
-                                        <option value="@opt.Value" selected>@opt.Text</option>
-                                    }
+                                    { <option value="@opt.Value" selected>@opt.Text</option> }
                                     else
-                                    {
-                                        <option value="@opt.Value">@opt.Text</option>
-                                    }
+                                    { <option value="@opt.Value">@opt.Text</option> }
                                 }
                             </select>
                         </div>
@@ -262,3 +320,128 @@
 
     </div>
 </div>
+
+@section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+(function () {
+    const ticketId      = @Model.Id;
+    const currentUserId = '@Html.Raw(currentUser?.Id ?? "")';
+    const isAdmin       = @(isAdmin ? "true" : "false");
+
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput    = document.getElementById('chat-input');
+    const btnSend      = document.getElementById('btn-chat-send');
+    const badge        = document.getElementById('chat-badge');
+
+    // Scroll to bottom on page load
+    if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // No chat input on closed ticket
+    if (!btnSend) return;
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl('/hubs/ticket')
+        .withAutomaticReconnect()
+        .build();
+
+    connection.on('ReceiveMessage', function (msg) {
+        if (msg.isInternal && !isAdmin) return;
+        document.getElementById('chat-empty')?.remove();
+        appendMessage(msg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    connection.onreconnecting(() => {
+        badge.className   = 'badge bg-warning text-dark';
+        badge.textContent = 'Yhdistetään uudelleen…';
+        chatInput.disabled = true;
+        btnSend.disabled   = true;
+    });
+
+    connection.onreconnected(() => {
+        badge.className    = 'badge bg-success';
+        badge.textContent  = 'Yhdistetty';
+        chatInput.disabled = false;
+        btnSend.disabled   = false;
+    });
+
+    connection.onclose(() => {
+        badge.className   = 'badge bg-danger';
+        badge.textContent = 'Yhteys katkaistu';
+        chatInput.disabled = true;
+        btnSend.disabled   = true;
+    });
+
+    async function startConnection() {
+        try {
+            await connection.start();
+            await connection.invoke('JoinTicketGroup', ticketId.toString());
+            badge.className    = 'badge bg-success';
+            badge.textContent  = 'Yhdistetty';
+            chatInput.disabled = false;
+            btnSend.disabled   = false;
+        } catch (e) {
+            badge.className   = 'badge bg-danger';
+            badge.textContent = 'Ei yhteyttä';
+            setTimeout(startConnection, 5000);
+        }
+    }
+
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g,  '&amp;')
+            .replace(/</g,  '&lt;')
+            .replace(/>/g,  '&gt;')
+            .replace(/"/g,  '&quot;');
+    }
+
+    function appendMessage(msg) {
+        const div = document.createElement('div');
+        div.className = 'p-3 border-bottom' + (msg.isInternal ? ' bg-warning bg-opacity-10' : '');
+        const internalBadge = msg.isInternal
+            ? '<span class="badge bg-warning text-dark ms-2">Sisäinen</span>' : '';
+        div.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-semibold small">
+                    <i class="bi bi-person-circle me-1"></i>${escHtml(msg.authorName)}
+                </span>
+                <span class="text-muted small">${escHtml(msg.timestamp)}${internalBadge}</span>
+            </div>
+            <p class="mb-0" style="white-space:pre-wrap;">${escHtml(msg.content)}</p>`;
+        chatMessages.appendChild(div);
+    }
+
+    async function sendMessage() {
+        const content    = chatInput.value.trim();
+        const isInternal = document.getElementById('chat-internal')?.checked ?? false;
+        if (!content) return;
+
+        btnSend.disabled = true;
+        try {
+            await connection.invoke('SendMessage', ticketId, content, isInternal);
+            chatInput.value = '';
+            const internalChk = document.getElementById('chat-internal');
+            if (internalChk) internalChk.checked = false;
+        } catch (e) {
+            console.error('Lähetys epäonnistui:', e);
+            alert('Viestin lähetys epäonnistui. Yritä uudelleen.');
+        } finally {
+            btnSend.disabled = false;
+            chatInput.focus();
+        }
+    }
+
+    btnSend.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    startConnection();
+})();
+</script>
+}

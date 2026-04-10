@@ -134,6 +134,68 @@
 
             </div>
         </div>
+
+        <!-- Liitteet -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="bi bi-paperclip me-2"></i>Liitteet
+                <span class="badge bg-secondary ms-1">@Model.Attachments.Count</span>
+            </div>
+
+            @if (Model.Attachments.Any())
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var a in Model.Attachments)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <div class="text-truncate" style="max-width:70%">
+                                <i class="bi bi-file-earmark-pdf me-2 text-muted"></i>
+                                <a asp-action="DownloadAttachment" asp-route-id="@a.Id"
+                                   class="text-decoration-none">@a.FileName</a>
+                                <small class="text-muted ms-2 d-none d-sm-inline">
+                                    @a.UploadedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                </small>
+                            </div>
+                            @if (isAdmin)
+                            {
+                                <form asp-action="DeleteAttachment" asp-route-id="@a.Id" method="post"
+                                      onsubmit="return confirm('Poistetaanko liite?');"
+                                      class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-danger btn-sm py-0">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="card-body py-2">
+                    <p class="text-muted mb-0 small">Ei liitteitä.</p>
+                </div>
+            }
+
+            @if (isAdmin)
+            {
+                <div class="card-footer p-2">
+                    <form asp-action="UploadAttachment" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="invoiceId" value="@Model.Id" />
+                        <div class="input-group input-group-sm">
+                            <input type="file" name="file" class="form-control form-control-sm" required />
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-upload me-1"></i>Lataa
+                            </button>
+                        </div>
+                        <small class="text-muted">Max 20 MB (PDF, sopimukset…)</small>
+                    </form>
+                </div>
+            }
+        </div>
+
     </div>
 
     <!-- Admin-paneeli -->

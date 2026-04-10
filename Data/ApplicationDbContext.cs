@@ -15,6 +15,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Invoice>        Invoices       { get; set; }
     public DbSet<InvoiceLine>    InvoiceLines   { get; set; }
     public DbSet<Contract>       Contracts      { get; set; }
+    public DbSet<TicketAttachment>   TicketAttachments   { get; set; }
+    public DbSet<InvoiceAttachment>  InvoiceAttachments  { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -117,6 +119,34 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
              .WithMany(cu => cu.Contracts)
              .HasForeignKey(c => c.CustomerId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── TicketAttachment ───────────────────────────────────
+        builder.Entity<TicketAttachment>(e =>
+        {
+            e.HasOne(a => a.Ticket)
+             .WithMany(t => t.Attachments)
+             .HasForeignKey(a => a.TicketId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(a => a.UploadedByUser)
+             .WithMany()
+             .HasForeignKey(a => a.UploadedByUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── InvoiceAttachment ──────────────────────────────────
+        builder.Entity<InvoiceAttachment>(e =>
+        {
+            e.HasOne(a => a.Invoice)
+             .WithMany(i => i.Attachments)
+             .HasForeignKey(a => a.InvoiceId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(a => a.UploadedByUser)
+             .WithMany()
+             .HasForeignKey(a => a.UploadedByUserId)
+             .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

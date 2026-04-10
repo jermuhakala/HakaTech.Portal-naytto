@@ -1,5 +1,7 @@
 using HakaTech.Portal.Data;
+using HakaTech.Portal.Hubs;
 using HakaTech.Portal.Models.Domain;
+using HakaTech.Portal.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
@@ -42,7 +44,9 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration  = true;
 });
 
-builder.Services.AddTransient<HakaTech.Portal.Services.IEmailService, HakaTech.Portal.Services.SmtpEmailService>();
+builder.Services.AddTransient<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+builder.Services.AddSignalR();
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
@@ -56,6 +60,8 @@ app.UseRouting();
 
 app.UseAuthentication(); // ENSIN Authentication
 app.UseAuthorization();  // SITTEN Authorization
+
+app.MapHub<TicketHub>("/hubs/ticket");
 
 app.MapControllerRoute(
     name: "default",

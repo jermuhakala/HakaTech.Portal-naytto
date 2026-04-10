@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
 namespace HakaTech.Portal.Models.ViewModels;
@@ -26,4 +27,13 @@ public class RegisterViewModel
     [Compare("Password", ErrorMessage = "Salasanat eivät täsmää.")]
     [Display(Name = "Vahvista salasana")]
     public string ConfirmPassword { get; set; } = string.Empty;
+
+    [Display(Name = "Rooli")]
+    public string Role { get; set; } = "Customer";
+
+    [Display(Name = "Asiakasyritys")]
+    public int? CustomerId { get; set; }
+
+    // Dropdown-valinnat
+    public IEnumerable<SelectListItem> CustomerOptions { get; set; } = [];
 }

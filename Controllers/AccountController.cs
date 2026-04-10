@@ -1,8 +1,11 @@
+using HakaTech.Portal.Data;
 using HakaTech.Portal.Models.Domain;
 using HakaTech.Portal.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
@@ -11,15 +14,18 @@ public class AccountController : Controller
     private readonly UserManager<ApplicationUser>   _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly ILogger<AccountController>     _logger;
+    private readonly ApplicationDbContext           _db;
 
     public AccountController(
         UserManager<ApplicationUser>   userManager,
         SignInManager<ApplicationUser> signInManager,
-        ILogger<AccountController>     logger)
+        ILogger<AccountController>     logger,
+        ApplicationDbContext           db)
     {
         _userManager   = userManager;
         _signInManager = signInManager;
         _logger        = logger;
+        _db            = db;
     }
 
     // ── GET /Account/Login ──────────────────────────────────────────
@@ -66,8 +72,7 @@ public class AccountController : Controller
         }
         else
         {
-            ModelState.AddModelError(string.Empty,
-                "Virheellinen sähköpostiosoite tai salasana.");
+            ModelState.AddModelError(string.Empty, "Virheellinen sähköpostiosoite tai salasana.");
         }
 
         return View(model);
@@ -87,9 +92,14 @@ public class AccountController : Controller
     // ── GET /Account/Register ───────────────────────────────────────
     [HttpGet]
     [Authorize(Roles = "Admin")]
-    public IActionResult Register()
+    public async Task<IActionResult> Register(int? customerId = null)
     {
-        return View(new RegisterViewModel());
+        var model = new RegisterViewModel
+        {
+            CustomerId      = customerId,
+            CustomerOptions = await BuildCustomerOptions()
+        };
+        return View(model);
     }
 
     // ── POST /Account/Register ──────────────────────────────────────
@@ -99,27 +109,51 @@ public class AccountController : Controller
     public async Task<IActionResult> Register(RegisterViewModel model)
     {
         if (!ModelState.IsValid)
+        {
+            model.CustomerOptions = await BuildCustomerOptions();
             return View(model);
+        }
+
+        // Rooli täytyy olla Admin tai Customer
+        if (model.Role != "Admin" && model.Role != "Customer")
+            model.Role = "Customer";
+
+        // Asiakaskäyttäjällä pitää olla yritys valittuna
+        if (model.Role == "Customer" && model.CustomerId is null)
+        {
+            ModelState.AddModelError(nameof(model.CustomerId),
+                "Asiakaskäyttäjälle on valittava yritys.");
+            model.CustomerOptions = await BuildCustomerOptions();
+            return View(model);
+        }
 
         var user = new ApplicationUser
         {
-            UserName = model.Email,
-            Email    = model.Email,
-            FullName = model.FullName
+            UserName   = model.Email,
+            Email      = model.Email,
+            FullName   = model.FullName,
+            CustomerId = model.Role == "Customer" ? model.CustomerId : null
         };
 
         var result = await _userManager.CreateAsync(user, model.Password);
 
         if (result.Succeeded)
         {
-            _logger.LogInformation("Admin loi uuden käyttäjän {Email}.", model.Email);
-            TempData["SuccessMessage"] = $"Käyttäjä {model.Email} luotu onnistuneesti.";
+            await _userManager.AddToRoleAsync(user, model.Role);
+            _logger.LogInformation("Admin loi uuden käyttäjän {Email} roolilla {Role}.", model.Email, model.Role);
+            TempData["SuccessMessage"] = $"Käyttäjä {model.Email} luotu onnistuneesti ({model.Role}).";
+
+            // Jos luotiin asiakaskäyttäjä, palaa asiakkaan tietoihin
+            if (model.Role == "Customer" && model.CustomerId.HasValue)
+                return RedirectToAction("Details", "Customer", new { id = model.CustomerId.Value });
+
             return RedirectToAction(nameof(Register));
         }
 
         foreach (var error in result.Errors)
             ModelState.AddModelError(string.Empty, error.Description);
 
+        model.CustomerOptions = await BuildCustomerOptions();
         return View(model);
     }
 
@@ -149,7 +183,6 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
-            // Päivitetään kirjautumistunnus niin, ettei sessio vanhene
             await _signInManager.RefreshSignInAsync(user);
             _logger.LogInformation("Käyttäjä {Email} vaihtoi salasanansa.", user.Email);
             TempData["SuccessMessage"] = "Salasana vaihdettu onnistuneesti.";
@@ -169,4 +202,12 @@ public class AccountController : Controller
     {
         return View();
     }
+
+    // ── Apumetodit ───────────────────────────────────────────────────
+    private async Task<IEnumerable<SelectListItem>> BuildCustomerOptions() =>
+        (await _db.Customers
+            .Where(c => c.IsActive)
+            .OrderBy(c => c.CompanyName)
+            .ToListAsync())
+        .Select(c => new SelectListItem(c.CompanyName, c.Id.ToString()));
 }

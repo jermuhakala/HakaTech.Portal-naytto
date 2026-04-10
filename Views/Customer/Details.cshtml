@@ -38,13 +38,26 @@
     </div>
     @if (User.IsInRole("Admin"))
     {
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <a asp-action="Edit" asp-route-id="@Model.Id"
                id="btn-customer-edit" class="btn btn-outline-secondary">
                 <i class="bi bi-pencil me-1"></i>Muokkaa
             </a>
+            <form asp-action="ToggleActive" asp-route-id="@Model.Id" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit"
+                        class="btn @(Model.IsActive ? "btn-outline-warning" : "btn-outline-success")">
+                    <i class="bi @(Model.IsActive ? "bi-pause-circle" : "bi-play-circle") me-1"></i>
+                    @(Model.IsActive ? "Deaktivoi" : "Aktivoi")
+                </button>
+            </form>
+            <a asp-controller="Account" asp-action="Register" asp-route-customerId="@Model.Id"
+               class="btn btn-outline-primary">
+                <i class="bi bi-person-plus me-1"></i>Luo käyttäjätili
+            </a>
             <form asp-action="Delete" asp-route-id="@Model.Id" method="post"
                   onsubmit="return confirm('Haluatko varmasti poistaa asiakkaan @Model.CompanyName?');">
+                @Html.AntiForgeryToken()
                 <button type="submit" id="btn-customer-delete" class="btn btn-outline-danger">
                     <i class="bi bi-trash me-1"></i>Poista
                 </button>
@@ -104,6 +117,52 @@
         </div>
     </div>
 </div>
+
+<!-- Käyttäjätilit -->
+@if (User.IsInRole("Admin"))
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-people me-2"></i>Käyttäjätilit
+                <span class="badge bg-secondary ms-1">@Model.Users.Count</span>
+            </span>
+            <a asp-controller="Account" asp-action="Register" asp-route-customerId="@Model.Id"
+               class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-person-plus me-1"></i>Lisää käyttäjä
+            </a>
+        </div>
+        <div class="card-body p-0">
+            @if (!Model.Users.Any())
+            {
+                <p class="text-muted p-3 mb-0">Ei käyttäjätilejä.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nimi</th>
+                                <th>Sähköposti</th>
+                                <th class="d-none d-md-table-cell">Käyttäjätunnus</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var u in Model.Users.OrderBy(u => u.FullName))
+                            {
+                                <tr>
+                                    <td>@(u.FullName.Length > 0 ? u.FullName : "—")</td>
+                                    <td><a href="mailto:@u.Email">@u.Email</a></td>
+                                    <td class="d-none d-md-table-cell text-muted small">@u.UserName</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
 
 <div class="row g-3">
     <!-- Viimeisimmät tiketit -->

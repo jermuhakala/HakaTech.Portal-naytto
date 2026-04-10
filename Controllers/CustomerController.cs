@@ -158,6 +158,24 @@ public class CustomerController : Controller
         return RedirectToAction(nameof(Details), new { id = customer.Id });
     }
 
+    // ── POST /Customer/ToggleActive/5 ────────────────────────────────
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleActive(int id)
+    {
+        var customer = await _db.Customers.FindAsync(id);
+        if (customer is null) return NotFound();
+
+        customer.IsActive = !customer.IsActive;
+        await _db.SaveChangesAsync();
+
+        string status = customer.IsActive ? "aktivoitu" : "deaktivoitu";
+        _logger.LogInformation("Asiakas {Name} {Status} (Id={Id}).", customer.CompanyName, status, id);
+        TempData["SuccessMessage"] = $"Asiakas \"{customer.CompanyName}\" {status}.";
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
     // ── POST /Customer/Delete/5 ──────────────────────────────────────
     [HttpPost]
     [Authorize(Roles = "Admin")]

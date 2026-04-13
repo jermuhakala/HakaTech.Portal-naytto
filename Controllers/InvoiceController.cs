@@ -19,19 +19,22 @@ public class InvoiceController : Controller
     private readonly ILogger<InvoiceController>   _logger;
     private readonly IFileStorageService           _fileStorage;
     private readonly IWebHostEnvironment           _env;
+    private readonly IEmailService                 _emailService;
 
     public InvoiceController(
         ApplicationDbContext         db,
         UserManager<ApplicationUser> userManager,
         ILogger<InvoiceController>   logger,
         IFileStorageService          fileStorage,
-        IWebHostEnvironment          env)
+        IWebHostEnvironment          env,
+        IEmailService                emailService)
     {
-        _db          = db;
-        _userManager = userManager;
-        _logger      = logger;
-        _fileStorage = fileStorage;
-        _env         = env;
+        _db           = db;
+        _userManager  = userManager;
+        _logger       = logger;
+        _fileStorage  = fileStorage;
+        _env          = env;
+        _emailService = emailService;
     }
 
     // ── GET /Invoice ─────────────────────────────────────────────────
@@ -196,7 +199,53 @@ public class InvoiceController : Controller
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Lasku {Num} luotu (Id={Id}).", invoice.InvoiceNumber, invoice.Id);
-        TempData["SuccessMessage"] = $"Lasku {invoice.InvoiceNumber} luotu.";
+
+        // ── Lähetä sähköposti-ilmoitus asiakkaalle ─────────────────────
+        var customer = await _db.Customers.FindAsync(invoice.CustomerId);
+        if (customer is not null && !string.IsNullOrWhiteSpace(customer.ContactEmail))
+        {
+            try
+            {
+                var html = $"""
+                    <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;color:#1e293b">
+                      <div style="background:#2563eb;padding:24px 32px;border-radius:8px 8px 0 0">
+                        <h1 style="color:#fff;margin:0;font-size:22px">HakaTech – Uusi lasku</h1>
+                      </div>
+                      <div style="background:#f8fafc;padding:24px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0">
+                        <p style="margin:0 0 16px">Hei <strong>{customer.CompanyName}</strong>,</p>
+                        <p style="margin:0 0 16px">Teille on laadittu uusi lasku HakaTech-portaaliin.</p>
+                        <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                          <tr><td style="padding:8px 0;color:#64748b;width:160px">Laskunumero</td><td style="padding:8px 0;font-weight:600">{invoice.InvoiceNumber}</td></tr>
+                          <tr><td style="padding:8px 0;color:#64748b">Laskupäivä</td><td style="padding:8px 0">{invoice.InvoiceDate:dd.MM.yyyy}</td></tr>
+                          <tr><td style="padding:8px 0;color:#64748b">Eräpäivä</td><td style="padding:8px 0;font-weight:600;color:#dc2626">{invoice.DueDate:dd.MM.yyyy}</td></tr>
+                          <tr style="border-top:2px solid #e2e8f0"><td style="padding:12px 0 8px;color:#64748b">Yhteensä (sis. ALV)</td><td style="padding:12px 0 8px;font-size:18px;font-weight:700">{invoice.TotalAmount:N2} €</td></tr>
+                        </table>
+                        <p style="margin:0 0 20px">Voitte tarkastella laskua kirjautumalla HakaTech-portaaliin.</p>
+                        <p style="margin:0;color:#94a3b8;font-size:13px">Tämä on automaattinen viesti. Älä vastaa tähän sähköpostiin.<br>HakaTech IT-palvelut | asiakastuki@hakatech.fi</p>
+                      </div>
+                    </div>
+                    """;
+
+                await _emailService.SendEmailAsync(
+                    customer.ContactEmail,
+                    $"Lasku {invoice.InvoiceNumber} – HakaTech",
+                    html);
+
+                _logger.LogInformation(
+                    "Laskuilmoitus {Num} lähetetty osoitteeseen {Email}.",
+                    invoice.InvoiceNumber, customer.ContactEmail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Laskuilmoituksen lähetys epäonnistui (lasku {Num}).", invoice.InvoiceNumber);
+            }
+        }
+
+        TempData["SuccessMessage"] = $"Lasku {invoice.InvoiceNumber} luotu" +
+            (customer is not null && !string.IsNullOrWhiteSpace(customer.ContactEmail)
+                ? $" ja lähetetty osoitteeseen {customer.ContactEmail}."
+                : ".");
         return RedirectToAction(nameof(Details), new { id = invoice.Id });
     }
 

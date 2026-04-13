@@ -16,16 +16,16 @@
 
     @* ── Sivupalkki ──────────────────────────────────────────────── *@
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-            <img src="~/img/logo.png" alt="HakaTech Logo" class="brand-img" style="height: 32px; width: 32px; border-radius: 6px; object-fit: cover;" />
+        <a asp-controller="Home" asp-action="Index" class="sidebar-brand text-decoration-none">
+            <img src="~/img/logo.png" alt="HakaTech Logo" class="brand-img" style="height: 44px; width: 44px; border-radius: 10px; object-fit: cover;" />
             <span class="brand-text">HakaTech</span>
-        </div>
+        </a>
 
         <nav class="sidebar-nav">
             <span class="nav-section-label">Päävalikko</span>
             <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")"
                asp-controller="Home" asp-action="Index">
-                <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+                <i class="bi bi-speedometer2"></i><span>Yhteenveto</span>
             </a>
 
             @if (User.Identity?.IsAuthenticated == true)

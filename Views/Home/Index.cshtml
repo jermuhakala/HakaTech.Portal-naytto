@@ -114,54 +114,54 @@
 
         @if (Model.IsAdmin)
         {
-            <div class="kpi-card kpi-blue">
+            <a asp-controller="Customer" asp-action="Index" class="kpi-card kpi-blue kpi-link">
                 <div class="kpi-icon"><i class="bi bi-building"></i></div>
                 <div class="kpi-body">
                     <span class="kpi-value">@Model.TotalCustomers</span>
                     <span class="kpi-label">Asiakasta yht.</span>
                 </div>
                 <div class="kpi-sub">@Model.ActiveCustomers aktiivista</div>
-            </div>
+            </a>
         }
 
-        <div class="kpi-card kpi-orange">
+        <a asp-controller="Ticket" asp-action="Index" asp-route-status="Open" class="kpi-card kpi-orange kpi-link">
             <div class="kpi-icon"><i class="bi bi-ticket-detailed"></i></div>
             <div class="kpi-body">
                 <span class="kpi-value">@Model.OpenTickets</span>
                 <span class="kpi-label">Avoimet tiketit</span>
             </div>
             <div class="kpi-sub">@Model.InProgressTickets käsittelyssä</div>
-        </div>
+        </a>
 
         @if (Model.IsAdmin)
         {
-            <div class="kpi-card kpi-red">
+            <a asp-controller="Ticket" asp-action="Index" asp-route-priority="Critical" class="kpi-card kpi-red kpi-link">
                 <div class="kpi-icon"><i class="bi bi-exclamation-triangle"></i></div>
                 <div class="kpi-body">
                     <span class="kpi-value">@Model.CriticalTickets</span>
                     <span class="kpi-label">Kriittiset tiketit</span>
                 </div>
                 <div class="kpi-sub">@Model.HighTickets korkea prioriteetti</div>
-            </div>
+            </a>
         }
 
-        <div class="kpi-card kpi-yellow">
+        <a asp-controller="Invoice" asp-action="Index" asp-route-status="Overdue" class="kpi-card kpi-yellow kpi-link">
             <div class="kpi-icon"><i class="bi bi-receipt"></i></div>
             <div class="kpi-body">
                 <span class="kpi-value">@Model.OverdueCount</span>
                 <span class="kpi-label">Erääntyneet laskut</span>
             </div>
             <div class="kpi-sub">@Model.TotalInvoices laskua yhteensä</div>
-        </div>
+        </a>
 
-        <div class="kpi-card kpi-green">
+        <a asp-controller="Invoice" asp-action="Index" class="kpi-card kpi-green kpi-link">
             <div class="kpi-icon"><i class="bi bi-currency-euro"></i></div>
             <div class="kpi-body">
                 <span class="kpi-value">@Model.UnpaidTotal.ToString("N0") €</span>
                 <span class="kpi-label">Maksamatta</span>
             </div>
             <div class="kpi-sub">avoimet laskut yhteensä</div>
-        </div>
+        </a>
 
     </div>
 

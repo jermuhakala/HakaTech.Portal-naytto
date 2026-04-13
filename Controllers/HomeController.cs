@@ -92,6 +92,10 @@ public class HomeController : Controller
                 .ToListAsync();
             vm.UnpaidTotal = unpaidInvoices.Sum(i => i.TotalAmount);
 
+            // ── Odottavat tarjouspyynnöt ───────────────────────────
+            vm.PendingQuoteRequests = await _db.QuoteRequests
+                .CountAsync(q => q.Status == QuoteRequestStatus.Pending);
+
             // ── Listat ─────────────────────────────────────────────
             vm.RecentOpenTickets = await _db.Tickets
                 .Include(t => t.Customer)
@@ -162,6 +166,17 @@ public class HomeController : Controller
                                 i.Status != InvoiceStatus.Paid &&
                                 i.Status != InvoiceStatus.Draft)
                     .OrderBy(i => i.DueDate)
+                    .Take(5)
+                    .ToListAsync();
+
+                // ── Uudet lähetetyt laskut (viimeiset 30 pv) ──────────
+                var since30Days = today.AddDays(-30);
+                vm.NewSentInvoices = await _db.Invoices
+                    .Include(i => i.Lines)
+                    .Where(i => i.CustomerId == custId &&
+                                i.Status == InvoiceStatus.Sent &&
+                                i.InvoiceDate.Date >= since30Days)
+                    .OrderByDescending(i => i.InvoiceDate)
                     .Take(5)
                     .ToListAsync();
             }

@@ -17,9 +17,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Contract>       Contracts      { get; set; }
     public DbSet<TicketAttachment>   TicketAttachments   { get; set; }
     public DbSet<InvoiceAttachment>  InvoiceAttachments  { get; set; }
-    public DbSet<ServiceCatalogItem> ServiceCatalogItems { get; set; }
-    public DbSet<QuoteRequest>       QuoteRequests       { get; set; }
-    public DbSet<Announcement>       Announcements       { get; set; }
+    public DbSet<ServiceCatalogItem>    ServiceCatalogItems      { get; set; }
+    public DbSet<QuoteRequest>          QuoteRequests            { get; set; }
+    public DbSet<Announcement>          Announcements            { get; set; }
+    public DbSet<RemoteDesktopConnection> RemoteDesktopConnections { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -193,6 +194,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
              .WithMany()
              .HasForeignKey(a => a.CreatedByUserId)
              .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── RemoteDesktopConnection ────────────────────────────
+        builder.Entity<RemoteDesktopConnection>(e =>
+        {
+            e.HasKey(r => r.Id);
+            e.Property(r => r.Name).IsRequired().HasMaxLength(200);
+            e.Property(r => r.Hostname).IsRequired().HasMaxLength(500);
+            e.Property(r => r.Username).HasMaxLength(200);
+            e.Property(r => r.EncryptedPassword).HasMaxLength(2000);
+            e.Property(r => r.Security).HasMaxLength(50);
+            e.Property(r => r.Notes).HasMaxLength(2000);
+
+            e.HasOne(r => r.Customer)
+             .WithMany(c => c.RemoteDesktopConnections)
+             .HasForeignKey(r => r.CustomerId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

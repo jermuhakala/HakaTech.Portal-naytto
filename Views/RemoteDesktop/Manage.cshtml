@@ -1,0 +1,112 @@
+@model IEnumerable<HakaTech.Portal.Models.Domain.RemoteDesktopConnection>
+@using HakaTech.Portal.Models.Domain
+@{
+    ViewData["Title"] = "Etätyöpöytä – Hallinta";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0"><i class="bi bi-display me-2"></i>Etätyöpöytä – Hallinta</h2>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Lisää yhteys
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] is string sMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-1"></i>@sMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] is string eMsg)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i>@eMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-1"></i>Ei etäyhteyksiä. Lisää ensimmäinen yhteys yllä olevasta painikkeesta.
+    </div>
+}
+else
+{
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Asiakas</th>
+                        <th>Nimi</th>
+                        <th>Protokolla</th>
+                        <th>Isäntänimi</th>
+                        <th class="text-center">Portti</th>
+                        <th class="text-center">Tila</th>
+                        <th class="text-end">Toiminnot</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model)
+                    {
+                        var protoColor = c.Protocol switch {
+                            RemoteDesktopProtocol.Rdp => "primary",
+                            RemoteDesktopProtocol.Vnc => "warning",
+                            RemoteDesktopProtocol.Ssh => "success",
+                            _                         => "secondary"
+                        };
+                        <tr class="@(!c.IsActive ? "table-secondary text-muted" : "")">
+                            <td class="small fw-semibold">@(c.Customer?.CompanyName ?? "-")</td>
+                            <td class="fw-semibold">@c.Name</td>
+                            <td>
+                                <span class="badge bg-@(protoColor)-subtle text-@(protoColor)-emphasis fw-semibold">
+                                    @c.Protocol.ToString().ToUpper()
+                                </span>
+                            </td>
+                            <td class="small font-monospace text-truncate" style="max-width:220px">@c.Hostname</td>
+                            <td class="text-center small">@c.Port</td>
+                            <td class="text-center">
+                                @if (c.IsActive)
+                                {
+                                    <span class="badge bg-success-subtle text-success-emphasis">Aktiivinen</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis">Poistettu</span>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap">
+                                @if (c.IsActive)
+                                {
+                                    <a asp-action="Connect" asp-route-id="@c.Id"
+                                       class="btn btn-sm btn-outline-@protoColor me-1"
+                                       target="_blank" rel="noopener noreferrer"
+                                       title="Yhdistä">
+                                        <i class="bi bi-plug"></i>
+                                    </a>
+                                }
+                                <a asp-action="Edit" asp-route-id="@c.Id"
+                                   class="btn btn-sm btn-outline-secondary me-1"
+                                   title="Muokkaa">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                @if (c.IsActive)
+                                {
+                                    <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline"
+                                          onsubmit="return confirm('Poistetaanko yhteys \u0022@c.Name\u0022 käytöstä?')">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Poista käytöstä">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

@@ -4,17 +4,56 @@
     ViewData["Title"] = "Palvelukatalogi";
     bool isAdmin = User.IsInRole("Admin");
     var grouped = Model.GroupBy(s => s.Category ?? "Muut").OrderBy(g => g.Key);
+
+    // Kategoria → Bootstrap-väri ja ikoni
+    static (string color, string icon) CategoryStyle(string cat) => cat.ToLower() switch {
+        var c when c.Contains("infra") || c.Contains("palvelin") => ("primary",   "bi-server"),
+        var c when c.Contains("tieto") || c.Contains("turva")    => ("danger",    "bi-shield-lock"),
+        var c when c.Contains("pilvi") || c.Contains("cloud")    => ("info",      "bi-cloud"),
+        var c when c.Contains("ylläpito") || c.Contains("tuki")  => ("success",   "bi-tools"),
+        var c when c.Contains("kehit") || c.Contains("ohjelmis") => ("warning",   "bi-code-slash"),
+        var c when c.Contains("verkko") || c.Contains("network") => ("secondary", "bi-diagram-3"),
+        _                                                         => ("primary",   "bi-grid"),
+    };
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0"><i class="bi bi-grid me-2"></i>Palvelukatalogi</h2>
+<style>
+    .service-card {
+        transition: transform .15s ease, box-shadow .15s ease;
+        border-radius: 1rem !important;
+    }
+    .service-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 .75rem 1.5rem rgba(0,0,0,.12) !important;
+    }
+    .service-icon-wrap {
+        width: 3.5rem;
+        height: 3.5rem;
+        border-radius: .75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        flex-shrink: 0;
+    }
+    .price-tag {
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0"><i class="bi bi-grid me-2"></i>Palvelukatalogi</h2>
+        <p class="text-muted mb-0 mt-1 small">Valitse palvelu ja pyydä tarjous suoraan portaalista.</p>
+    </div>
     @if (isAdmin)
     {
         <div class="d-flex gap-2">
-            <a asp-action="Requests" class="btn btn-outline-secondary btn-sm">
+            <a asp-action="Requests" class="btn btn-outline-secondary">
                 <i class="bi bi-envelope-open me-1"></i>Tarjouspyynnöt
             </a>
-            <a asp-action="Manage" class="btn btn-primary btn-sm">
+            <a asp-action="Manage" class="btn btn-primary">
                 <i class="bi bi-gear me-1"></i>Hallinnoi palveluja
             </a>
         </div>
@@ -46,34 +85,45 @@ else
 {
     @foreach (var group in grouped)
     {
-        <h5 class="text-muted mb-3 mt-4 text-uppercase small fw-semibold">
-            <i class="bi bi-tag me-1"></i>@group.Key
-        </h5>
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-2">
+        var (color, icon) = CategoryStyle(group.Key);
+        <div class="d-flex align-items-center gap-2 mt-5 mb-3">
+            <span class="badge bg-@(color)-subtle text-@(color)-emphasis fs-6 px-3 py-2 rounded-pill fw-semibold">
+                <i class="bi @icon me-1"></i>@group.Key
+            </span>
+            <hr class="flex-grow-1 my-0 opacity-25">
+        </div>
+        <div class="row row-cols-1 row-cols-md-2 g-4 mb-2">
             @foreach (var service in group)
             {
                 <div class="col">
-                    <div class="card h-100 shadow-sm border-0">
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title fw-semibold mb-1">@service.Name</h5>
-                            <p class="card-text text-muted small flex-grow-1">@service.Description</p>
-                            @if (service.Price.HasValue)
-                            {
-                                <p class="mb-2">
-                                    <span class="badge bg-light text-dark border">
-                                        Alkaen @service.Price.Value.ToString("N0") €
-                                    </span>
-                                </p>
-                            }
+                    <div class="card h-100 shadow-sm border-0 service-card">
+                        <div class="card-body p-4 d-flex flex-column gap-3">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="service-icon-wrap bg-@(color)-subtle text-@(color)-emphasis">
+                                    <i class="bi @icon"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title fw-bold mb-0 fs-5">@service.Name</h5>
+                                    @if (service.Price.HasValue)
+                                    {
+                                        <span class="text-@(color)-emphasis price-tag">
+                                            alkaen @service.Price.Value.ToString("N0") €
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                            <p class="card-text text-muted mb-0 flex-grow-1" style="line-height:1.6">
+                                @service.Description
+                            </p>
                             @if (!isAdmin)
                             {
                                 <button type="button"
-                                        class="btn btn-primary btn-sm mt-auto"
+                                        class="btn btn-@color w-100 mt-auto"
                                         data-bs-toggle="modal"
                                         data-bs-target="#quoteModal"
                                         data-service-id="@service.Id"
                                         data-service-name="@service.Name">
-                                    <i class="bi bi-send me-1"></i>Pyydä tarjous
+                                    <i class="bi bi-send me-2"></i>Pyydä tarjous
                                 </button>
                             }
                         </div>

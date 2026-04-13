@@ -1,7 +1,7 @@
 using HakaTech.Portal.Models.Domain;
+using HakaTech.Portal.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 
 namespace HakaTech.Portal.Data;
 
@@ -141,6 +141,55 @@ public static class SeedData
                 IsPublished     = true,
                 CreatedByUserId = admin1.Id,
                 CreatedAt       = DateTime.UtcNow
+            }
+        );
+        await dbContext.SaveChangesAsync();
+
+        // 10. Etätyöpöytäyhteydet (demo)
+        var guacamole = scope.ServiceProvider.GetRequiredService<IGuacamoleService>();
+
+        dbContext.RemoteDesktopConnections.AddRange(
+            new RemoteDesktopConnection
+            {
+                Name      = "Pääpalvelin (RDP)",
+                Protocol  = RemoteDesktopProtocol.Rdp,
+                Hostname  = "192.168.10.10",
+                Port      = 3389,
+                Username  = "administrator",
+                EncryptedPassword = guacamole.ProtectPassword("DemoSalasana1!"),
+                IgnoreCert = true,
+                Security   = "any",
+                Notes      = "Tuotantoliikenteen pääpalvelin. Käytä varoen.",
+                IsActive   = true,
+                CustomerId = techsol.Id
+            },
+            new RemoteDesktopConnection
+            {
+                Name      = "Kehityspalvelin (SSH)",
+                Protocol  = RemoteDesktopProtocol.Ssh,
+                Hostname  = "192.168.10.20",
+                Port      = 22,
+                Username  = "devops",
+                EncryptedPassword = guacamole.ProtectPassword("DemoSalasana2!"),
+                IgnoreCert = false,
+                Security   = "any",
+                Notes      = "SSH-yhteys kehitys- ja testipalvelimelle.",
+                IsActive   = true,
+                CustomerId = techsol.Id
+            },
+            new RemoteDesktopConnection
+            {
+                Name      = "Toimistotyöasema (RDP)",
+                Protocol  = RemoteDesktopProtocol.Rdp,
+                Hostname  = "10.0.1.50",
+                Port      = 3389,
+                Username  = "kayttaja",
+                EncryptedPassword = guacamole.ProtectPassword("DemoSalasana3!"),
+                IgnoreCert = true,
+                Security   = "any",
+                Notes      = "Toimiston Windows-työasema etähallintaa varten.",
+                IsActive   = true,
+                CustomerId = digimolli.Id
             }
         );
         await dbContext.SaveChangesAsync();

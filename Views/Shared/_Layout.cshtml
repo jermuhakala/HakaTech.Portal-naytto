@@ -42,6 +42,10 @@
                    asp-controller="ServiceCatalog" asp-action="Index">
                     <i class="bi bi-grid"></i><span>Palvelut</span>
                 </a>
+                <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RemoteDesktop" ? "active" : "")"
+                   asp-controller="RemoteDesktop" asp-action="Index">
+                    <i class="bi bi-display"></i><span>Etätyöpöytä</span>
+                </a>
 
                 @if (User.IsInRole("Admin"))
                 {

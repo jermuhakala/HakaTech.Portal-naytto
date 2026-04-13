@@ -35,6 +35,10 @@ public class DashboardViewModel
     // ── Tiedotteet & huoltoikkunat ───────────────────────────────────
     public IList<Announcement> ActiveAnnouncements { get; set; } = [];
 
+    // ── Ilmoitukset (admin: odottavat tarjouspyynnöt, asiakas: uudet laskut) ──
+    public int PendingQuoteRequests { get; set; }
+    public IList<Invoice> NewSentInvoices { get; set; } = [];
+
     // ── Rooli ────────────────────────────────────────────────────────
     public bool IsAdmin { get; set; }
     public string WelcomeName { get; set; } = string.Empty;

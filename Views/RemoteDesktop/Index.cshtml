@@ -1,0 +1,98 @@
+@model IEnumerable<HakaTech.Portal.Models.ViewModels.RemoteDesktopConnectionCardViewModel>
+@using HakaTech.Portal.Models.Domain
+@{
+    ViewData["Title"] = "Etätyöpöytä";
+
+    static (string color, string icon) ProtoStyle(RemoteDesktopProtocol p) => p switch {
+        RemoteDesktopProtocol.Rdp => ("primary", "bi-windows"),
+        RemoteDesktopProtocol.Vnc => ("warning",  "bi-display"),
+        RemoteDesktopProtocol.Ssh => ("success",  "bi-terminal"),
+        _                         => ("secondary","bi-display")
+    };
+}
+
+<style>
+    .conn-card {
+        transition: transform .15s ease, box-shadow .15s ease;
+        border-radius: 1rem !important;
+    }
+    .conn-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 .75rem 1.5rem rgba(0,0,0,.12) !important;
+    }
+    .conn-icon-wrap {
+        width: 3.5rem; height: 3.5rem;
+        border-radius: .75rem;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.6rem; flex-shrink: 0;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0"><i class="bi bi-display me-2"></i>Etätyöpöytä</h2>
+        <p class="text-muted mb-0 mt-1 small">Yhdistä hallittuihin palvelimiin ja työasemiin suoraan selaimesta.</p>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] is string sMsg)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-1"></i>@sMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] is string eMsg)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-1"></i>@eMsg
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-1"></i>
+        Sinulle ei ole vielä määritetty etäyhteyksiä.
+        Ota yhteyttä tukeen, jos tarvitset etätyöpöytäyhteyden.
+    </div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        @foreach (var conn in Model)
+        {
+            var (color, icon) = ProtoStyle(conn.Protocol);
+            <div class="col">
+                <div class="card h-100 shadow-sm border-0 conn-card">
+                    <div class="card-body p-4 d-flex flex-column gap-3">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="conn-icon-wrap bg-@(color)-subtle text-@(color)-emphasis">
+                                <i class="bi @icon"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5 class="card-title fw-bold mb-1 fs-5">@conn.Name</h5>
+                                <span class="badge bg-@(color)-subtle text-@(color)-emphasis text-uppercase small fw-semibold">
+                                    @conn.Protocol.ToString()
+                                </span>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-0">
+                            <i class="bi bi-hdd-network me-1"></i>@conn.Hostname:@conn.Port
+                        </p>
+                        @if (!string.IsNullOrEmpty(conn.Notes))
+                        {
+                            <p class="text-muted small mb-0" style="line-height:1.5">@conn.Notes</p>
+                        }
+                        <a asp-action="Connect" asp-route-id="@conn.Id"
+                           class="btn btn-@color w-100 mt-auto"
+                           target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-plug me-2"></i>Yhdistä
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

@@ -14,8 +14,9 @@ public class Customer
     public bool IsActive       { get; set; } = true;
 
     // Navigaatio
-    public ICollection<ApplicationUser> Users     { get; set; } = new List<ApplicationUser>();
-    public ICollection<Ticket>          Tickets   { get; set; } = new List<Ticket>();
-    public ICollection<Invoice>         Invoices  { get; set; } = new List<Invoice>();
-    public ICollection<Contract>        Contracts { get; set; } = new List<Contract>();
+    public ICollection<ApplicationUser>        Users                   { get; set; } = new List<ApplicationUser>();
+    public ICollection<Ticket>                 Tickets                 { get; set; } = new List<Ticket>();
+    public ICollection<Invoice>                Invoices                { get; set; } = new List<Invoice>();
+    public ICollection<Contract>               Contracts               { get; set; } = new List<Contract>();
+    public ICollection<RemoteDesktopConnection> RemoteDesktopConnections { get; set; } = new List<RemoteDesktopConnection>();
 }

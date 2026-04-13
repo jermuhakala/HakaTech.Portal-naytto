@@ -45,6 +45,51 @@
         </div>
     }
 
+    @* ── Ilmoitukset: admin → odottavat tarjouspyynnöt ─────────────── *@
+    @if (Model.IsAdmin && Model.PendingQuoteRequests > 0)
+    {
+        <div class="alert alert-warning alert-dismissible fade show mb-3 d-flex align-items-center gap-3" role="alert">
+            <i class="bi bi-envelope-exclamation-fill fs-4 flex-shrink-0"></i>
+            <div class="flex-grow-1">
+                <strong>@Model.PendingQuoteRequests tarjouspyyntö@(Model.PendingQuoteRequests > 1 ? "ä" : "") odottaa käsittelyä.</strong>
+                Tarkista ja vastaa asiakkaille mahdollisimman pian.
+            </div>
+            <a asp-controller="ServiceCatalog" asp-action="Requests" class="btn btn-warning btn-sm text-nowrap">
+                <i class="bi bi-arrow-right me-1"></i>Katso pyynnöt
+            </a>
+            <button type="button" class="btn-close ms-2" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @* ── Ilmoitukset: asiakas → uudet laskut ───────────────────────── *@
+    @if (!Model.IsAdmin && Model.NewSentInvoices.Any())
+    {
+        <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+            <div class="d-flex align-items-start gap-3">
+                <i class="bi bi-receipt fs-4 flex-shrink-0 mt-1"></i>
+                <div class="flex-grow-1">
+                    <strong>Sinulle on saapunut @Model.NewSentInvoices.Count uusi lasku@(Model.NewSentInvoices.Count > 1 ? "a" : "").</strong>
+                    <ul class="mb-0 mt-1 ps-3">
+                        @foreach (var inv in Model.NewSentInvoices)
+                        {
+                            <li>
+                                <a asp-controller="Invoice" asp-action="Details" asp-route-id="@inv.Id" class="alert-link fw-semibold">
+                                    @inv.InvoiceNumber
+                                </a>
+                                — @inv.TotalAmount.ToString("N2") €,
+                                eräpäivä <strong>@inv.DueDate.ToString("dd.MM.yyyy")</strong>
+                            </li>
+                        }
+                    </ul>
+                </div>
+                <a asp-controller="Invoice" asp-action="Index" class="btn btn-outline-info btn-sm text-nowrap align-self-start">
+                    <i class="bi bi-arrow-right me-1"></i>Laskut
+                </a>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
     @* ── Tervetuloa-palkki ─────────────────────────────────────── *@
     <div class="welcome-bar mb-4">
         <div>

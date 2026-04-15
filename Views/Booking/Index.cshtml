@@ -1,0 +1,360 @@
+@model HakaTech.Portal.Models.ViewModels.BookingCalendarViewModel
+@using HakaTech.Portal.Models.Domain
+@{
+    ViewData["Title"] = "Huoltokalenteri";
+    var fi     = new System.Globalization.CultureInfo("fi-FI");
+    var today  = DateTime.Today;
+    var (prevY, prevM) = Model.PrevMonth;
+    var (nextY, nextM) = Model.NextMonth;
+
+    string TypeColor(BookingSlotType t) => t switch {
+        BookingSlotType.Maintenance   => "warning",
+        BookingSlotType.Consulting    => "primary",
+        BookingSlotType.RemoteSupport => "success",
+        _                             => "secondary"
+    };
+    string TypeName(BookingSlotType t) => t switch {
+        BookingSlotType.Maintenance   => "Huolto",
+        BookingSlotType.Consulting    => "Konsultointi",
+        BookingSlotType.RemoteSupport => "Etätuki",
+        _                             => t.ToString()
+    };
+    string TypeIcon(BookingSlotType t) => t switch {
+        BookingSlotType.Maintenance   => "bi-wrench-adjustable",
+        BookingSlotType.Consulting    => "bi-person-video3",
+        BookingSlotType.RemoteSupport => "bi-display",
+        _                             => "bi-calendar-event"
+    };
+}
+
+@* ── Otsikkorivi ────────────────────────────────────────────────── *@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">
+        <i class="bi bi-calendar3 me-2 text-primary"></i>Huoltokalenteri
+    </h2>
+    <div class="d-flex gap-2">
+        @if (Model.IsAdmin)
+        {
+            <a asp-action="ManageBookings" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-list-check me-1"></i>Varaukset
+            </a>
+            <a asp-action="CreateSlot" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Lisää aikaväli
+            </a>
+        }
+        else
+        {
+            <a asp-action="MyBookings" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-bookmark-check me-1"></i>Omat varaukset
+            </a>
+        }
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] is string ok)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-1"></i>@ok
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle me-1"></i>@err
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row g-3 align-items-start">
+
+    @* ── Kalenteriruudukko ──────────────────────────────────────── *@
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <a asp-action="Index" asp-route-year="@prevY" asp-route-month="@prevM"
+                   class="btn btn-sm btn-link text-secondary p-0 px-1 text-decoration-none">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                <span class="fw-semibold">@Model.MonthName</span>
+                <a asp-action="Index" asp-route-year="@nextY" asp-route-month="@nextM"
+                   class="btn btn-sm btn-link text-secondary p-0 px-1 text-decoration-none">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+            <div class="card-body p-3">
+
+                @* Päivänimiotsikot *@
+                <div class="cal-header-row mb-1">
+                    @foreach (var d in new[] { "Ma","Ti","Ke","To","Pe","La","Su" })
+                    {
+                        <div class="cal-hdr">@d</div>
+                    }
+                </div>
+
+                @* Kalenterisolut *@
+                <div class="cal-grid">
+                    @for (int i = 0; i < Model.MonthStartOffset; i++)
+                    {
+                        <div></div>
+                    }
+                    @for (int d = 1; d <= Model.DaysInMonth; d++)
+                    {
+                        var daySlots = Model.SlotsOnDay(d).ToList();
+                        bool isToday    = today.Year == Model.Year && today.Month == Model.Month && today.Day == d;
+                        bool isSelected = Model.SelectedDay == d;
+                        bool hasSlots   = daySlots.Any();
+
+                        <div class="cal-cell @(isToday ? "cal-today" : "") @(isSelected ? "cal-selected" : "") @(hasSlots ? "cal-has-slots" : "")">
+                            @if (hasSlots)
+                            {
+                                int? targetDay = isSelected ? null : (int?)d;
+                                <a asp-action="Index"
+                                   asp-route-year="@Model.Year" asp-route-month="@Model.Month"
+                                   asp-route-day="@targetDay"
+                                   class="cal-cell-link text-decoration-none" style="color:inherit">
+                                    <span class="cal-num">@d</span>
+                                    <div class="cal-dots">
+                                        @foreach (var s in daySlots.Take(3))
+                                        {
+                                            <span class="cal-dot cal-dot-@TypeColor(s.SlotType)"></span>
+                                        }
+                                    </div>
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="cal-num">@d</span>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @* Selite *@
+                <div class="d-flex gap-3 justify-content-center mt-3 small text-muted">
+                    <span><span class="cal-dot cal-dot-warning d-inline-block me-1"></span>Huolto</span>
+                    <span><span class="cal-dot cal-dot-primary d-inline-block me-1"></span>Konsultointi</span>
+                    <span><span class="cal-dot cal-dot-success d-inline-block me-1"></span>Etätuki</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ── Aikavälylista ──────────────────────────────────────────── *@
+    <div class="col-lg-8">
+        @{
+            var displaySlots = Model.DisplayedSlots;
+            string listTitle = Model.SelectedDay.HasValue
+                ? new DateTime(Model.Year, Model.Month, Model.SelectedDay.Value)
+                      .ToString("dddd d.M.yyyy", fi)
+                : Model.MonthName;
+        }
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0 text-capitalize">@listTitle</h5>
+            @if (Model.SelectedDay.HasValue)
+            {
+                <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
+                   class="btn btn-link btn-sm p-0 text-decoration-none">
+                    <i class="bi bi-x me-1"></i>Näytä kaikki
+                </a>
+            }
+        </div>
+
+        @if (!displaySlots.Any())
+        {
+            <div class="card border-0 shadow-sm text-center py-5 text-muted">
+                <div>
+                    <i class="bi bi-calendar-x display-4 d-block mb-3 opacity-50"></i>
+                    <p class="mb-3">Ei aikavälyjä valitulle ajankohdalle.</p>
+                    @if (Model.IsAdmin)
+                    {
+                        <a asp-action="CreateSlot"
+                           asp-route-date="@(Model.SelectedDay.HasValue ? new DateTime(Model.Year, Model.Month, Model.SelectedDay.Value).ToString("yyyy-MM-dd") : null)"
+                           class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-lg me-1"></i>Lisää aikaväli
+                        </a>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-2">
+                @foreach (var slot in displaySlots)
+                {
+                    bool myBooked  = Model.MyBookedSlotIds.Contains(slot.Id);
+                    string color   = TypeColor(slot.SlotType);
+
+                    <div class="card border-0 shadow-sm slot-card slot-card-@color @(slot.IsPast ? "opacity-65" : "")">
+                        <div class="card-body py-3">
+                            <div class="d-flex gap-3 align-items-start">
+                                @* Aika-pylväs *@
+                                <div class="text-center flex-shrink-0" style="width:52px">
+                                    <div class="fw-bold" style="font-size:18px;line-height:1.1">
+                                        @slot.StartTime.ToString("HH:mm")
+                                    </div>
+                                    <div class="text-muted" style="font-size:11px">
+                                        @slot.StartTime.ToString("d.M.", fi)
+                                    </div>
+                                    <div class="text-muted" style="font-size:11px">
+                                        @slot.DurationMinutes min
+                                    </div>
+                                </div>
+
+                                @* Sisältö *@
+                                <div class="flex-grow-1 min-width-0">
+                                    <div class="d-flex flex-wrap gap-1 mb-1">
+                                        <span class="badge text-bg-@color">
+                                            <i class="bi @TypeIcon(slot.SlotType) me-1"></i>@TypeName(slot.SlotType)
+                                        </span>
+                                        @if (!slot.IsActive)
+                                        {
+                                            <span class="badge bg-secondary">Ei aktiivinen</span>
+                                        }
+                                        @if (slot.IsPast)
+                                        {
+                                            <span class="badge bg-light text-muted border">Mennyt</span>
+                                        }
+                                    </div>
+
+                                    <div class="fw-semibold">@slot.Title</div>
+
+                                    @if (!string.IsNullOrWhiteSpace(slot.Description))
+                                    {
+                                        <div class="text-muted small mt-1">@slot.Description</div>
+                                    }
+
+                                    @* Varaukset *@
+                                    @if (Model.IsAdmin)
+                                    {
+                                        <div class="mt-2 small">
+                                            <span class="text-muted">
+                                                <i class="bi bi-people me-1"></i>@slot.ActiveBookingsCount / @slot.MaxCapacity
+                                            </span>
+                                            @foreach (var b in slot.Bookings.Where(b => b.Status != BookingStatus.Cancelled))
+                                            {
+                                                <span class="badge bg-light text-dark border ms-1">
+                                                    @(b.User?.FullName ?? b.User?.Email ?? "?")
+                                                    @if (b.Status == BookingStatus.Confirmed)
+                                                    {
+                                                        <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-hourglass text-warning ms-1"></i>
+                                                    }
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                    else if (!slot.IsPast)
+                                    {
+                                        <div class="mt-1 small">
+                                            @if (slot.AvailableSpots > 0)
+                                            {
+                                                <span class="text-success">
+                                                    <i class="bi bi-check-circle me-1"></i>@slot.AvailableSpots paikkaa jäljellä
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-danger">
+                                                    <i class="bi bi-x-circle me-1"></i>Täynnä
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+
+                                @* Toiminnot *@
+                                <div class="d-flex flex-column gap-1 flex-shrink-0 align-items-end">
+                                    @if (Model.IsAdmin)
+                                    {
+                                        <a asp-action="EditSlot" asp-route-id="@slot.Id"
+                                           class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form asp-action="DeleteSlot" asp-route-id="@slot.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                    data-confirm="Poistetaanko aikaväli '@slot.Title'?">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else if (myBooked)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success py-2 px-3">
+                                            <i class="bi bi-bookmark-check-fill me-1"></i>Varattu
+                                        </span>
+                                    }
+                                    else if (!slot.IsPast && slot.IsAvailable)
+                                    {
+                                        <a asp-action="Book" asp-route-id="@slot.Id"
+                                           class="btn btn-primary btn-sm">
+                                            <i class="bi bi-calendar-check me-1"></i>Varaa
+                                        </a>
+                                    }
+                                    else if (!slot.IsPast && slot.IsFull)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger py-2 px-3">
+                                            Täynnä
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<style>
+/* ── Kalenteriruudukko ── */
+.cal-header-row,
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-hdr  { font-size:11px; font-weight:600; color:#94a3b8; text-align:center; padding:2px 0; }
+
+.cal-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3px 1px;
+    border-radius: 6px;
+    min-height: 42px;
+    position: relative;
+}
+.cal-cell-link { display:flex; flex-direction:column; align-items:center; width:100%; }
+.cal-num {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    font-size: 13px;
+    line-height: 1;
+}
+.cal-dots { display:flex; gap:3px; margin-top:2px; justify-content:center; flex-wrap:wrap; }
+.cal-dot  { width:6px; height:6px; border-radius:50%; display:inline-block; }
+.cal-dot-warning  { background:#f59e0b; }
+.cal-dot-primary  { background:#3b82f6; }
+.cal-dot-success  { background:#22c55e; }
+.cal-dot-secondary { background:#94a3b8; }
+
+.cal-cell.cal-today .cal-num        { background:#dbeafe; color:#1d4ed8; font-weight:700; }
+.cal-cell.cal-selected .cal-num     { background:#2563eb; color:#fff; font-weight:700; }
+.cal-cell.cal-has-slots             { cursor:pointer; }
+.cal-cell.cal-has-slots:hover:not(.cal-selected) { background:#f1f5f9; }
+
+/* ── Aikavälykortit ── */
+.slot-card { border-left: 4px solid transparent !important; }
+.slot-card-warning  { border-left-color: #f59e0b !important; }
+.slot-card-primary  { border-left-color: #3b82f6 !important; }
+.slot-card-success  { border-left-color: #22c55e !important; }
+.slot-card-secondary { border-left-color: #94a3b8 !important; }
+.opacity-65 { opacity: .65; }
+.min-width-0 { min-width: 0; }
+</style>
+}

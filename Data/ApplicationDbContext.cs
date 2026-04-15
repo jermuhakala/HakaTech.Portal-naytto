@@ -25,6 +25,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<KnowledgeBaseArticle>    KnowledgeBaseArticles      { get; set; }
     public DbSet<TicketFeedback>          TicketFeedbacks            { get; set; }
     public DbSet<AuditLog>                AuditLogs                  { get; set; }
+    public DbSet<BookingSlot>             BookingSlots               { get; set; }
+    public DbSet<Booking>                 Bookings                   { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -272,6 +274,43 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasOne(a => a.CreatedByUser)
              .WithMany()
              .HasForeignKey(a => a.CreatedByUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── BookingSlot ────────────────────────────────────────
+        builder.Entity<BookingSlot>(e =>
+        {
+            e.HasKey(s => s.Id);
+            e.Property(s => s.Title).IsRequired().HasMaxLength(200);
+            e.Property(s => s.Description).HasMaxLength(1000);
+            e.HasIndex(s => s.StartTime);
+
+            e.HasOne(s => s.CreatedByUser)
+             .WithMany()
+             .HasForeignKey(s => s.CreatedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ── Booking ────────────────────────────────────────────
+        builder.Entity<Booking>(e =>
+        {
+            e.HasKey(b => b.Id);
+            e.Property(b => b.Notes).HasMaxLength(1000);
+            e.Property(b => b.CancellationReason).HasMaxLength(500);
+
+            e.HasOne(b => b.BookingSlot)
+             .WithMany(s => s.Bookings)
+             .HasForeignKey(b => b.BookingSlotId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(b => b.Customer)
+             .WithMany()
+             .HasForeignKey(b => b.CustomerId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(b => b.User)
+             .WithMany()
+             .HasForeignKey(b => b.UserId)
              .OnDelete(DeleteBehavior.Restrict);
         });
     }

@@ -352,6 +352,109 @@ public static class SeedData
             }
         );
         await dbContext.SaveChangesAsync();
+
+        // 12. Huoltokalenteri – demo-aikavälyt ja varaukset
+        var now = DateTime.Now;
+
+        // Tulevia aikavälyjä
+        var slot1 = new BookingSlot
+        {
+            Title           = "Palvelinhuolto ja päivitykset",
+            SlotType        = BookingSlotType.Maintenance,
+            StartTime       = now.Date.AddDays(3).AddHours(10),
+            DurationMinutes = 120,
+            MaxCapacity     = 1,
+            IsActive        = true,
+            CreatedByUserId = admin1.Id,
+            Description     = "Käyttöjärjestelmäpäivitykset, varmuuskopioinnin tarkistus ja suorituskykyanalyysi."
+        };
+        var slot2 = new BookingSlot
+        {
+            Title           = "IT-konsultointi",
+            SlotType        = BookingSlotType.Consulting,
+            StartTime       = now.Date.AddDays(5).AddHours(13),
+            DurationMinutes = 60,
+            MaxCapacity     = 3,
+            IsActive        = true,
+            CreatedByUserId = admin2.Id,
+            Description     = "Vapaamuotoinen konsultointitunti IT-strategiaan tai teknisiin kysymyksiin."
+        };
+        var slot3 = new BookingSlot
+        {
+            Title           = "Etätukisessio",
+            SlotType        = BookingSlotType.RemoteSupport,
+            StartTime       = now.Date.AddDays(2).AddHours(9),
+            DurationMinutes = 45,
+            MaxCapacity     = 1,
+            IsActive        = true,
+            CreatedByUserId = admin1.Id
+        };
+        var slot4 = new BookingSlot
+        {
+            Title           = "Verkon tarkistus ja optimointi",
+            SlotType        = BookingSlotType.Maintenance,
+            StartTime       = now.Date.AddDays(7).AddHours(8),
+            DurationMinutes = 90,
+            MaxCapacity     = 2,
+            IsActive        = true,
+            CreatedByUserId = admin2.Id,
+            Description     = "Verkon suorituskyky, palomuurin tarkistus ja langattoman verkon optimointi."
+        };
+        var slot5 = new BookingSlot
+        {
+            Title           = "Microsoft 365 -käyttöönottokonsultointi",
+            SlotType        = BookingSlotType.Consulting,
+            StartTime       = now.Date.AddDays(10).AddHours(14),
+            DurationMinutes = 90,
+            MaxCapacity     = 5,
+            IsActive        = true,
+            CreatedByUserId = admin1.Id
+        };
+        // Mennyt aikaväli (historiaa varten)
+        var slotPast = new BookingSlot
+        {
+            Title           = "Tulostimen huolto",
+            SlotType        = BookingSlotType.Maintenance,
+            StartTime       = now.Date.AddDays(-10).AddHours(11),
+            DurationMinutes = 60,
+            MaxCapacity     = 1,
+            IsActive        = true,
+            CreatedByUserId = admin2.Id
+        };
+
+        dbContext.BookingSlots.AddRange(slot1, slot2, slot3, slot4, slot5, slotPast);
+        await dbContext.SaveChangesAsync();
+
+        // Demo-varaukset
+        dbContext.Bookings.AddRange(
+            new Booking
+            {
+                BookingSlotId = slot2.Id,
+                CustomerId    = digimolli.Id,
+                UserId        = matti.Id,
+                Status        = BookingStatus.Confirmed,
+                Notes         = "Kysymyksiä M365-lisensoinnista ja Teams-integraatiosta.",
+                CreatedAt     = DateTime.UtcNow.AddDays(-1)
+            },
+            new Booking
+            {
+                BookingSlotId = slot3.Id,
+                CustomerId    = techsol.Id,
+                UserId        = miia.Id,
+                Status        = BookingStatus.Pending,
+                Notes         = "VPN-yhteysongelma etätyöntekijöillä.",
+                CreatedAt     = DateTime.UtcNow.AddHours(-3)
+            },
+            new Booking
+            {
+                BookingSlotId = slotPast.Id,
+                CustomerId    = kivikangas.Id,
+                UserId        = kalle.Id,
+                Status        = BookingStatus.Confirmed,
+                CreatedAt     = DateTime.UtcNow.AddDays(-11)
+            }
+        );
+        await dbContext.SaveChangesAsync();
     }
 
     private static async Task<ApplicationUser> CreateUserAsync(UserManager<ApplicationUser> userManager, string email, string fullName, int? customerId, string role, string password, bool isCustomerAdmin = false)

@@ -1,0 +1,116 @@
+@model HakaTech.Portal.Models.ViewModels.BookingFormViewModel
+@using HakaTech.Portal.Models.Domain
+@{
+    var slot = ViewBag.Slot as BookingSlot;
+    ViewData["Title"] = "Tee varaus";
+    var fi = new System.Globalization.CultureInfo("fi-FI");
+
+    string TypeColor(BookingSlotType t) => t switch {
+        BookingSlotType.Maintenance   => "warning",
+        BookingSlotType.Consulting    => "primary",
+        BookingSlotType.RemoteSupport => "success",
+        _                             => "secondary"
+    };
+    string TypeName(BookingSlotType t) => t switch {
+        BookingSlotType.Maintenance   => "Huolto",
+        BookingSlotType.Consulting    => "Konsultointi",
+        BookingSlotType.RemoteSupport => "Etätuki",
+        _                             => t.ToString()
+    };
+}
+
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a asp-action="Index"
+               asp-route-year="@slot?.StartTime.Year"
+               asp-route-month="@slot?.StartTime.Month">Kalenteri</a>
+        </li>
+        <li class="breadcrumb-item active">Tee varaus</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+
+        @* Aikavälin tiedot *@
+        @if (slot is not null)
+        {
+            <div class="card border-0 shadow-sm mb-3 border-start border-@TypeColor(slot.SlotType) border-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="text-center" style="min-width:56px">
+                            <div class="fw-bold fs-4 lh-1">@slot.StartTime.ToString("HH:mm")</div>
+                            <div class="text-muted small">@slot.StartTime.ToString("d.M.yyyy", fi)</div>
+                        </div>
+                        <div>
+                            <span class="badge text-bg-@TypeColor(slot.SlotType) mb-1">
+                                @TypeName(slot.SlotType)
+                            </span>
+                            <h5 class="mb-1">@slot.Title</h5>
+                            <div class="text-muted small">
+                                <i class="bi bi-clock me-1"></i>
+                                @slot.StartTime.ToString("dddd d.M.yyyy HH:mm", fi)
+                                – @slot.EndTime.ToString("HH:mm")
+                                (@slot.DurationMinutes min)
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(slot.Description))
+                            {
+                                <div class="text-muted small mt-1">@slot.Description</div>
+                            }
+                            <div class="mt-2 small">
+                                <i class="bi bi-people me-1 text-success"></i>
+                                <span class="text-success">@slot.AvailableSpots paikkaa jäljellä</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* Varauslomake *@
+        <div class="card border-0 shadow-sm">
+            <div class="card-header">
+                <i class="bi bi-calendar-check me-2"></i>Vahvista varaus
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Book" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="BookingSlotId" />
+
+                    <div asp-validation-summary="ModelOnly"
+                         class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-4">
+                        <label asp-for="Notes" class="form-label fw-medium"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="3"
+                                  placeholder="Esim. erityistoiveet, yhteystiedot tai lisätiedot huollolle…"></textarea>
+                        <span asp-validation-for="Notes" class="text-danger small"></span>
+                        <div class="form-text">Vapaaehtoinen.</div>
+                    </div>
+
+                    <div class="alert alert-info small mb-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Varaus on aluksi <strong>odottaa vahvistusta</strong> -tilassa.
+                        Lähetämme sähköpostivahvistuksen kun varaus on hyväksytty.
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-calendar-check me-1"></i>Vahvista varaus
+                        </button>
+                        <a asp-action="Index"
+                           asp-route-year="@slot?.StartTime.Year"
+                           asp-route-month="@slot?.StartTime.Month"
+                           class="btn btn-outline-secondary">Peruuta</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

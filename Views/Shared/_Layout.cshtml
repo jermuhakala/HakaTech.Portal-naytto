@@ -50,6 +50,10 @@
                    asp-controller="KnowledgeBase" asp-action="Index">
                     <i class="bi bi-book"></i><span>Tietopankki</span>
                 </a>
+                <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Booking" ? "active" : "")"
+                   asp-controller="Booking" asp-action="Index">
+                    <i class="bi bi-calendar3"></i><span>Kalenteri</span>
+                </a>
 
                 @if (User.IsInRole("Admin"))
                 {

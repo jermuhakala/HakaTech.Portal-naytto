@@ -1,0 +1,103 @@
+@model HakaTech.Portal.Models.ViewModels.BookingSlotFormViewModel
+@using HakaTech.Portal.Models.Domain
+@{
+    bool isEdit = Model.Id > 0;
+    ViewData["Title"] = isEdit ? "Muokkaa aikaväliä" : "Lisää aikaväli";
+    string formAction = ViewBag.FormAction as string ?? (isEdit ? "EditSlot" : "CreateSlot");
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h2 class="mb-0">@ViewData["Title"]</h2>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form asp-action="@formAction" method="post">
+                    @Html.AntiForgeryToken()
+                    @if (isEdit)
+                    {
+                        <input type="hidden" asp-for="Id" />
+                    }
+
+                    <div asp-validation-summary="ModelOnly"
+                         class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label fw-medium"></label>
+                        <input asp-for="Title" class="form-control"
+                               placeholder="Esim. Palvelinhuolto, IT-konsultointi…" />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="SlotType" class="form-label fw-medium"></label>
+                        <select asp-for="SlotType" class="form-select">
+                            <option value="@BookingSlotType.Maintenance">Huolto</option>
+                            <option value="@BookingSlotType.Consulting">Konsultointi</option>
+                            <option value="@BookingSlotType.RemoteSupport">Etätuki</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-7">
+                            <label class="form-label fw-medium">Alkamisaika</label>
+                            <input type="datetime-local"
+                                   id="StartTime" name="StartTime"
+                                   value="@Model.StartTime.ToString("yyyy-MM-ddTHH:mm")"
+                                   class="form-control" required />
+                            <span asp-validation-for="StartTime" class="text-danger small"></span>
+                        </div>
+                        <div class="col-sm-5">
+                            <label asp-for="DurationMinutes" class="form-label fw-medium"></label>
+                            <div class="input-group">
+                                <input asp-for="DurationMinutes" class="form-control" type="number" min="15" max="480" step="15" />
+                                <span class="input-group-text">min</span>
+                            </div>
+                            <span asp-validation-for="DurationMinutes" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="MaxCapacity" class="form-label fw-medium"></label>
+                        <input asp-for="MaxCapacity" class="form-control" type="number" min="1" max="50" style="max-width:120px" />
+                        <div class="form-text">Kuinka monta asiakasta voi varata saman aikavälin.</div>
+                        <span asp-validation-for="MaxCapacity" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Description" class="form-label fw-medium"></label>
+                        <textarea asp-for="Description" class="form-control" rows="3"
+                                  placeholder="Vapaaehtoinen kuvaus asiakkaille…"></textarea>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4 p-3 bg-light rounded">
+                        <div class="form-check">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label fw-medium">Julkaistu</label>
+                        </div>
+                        <div class="form-text mt-1">
+                            Vain julkaistut aikavälyt näkyvät asiakkaille.
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-floppy me-1"></i>@(isEdit ? "Tallenna" : "Luo aikaväli")
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Peruuta</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

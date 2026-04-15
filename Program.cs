@@ -3,6 +3,7 @@ using HakaTech.Portal.Hubs;
 using HakaTech.Portal.Models.Domain;
 using HakaTech.Portal.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
 
@@ -56,7 +57,9 @@ builder.Services.AddDataProtection();
 builder.Services.AddHttpClient<IGuacamoleService, GuacamoleService>();
 
 builder.Services.AddSignalR();
-builder.Services.AddControllersWithViews();
+builder.Services.AddLocalization(opts => opts.ResourcesPath = "Resources");
+builder.Services.AddControllersWithViews()
+    .AddViewLocalization();
 
 var app = builder.Build();
 
@@ -65,6 +68,15 @@ await SeedData.InitializeAsync(app.Services);
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+var supportedCultures = new[] { "fi-FI", "sv-SE", "en-US" };
+var localizationOptions = new RequestLocalizationOptions()
+    .SetDefaultCulture("fi-FI")
+    .AddSupportedCultures(supportedCultures)
+    .AddSupportedUICultures(supportedCultures);
+localizationOptions.RequestCultureProviders.Insert(0, new CookieRequestCultureProvider());
+app.UseRequestLocalization(localizationOptions);
+
 app.UseRouting();
 
 app.UseAuthentication(); // ENSIN Authentication

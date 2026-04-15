@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true" />
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+
+  <data name="Nav.MainMenu" xml:space="preserve"><value>Huvudmeny</value></data>
+  <data name="Nav.Overview" xml:space="preserve"><value>Sammanfattning</value></data>
+  <data name="Nav.Tickets" xml:space="preserve"><value>Ärenden</value></data>
+  <data name="Nav.Invoices" xml:space="preserve"><value>Fakturor</value></data>
+  <data name="Nav.Services" xml:space="preserve"><value>Tjänster</value></data>
+  <data name="Nav.RemoteDesktop" xml:space="preserve"><value>Fjärrskrivbord</value></data>
+  <data name="Nav.KnowledgeBase" xml:space="preserve"><value>Kunskapsbas</value></data>
+  <data name="Nav.Calendar" xml:space="preserve"><value>Kalender</value></data>
+  <data name="Nav.Management" xml:space="preserve"><value>Administration</value></data>
+  <data name="Nav.Customers" xml:space="preserve"><value>Kunder</value></data>
+  <data name="Nav.CreateUser" xml:space="preserve"><value>Skapa användare</value></data>
+  <data name="Nav.Reports" xml:space="preserve"><value>Rapporter</value></data>
+  <data name="Nav.Announcements" xml:space="preserve"><value>Meddelanden</value></data>
+  <data name="Nav.KBManage" xml:space="preserve"><value>KB: Hantering</value></data>
+  <data name="Nav.AuditLog" xml:space="preserve"><value>Händelselogg</value></data>
+  <data name="Nav.Users" xml:space="preserve"><value>Användare</value></data>
+  <data name="Nav.SignIn" xml:space="preserve"><value>Logga in</value></data>
+  <data name="Nav.SignOut" xml:space="preserve"><value>Logga ut</value></data>
+  <data name="Nav.ChangePassword" xml:space="preserve"><value>Byt lösenord</value></data>
+  <data name="Role.Admin" xml:space="preserve"><value>Administratör</value></data>
+  <data name="Role.Customer" xml:space="preserve"><value>Kund</value></data>
+</root>

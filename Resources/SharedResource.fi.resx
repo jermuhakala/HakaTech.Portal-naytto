@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true" />
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+
+  <data name="Nav.MainMenu" xml:space="preserve"><value>Päävalikko</value></data>
+  <data name="Nav.Overview" xml:space="preserve"><value>Yhteenveto</value></data>
+  <data name="Nav.Tickets" xml:space="preserve"><value>Tiketit</value></data>
+  <data name="Nav.Invoices" xml:space="preserve"><value>Laskut</value></data>
+  <data name="Nav.Services" xml:space="preserve"><value>Palvelut</value></data>
+  <data name="Nav.RemoteDesktop" xml:space="preserve"><value>Etätyöpöytä</value></data>
+  <data name="Nav.KnowledgeBase" xml:space="preserve"><value>Tietopankki</value></data>
+  <data name="Nav.Calendar" xml:space="preserve"><value>Kalenteri</value></data>
+  <data name="Nav.Management" xml:space="preserve"><value>Hallinta</value></data>
+  <data name="Nav.Customers" xml:space="preserve"><value>Asiakkaat</value></data>
+  <data name="Nav.CreateUser" xml:space="preserve"><value>Luo käyttäjä</value></data>
+  <data name="Nav.Reports" xml:space="preserve"><value>Raportit</value></data>
+  <data name="Nav.Announcements" xml:space="preserve"><value>Tiedotteet</value></data>
+  <data name="Nav.KBManage" xml:space="preserve"><value>KB: Hallinta</value></data>
+  <data name="Nav.AuditLog" xml:space="preserve"><value>Tapahtumaloki</value></data>
+  <data name="Nav.Users" xml:space="preserve"><value>Käyttäjät</value></data>
+  <data name="Nav.SignIn" xml:space="preserve"><value>Kirjaudu sisään</value></data>
+  <data name="Nav.SignOut" xml:space="preserve"><value>Kirjaudu ulos</value></data>
+  <data name="Nav.ChangePassword" xml:space="preserve"><value>Vaihda salasana</value></data>
+  <data name="Role.Admin" xml:space="preserve"><value>Administrator</value></data>
+  <data name="Role.Customer" xml:space="preserve"><value>Asiakas</value></data>
+</root>

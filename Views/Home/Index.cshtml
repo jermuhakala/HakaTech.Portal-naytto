@@ -2,11 +2,12 @@
 @using HakaTech.Portal.Models.Domain
 @{
     ViewData["Title"] = "Yhteenveto";
+    var fi = new System.Globalization.CultureInfo("fi-FI");
 }
 
-<div class="dashboard-wrapper">
+<div class="dashboard-wrapper" id="dashboardRoot">
 
-    @* ── Tiedotteet & huoltoikkunat ────────────────────────────── *@
+    @* ── Tiedotteet (kiinteä yläosa, ei draggable) ─────────────── *@
     @if (Model.ActiveAnnouncements.Any())
     {
         <div class="mb-3">
@@ -45,7 +46,7 @@
         </div>
     }
 
-    @* ── Ilmoitukset: admin → odottavat tarjouspyynnöt ─────────────── *@
+    @* ── Admin: odottavat tarjouspyynnöt ──────────────────────── *@
     @if (Model.IsAdmin && Model.PendingQuoteRequests > 0)
     {
         <div class="alert alert-warning alert-dismissible fade show mb-3 d-flex align-items-center gap-3" role="alert">
@@ -61,7 +62,7 @@
         </div>
     }
 
-    @* ── Ilmoitukset: asiakas → uudet laskut ───────────────────────── *@
+    @* ── Asiakas: uudet laskut ──────────────────────────────────── *@
     @if (!Model.IsAdmin && Model.NewSentInvoices.Any())
     {
         <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
@@ -73,9 +74,7 @@
                         @foreach (var inv in Model.NewSentInvoices)
                         {
                             <li>
-                                <a asp-controller="Invoice" asp-action="Details" asp-route-id="@inv.Id" class="alert-link fw-semibold">
-                                    @inv.InvoiceNumber
-                                </a>
+                                <a asp-controller="Invoice" asp-action="Details" asp-route-id="@inv.Id" class="alert-link fw-semibold">@inv.InvoiceNumber</a>
                                 — @inv.TotalAmount.ToString("N2") €,
                                 eräpäivä <strong>@inv.DueDate.ToString("dd.MM.yyyy")</strong>
                             </li>
@@ -94,247 +93,376 @@
     <div class="welcome-bar mb-4">
         <div>
             <h1 class="welcome-title">
-                <i class="bi bi-speedometer2"></i>
-                Yhteenveto
+                <i class="bi bi-speedometer2"></i> Yhteenveto
             </h1>
-            <p class="welcome-sub">Tervetuloa, <strong>@Model.WelcomeName</strong> &mdash; @DateTime.Now.ToString("dddd d. MMMM yyyy", new System.Globalization.CultureInfo("fi-FI"))</p>
+            <p class="welcome-sub">Tervetuloa, <strong>@Model.WelcomeName</strong> &mdash; @DateTime.Now.ToString("dddd d. MMMM yyyy", fi)</p>
         </div>
-        @if (Model.IsAdmin)
-        {
-            <span class="badge-role"><i class="bi bi-shield-check"></i> Admin</span>
-        }
-        else
-        {
-            <span class="badge-role badge-customer"><i class="bi bi-person"></i> Asiakas</span>
-        }
-    </div>
-
-    @* ── KPI-kortit ───────────────────────────────────────────── *@
-    <div class="kpi-grid mb-4">
-
-        @if (Model.IsAdmin)
-        {
-            <a asp-controller="Customer" asp-action="Index" class="kpi-card kpi-blue kpi-link">
-                <div class="kpi-icon"><i class="bi bi-building"></i></div>
-                <div class="kpi-body">
-                    <span class="kpi-value">@Model.TotalCustomers</span>
-                    <span class="kpi-label">Asiakasta yht.</span>
-                </div>
-                <div class="kpi-sub">@Model.ActiveCustomers aktiivista</div>
-            </a>
-        }
-
-        <a asp-controller="Ticket" asp-action="Index" asp-route-status="Open" class="kpi-card kpi-orange kpi-link">
-            <div class="kpi-icon"><i class="bi bi-ticket-detailed"></i></div>
-            <div class="kpi-body">
-                <span class="kpi-value">@Model.OpenTickets</span>
-                <span class="kpi-label">Avoimet tiketit</span>
-            </div>
-            <div class="kpi-sub">@Model.InProgressTickets käsittelyssä</div>
-        </a>
-
-        @if (Model.IsAdmin)
-        {
-            <a asp-controller="Ticket" asp-action="Index" asp-route-priority="Critical" class="kpi-card kpi-red kpi-link">
-                <div class="kpi-icon"><i class="bi bi-exclamation-triangle"></i></div>
-                <div class="kpi-body">
-                    <span class="kpi-value">@Model.CriticalTickets</span>
-                    <span class="kpi-label">Kriittiset tiketit</span>
-                </div>
-                <div class="kpi-sub">@Model.HighTickets korkea prioriteetti</div>
-            </a>
-        }
-
-        <a asp-controller="Invoice" asp-action="Index" asp-route-status="Overdue" class="kpi-card kpi-yellow kpi-link">
-            <div class="kpi-icon"><i class="bi bi-receipt"></i></div>
-            <div class="kpi-body">
-                <span class="kpi-value">@Model.OverdueCount</span>
-                <span class="kpi-label">Erääntyneet laskut</span>
-            </div>
-            <div class="kpi-sub">@Model.TotalInvoices laskua yhteensä</div>
-        </a>
-
-        <a asp-controller="Invoice" asp-action="Index" class="kpi-card kpi-green kpi-link">
-            <div class="kpi-icon"><i class="bi bi-currency-euro"></i></div>
-            <div class="kpi-body">
-                <span class="kpi-value">@Model.UnpaidTotal.ToString("N0") €</span>
-                <span class="kpi-label">Maksamatta</span>
-            </div>
-            <div class="kpi-sub">avoimet laskut yhteensä</div>
-        </a>
-
-    </div>
-
-    @* ── Pääsisältöalue: kaavio + listat ─────────────────────── *@
-    <div class="dashboard-main-grid">
-
-        @* Vasen sarake *@
-        <div class="dashboard-col-left">
-
-            @* Tikettien tilakaavio (Admin only) *@
-            @if (Model.IsAdmin && Model.TicketsByStatus.Any())
+        <div class="d-flex align-items-center gap-2">
+            @if (Model.IsAdmin)
             {
-                <div class="dash-card mb-4">
-                    <div class="dash-card-header">
-                        <i class="bi bi-pie-chart-fill"></i> Tikettien tilajakauma
-                    </div>
-                    <div class="dash-card-body chart-container" style="position:relative; height:190px; padding: .75rem 1rem;">
-                        <canvas id="ticketStatusChart"></canvas>
-                    </div>
-                </div>
-            }
-
-            @* Avoimet tiketit -taulukko *@
-            @if (Model.RecentOpenTickets.Any())
-            {
-                <div class="dash-card">
-                    <div class="dash-card-header">
-                        <i class="bi bi-list-check"></i>
-                        @(Model.IsAdmin ? "Avoimet tiketit (prioriteetti)" : "Omat tiketit")
-                    </div>
-                    <div class="dash-card-body p-0">
-                        <div class="table-responsive">
-                            <table class="dash-table">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Otsikko</th>
-                                        @if (Model.IsAdmin) { <th>Asiakas</th> }
-                                        <th>Prioriteetti</th>
-                                        <th>Tila</th>
-                                        <th>Luotu</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var t in Model.RecentOpenTickets)
-                                    {
-                                        <tr>
-                                            <td><a href="/Ticket/Details/@t.Id" class="link-subtle">#@t.Id</a></td>
-                                            <td class="text-truncate-cell"><a href="/Ticket/Details/@t.Id" class="link-subtle">@t.Title</a></td>
-                                            @if (Model.IsAdmin)
-                                            {
-                                                <td>@(t.Customer?.CompanyName ?? "-")</td>
-                                            }
-                                            <td>
-                                                <span class="badge-priority badge-@t.Priority.ToString().ToLower()">
-                                                    @PriorityLabel(t.Priority)
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span class="badge-status badge-status-@t.Status.ToString().ToLower()">
-                                                    @StatusLabel(t.Status)
-                                                </span>
-                                            </td>
-                                            <td class="text-nowrap">@t.CreatedAt.ToString("dd.MM.yyyy")</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="dash-card-footer">
-                        <a href="/Ticket" class="btn-link-more"><i class="bi bi-arrow-right-circle"></i> Kaikki tiketit</a>
-                    </div>
-                </div>
+                <span class="badge-role"><i class="bi bi-shield-check"></i> Admin</span>
             }
             else
             {
-                <div class="dash-card">
-                    <div class="dash-card-body text-center text-muted py-5">
-                        <i class="bi bi-check-circle display-4"></i>
-                        <p class="mt-2">Ei avoimia tikettejä.</p>
-                    </div>
-                </div>
+                <span class="badge-role badge-customer"><i class="bi bi-person"></i> Asiakas</span>
             }
+            <button id="editLayoutBtn" class="btn btn-sm btn-outline-light opacity-75" title="Muokkaa koontinäyttöä" onclick="toggleEditMode()">
+                <i class="bi bi-grid-3x3-gap"></i>
+            </button>
         </div>
+    </div>
 
-        @* Oikea sarake *@
-        <div class="dashboard-col-right">
+    @* ── Mukautettu widget-ruudukko ───────────────────────────── *@
+    <div id="widgetContainer">
 
-            @* Erääntyvät laskut *@
-            @if (Model.UpcomingDueInvoices.Any())
+        @foreach (var widgetKey in Model.WidgetOrder)
+        {
+            switch (widgetKey)
             {
-                <div class="dash-card mb-4">
-                    <div class="dash-card-header text-warning">
-                        <i class="bi bi-calendar-event"></i> Erääntyvät pian (7 pv)
-                    </div>
-                    <div class="dash-card-body p-0">
-                        <ul class="invoice-list">
-                            @foreach (var inv in Model.UpcomingDueInvoices)
+                case "kpi":
+                    @* ── KPI-kortit ──────────────────────────────── *@
+                    <div class="widget mb-4" data-widget="kpi">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="widget-drag-handle"><i class="bi bi-grip-vertical"></i></span>
+                        </div>
+                        <div class="kpi-grid">
+                            @if (Model.IsAdmin)
                             {
-                                var daysLeft = (inv.DueDate.Date - DateTime.UtcNow.Date).Days;
-                                <li>
-                                    <div class="inv-left">
-                                        <span class="inv-num"><a href="/Invoice/Details/@inv.Id" class="link-subtle">@inv.InvoiceNumber</a></span>
-                                        @if (Model.IsAdmin)
-                                        {
-                                            <span class="inv-customer">@(inv.Customer?.CompanyName ?? "-")</span>
-                                        }
+                                <a asp-controller="Customer" asp-action="Index" class="kpi-card kpi-blue kpi-link">
+                                    <div class="kpi-icon"><i class="bi bi-building"></i></div>
+                                    <div class="kpi-body">
+                                        <span class="kpi-value">@Model.TotalCustomers</span>
+                                        <span class="kpi-label">Asiakasta yht.</span>
                                     </div>
-                                    <div class="inv-right">
-                                        <span class="inv-amount">@inv.TotalAmount.ToString("N2") €</span>
-                                        <span class="inv-days @(daysLeft <= 2 ? "text-danger" : "text-warning")">
-                                            @(daysLeft == 0 ? "Tänään!" : $"{daysLeft} pv")
-                                        </span>
-                                    </div>
-                                </li>
+                                    <div class="kpi-sub">@Model.ActiveCustomers aktiivista</div>
+                                </a>
                             }
-                        </ul>
-                    </div>
-                    <div class="dash-card-footer">
-                        <a href="/Invoice" class="btn-link-more"><i class="bi bi-arrow-right-circle"></i> Kaikki laskut</a>
-                    </div>
-                </div>
-            }
-
-            @* Erääntyneet laskut *@
-            @if (Model.OverdueInvoices.Any())
-            {
-                <div class="dash-card dash-card-danger">
-                    <div class="dash-card-header text-danger">
-                        <i class="bi bi-exclamation-circle-fill"></i> Erääntyneet laskut
-                    </div>
-                    <div class="dash-card-body p-0">
-                        <ul class="invoice-list">
-                            @foreach (var inv in Model.OverdueInvoices)
+                            <a asp-controller="Ticket" asp-action="Index" asp-route-status="Open" class="kpi-card kpi-orange kpi-link">
+                                <div class="kpi-icon"><i class="bi bi-ticket-detailed"></i></div>
+                                <div class="kpi-body">
+                                    <span class="kpi-value">@Model.OpenTickets</span>
+                                    <span class="kpi-label">Avoimet tiketit</span>
+                                </div>
+                                <div class="kpi-sub">@Model.InProgressTickets käsittelyssä</div>
+                            </a>
+                            @if (Model.IsAdmin)
                             {
-                                var overdueDays = (DateTime.UtcNow.Date - inv.DueDate.Date).Days;
-                                <li>
-                                    <div class="inv-left">
-                                        <span class="inv-num"><a href="/Invoice/Details/@inv.Id" class="link-subtle">@inv.InvoiceNumber</a></span>
-                                        @if (Model.IsAdmin)
-                                        {
-                                            <span class="inv-customer">@(inv.Customer?.CompanyName ?? "-")</span>
-                                        }
+                                <a asp-controller="Ticket" asp-action="Index" asp-route-priority="Critical" class="kpi-card kpi-red kpi-link">
+                                    <div class="kpi-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                                    <div class="kpi-body">
+                                        <span class="kpi-value">@Model.CriticalTickets</span>
+                                        <span class="kpi-label">Kriittiset tiketit</span>
                                     </div>
-                                    <div class="inv-right">
-                                        <span class="inv-amount text-danger">@inv.TotalAmount.ToString("N2") €</span>
-                                        <span class="inv-days text-danger">-@overdueDays pv</span>
-                                    </div>
-                                </li>
+                                    <div class="kpi-sub">@Model.HighTickets korkea prioriteetti</div>
+                                </a>
                             }
-                        </ul>
+                            <a asp-controller="Invoice" asp-action="Index" asp-route-status="Overdue" class="kpi-card kpi-yellow kpi-link">
+                                <div class="kpi-icon"><i class="bi bi-receipt"></i></div>
+                                <div class="kpi-body">
+                                    <span class="kpi-value">@Model.OverdueCount</span>
+                                    <span class="kpi-label">Erääntyneet laskut</span>
+                                </div>
+                                <div class="kpi-sub">@Model.TotalInvoices laskua yhteensä</div>
+                            </a>
+                            <a asp-controller="Invoice" asp-action="Index" class="kpi-card kpi-green kpi-link">
+                                <div class="kpi-icon"><i class="bi bi-currency-euro"></i></div>
+                                <div class="kpi-body">
+                                    <span class="kpi-value">@Model.UnpaidTotal.ToString("N0") €</span>
+                                    <span class="kpi-label">Maksamatta</span>
+                                </div>
+                                <div class="kpi-sub">avoimet laskut yhteensä</div>
+                            </a>
+                        </div>
                     </div>
-                </div>
-            }
+                    break;
 
-            @* Tyhjä tila jos ei laskuja *@
-            @if (!Model.UpcomingDueInvoices.Any() && !Model.OverdueInvoices.Any())
-            {
-                <div class="dash-card">
-                    <div class="dash-card-body text-center text-muted py-5">
-                        <i class="bi bi-check2-all display-4"></i>
-                        <p class="mt-2">Ei avoimia laskuja.</p>
+                case "tickets":
+                    @* ── Tiketit ──────────────────────────────────── *@
+                    <div class="widget mb-4" data-widget="tickets">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="widget-drag-handle"><i class="bi bi-grip-vertical"></i></span>
+                        </div>
+                        <div class="dashboard-main-grid">
+                            <div class="dashboard-col-left">
+                                @if (Model.IsAdmin && Model.TicketsByStatus.Any())
+                                {
+                                    <div class="dash-card mb-4">
+                                        <div class="dash-card-header">
+                                            <i class="bi bi-pie-chart-fill"></i> Tikettien tilajakauma
+                                        </div>
+                                        <div class="dash-card-body chart-container" style="position:relative; height:190px; padding: .75rem 1rem;">
+                                            <canvas id="ticketStatusChart"></canvas>
+                                        </div>
+                                    </div>
+                                }
+                                @if (Model.RecentOpenTickets.Any())
+                                {
+                                    <div class="dash-card">
+                                        <div class="dash-card-header">
+                                            <i class="bi bi-list-check"></i>
+                                            @(Model.IsAdmin ? "Avoimet tiketit (prioriteetti)" : "Omat tiketit")
+                                        </div>
+                                        <div class="dash-card-body p-0">
+                                            <div class="table-responsive">
+                                                <table class="dash-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>#</th>
+                                                            <th>Otsikko</th>
+                                                            @if (Model.IsAdmin) { <th>Asiakas</th> }
+                                                            <th>Prioriteetti</th>
+                                                            <th>Tila</th>
+                                                            <th>Luotu</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var t in Model.RecentOpenTickets)
+                                                        {
+                                                            <tr>
+                                                                <td><a href="/Ticket/Details/@t.Id" class="link-subtle">#@t.Id</a></td>
+                                                                <td class="text-truncate-cell"><a href="/Ticket/Details/@t.Id" class="link-subtle">@t.Title</a></td>
+                                                                @if (Model.IsAdmin) { <td>@(t.Customer?.CompanyName ?? "-")</td> }
+                                                                <td>
+                                                                    <span class="badge-priority badge-@t.Priority.ToString().ToLower()">@PriorityLabel(t.Priority)</span>
+                                                                </td>
+                                                                <td>
+                                                                    <span class="badge-status badge-status-@t.Status.ToString().ToLower()">@StatusLabel(t.Status)</span>
+                                                                </td>
+                                                                <td class="text-nowrap">@t.CreatedAt.ToString("dd.MM.yyyy")</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="dash-card-footer">
+                                            <a href="/Ticket" class="btn-link-more"><i class="bi bi-arrow-right-circle"></i> Kaikki tiketit</a>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="dash-card">
+                                        <div class="dash-card-body text-center text-muted py-4">
+                                            <i class="bi bi-check-circle display-4"></i>
+                                            <p class="mt-2">Ei avoimia tikettejä.</p>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
                     </div>
-                </div>
+                    break;
+
+                case "invoices":
+                    @* ── Laskut ───────────────────────────────────── *@
+                    <div class="widget mb-4" data-widget="invoices">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="widget-drag-handle"><i class="bi bi-grip-vertical"></i></span>
+                        </div>
+                        <div class="row g-4">
+                            @if (Model.UpcomingDueInvoices.Any())
+                            {
+                                <div class="col-lg-6">
+                                    <div class="dash-card h-100">
+                                        <div class="dash-card-header text-warning">
+                                            <i class="bi bi-calendar-event"></i> Erääntyvät pian (7 pv)
+                                        </div>
+                                        <div class="dash-card-body p-0">
+                                            <ul class="invoice-list">
+                                                @foreach (var inv in Model.UpcomingDueInvoices)
+                                                {
+                                                    var daysLeft = (inv.DueDate.Date - DateTime.UtcNow.Date).Days;
+                                                    <li>
+                                                        <div class="inv-left">
+                                                            <span class="inv-num"><a href="/Invoice/Details/@inv.Id" class="link-subtle">@inv.InvoiceNumber</a></span>
+                                                            @if (Model.IsAdmin) { <span class="inv-customer">@(inv.Customer?.CompanyName ?? "-")</span> }
+                                                        </div>
+                                                        <div class="inv-right">
+                                                            <span class="inv-amount">@inv.TotalAmount.ToString("N2") €</span>
+                                                            <span class="inv-days @(daysLeft <= 2 ? "text-danger" : "text-warning")">
+                                                                @(daysLeft == 0 ? "Tänään!" : $"{daysLeft} pv")
+                                                            </span>
+                                                        </div>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                        <div class="dash-card-footer">
+                                            <a href="/Invoice" class="btn-link-more"><i class="bi bi-arrow-right-circle"></i> Kaikki laskut</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            @if (Model.OverdueInvoices.Any())
+                            {
+                                <div class="col-lg-6">
+                                    <div class="dash-card dash-card-danger h-100">
+                                        <div class="dash-card-header text-danger">
+                                            <i class="bi bi-exclamation-circle-fill"></i> Erääntyneet laskut
+                                        </div>
+                                        <div class="dash-card-body p-0">
+                                            <ul class="invoice-list">
+                                                @foreach (var inv in Model.OverdueInvoices)
+                                                {
+                                                    var overdueDays = (DateTime.UtcNow.Date - inv.DueDate.Date).Days;
+                                                    <li>
+                                                        <div class="inv-left">
+                                                            <span class="inv-num"><a href="/Invoice/Details/@inv.Id" class="link-subtle">@inv.InvoiceNumber</a></span>
+                                                            @if (Model.IsAdmin) { <span class="inv-customer">@(inv.Customer?.CompanyName ?? "-")</span> }
+                                                        </div>
+                                                        <div class="inv-right">
+                                                            <span class="inv-amount text-danger">@inv.TotalAmount.ToString("N2") €</span>
+                                                            <span class="inv-days text-danger">-@overdueDays pv</span>
+                                                        </div>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            @if (!Model.UpcomingDueInvoices.Any() && !Model.OverdueInvoices.Any())
+                            {
+                                <div class="col-12">
+                                    <div class="dash-card">
+                                        <div class="dash-card-body text-center text-muted py-4">
+                                            <i class="bi bi-check2-all display-4"></i>
+                                            <p class="mt-2">Ei avoimia laskuja.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    break;
+
+                case "calendar":
+                    @* ── Kalenteri: tulevat varaukset ─────────────── *@
+                    <div class="widget mb-4" data-widget="calendar">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="widget-drag-handle"><i class="bi bi-grip-vertical"></i></span>
+                        </div>
+                        <div class="dash-card">
+                            <div class="dash-card-header">
+                                <i class="bi bi-calendar3"></i> Tulevat varaukset (14 pv)
+                            </div>
+                            <div class="dash-card-body p-0">
+                                @if (!Model.UpcomingBookingSlots.Any())
+                                {
+                                    <div class="text-center text-muted py-4">
+                                        <i class="bi bi-calendar-x display-4 d-block mb-2"></i>
+                                        <p>Ei tulevia varauksia lähiaikoina.</p>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <ul class="list-group list-group-flush">
+                                        @foreach (var slot in Model.UpcomingBookingSlots)
+                                        {
+                                            var slotColor = slot.SlotType switch {
+                                                BookingSlotType.Maintenance   => "warning",
+                                                BookingSlotType.Consulting    => "primary",
+                                                BookingSlotType.RemoteSupport => "info",
+                                                _ => "secondary"
+                                            };
+                                            var slotIcon = slot.SlotType switch {
+                                                BookingSlotType.Maintenance   => "bi-tools",
+                                                BookingSlotType.Consulting    => "bi-person-workspace",
+                                                BookingSlotType.RemoteSupport => "bi-display",
+                                                _ => "bi-calendar"
+                                            };
+                                            <li class="list-group-item d-flex align-items-center gap-3 py-3">
+                                                <div class="text-center" style="min-width:44px">
+                                                    <div class="fw-bold" style="font-size:.95rem; line-height:1.1">@slot.StartTime.ToString("dd", fi)</div>
+                                                    <div class="text-muted" style="font-size:.7rem; text-transform:uppercase">@slot.StartTime.ToString("MMM", fi)</div>
+                                                </div>
+                                                <span class="badge text-bg-@slotColor rounded-pill" style="width:8px; height:8px; padding:4px; flex-shrink:0"></span>
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-medium small">@slot.Title</div>
+                                                    <div class="text-muted" style="font-size:.75rem">
+                                                        <i class="bi @slotIcon me-1"></i>@slot.StartTime.ToString("HH:mm") – @slot.EndTime.ToString("HH:mm")
+                                                        @if (slot.ActiveBookingsCount > 0)
+                                                        {
+                                                            <span class="ms-2">· @slot.ActiveBookingsCount/@slot.MaxCapacity varattua</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                @if (slot.IsAvailable)
+                                                {
+                                                    <a asp-controller="Booking" asp-action="Book" asp-route-id="@slot.Id"
+                                                       class="btn btn-outline-primary btn-sm">Varaa</a>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge text-bg-secondary">Täynnä</span>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+                            <div class="dash-card-footer">
+                                <a asp-controller="Booking" asp-action="Index" class="btn-link-more">
+                                    <i class="bi bi-arrow-right-circle"></i> Koko kalenteri
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    break;
+
+                case "quickactions":
+                    @* ── Pikalinkit ───────────────────────────────── *@
+                    <div class="widget mb-4" data-widget="quickactions">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="widget-drag-handle"><i class="bi bi-grip-vertical"></i></span>
+                        </div>
+                        <div class="dash-card">
+                            <div class="dash-card-header">
+                                <i class="bi bi-lightning-charge"></i> Pikalinkit
+                            </div>
+                            <div class="dash-card-body">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a asp-controller="Ticket" asp-action="Create" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-plus-lg me-1"></i>Uusi tiketti
+                                    </a>
+                                    <a asp-controller="Invoice" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-receipt me-1"></i>Laskut
+                                    </a>
+                                    <a asp-controller="ServiceCatalog" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-grid me-1"></i>Palvelut
+                                    </a>
+                                    <a asp-controller="Booking" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-calendar3 me-1"></i>Kalenteri
+                                    </a>
+                                    <a asp-controller="KnowledgeBase" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-book me-1"></i>Tietopankki
+                                    </a>
+                                    @if (Model.IsAdmin)
+                                    {
+                                        <a asp-controller="Customer" asp-action="Create" class="btn btn-outline-success btn-sm">
+                                            <i class="bi bi-building-add me-1"></i>Uusi asiakas
+                                        </a>
+                                        <a asp-controller="Report" asp-action="Index" class="btn btn-outline-info btn-sm">
+                                            <i class="bi bi-bar-chart-line me-1"></i>Raportit
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    break;
             }
-        </div>
+        }
+
     </div>
 </div>
 
-@* ── Chart.js ─────────────────────────────────────────────────── *@
+@* ── Scripts ──────────────────────────────────────────────────── *@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+
     @if (Model.IsAdmin && Model.TicketsByStatus.Any())
     {
         <script>
@@ -342,45 +470,72 @@
                 const labels = [@Html.Raw(string.Join(",", Model.TicketsByStatus.Keys.Select(k => $"'{StatusLabel(k)}'")))]
                 const data   = [@string.Join(",", Model.TicketsByStatus.Values)]
                 const colors = ['#3b82f6','#f59e0b','#8b5cf6','#22c55e','#6b7280']
-
                 const ctx = document.getElementById('ticketStatusChart')
+                if (!ctx) return;
                 new Chart(ctx, {
                     type: 'doughnut',
-                    data: {
-                        labels,
-                        datasets: [{
-                            data,
-                            backgroundColor: colors,
-                            borderColor: '#ffffff',
-                            borderWidth: 3,
-                            hoverOffset: 8
-                        }]
-                    },
+                    data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: '#ffffff', borderWidth: 3, hoverOffset: 8 }] },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '62%',
+                        responsive: true, maintainAspectRatio: false, cutout: '62%',
                         plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: {
-                                    color: '#475569',
-                                    font: { size: 11 },
-                                    padding: 10,
-                                    boxWidth: 12
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: ctx => ` ${ctx.label}: ${ctx.parsed} tiketti${ctx.parsed !== 1 ? 'ä' : ''}`
-                                }
-                            }
+                            legend: { position: 'right', labels: { color: '#475569', font: { size: 11 }, padding: 10, boxWidth: 12 } },
+                            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} tiketti${ctx.parsed !== 1 ? 'ä' : ''}` } }
                         }
                     }
                 })
             })()
         </script>
     }
+
+    <script>
+        // ── SortableJS drag-and-drop widget layout ──────────────────
+        var editMode = false;
+        var sortable = null;
+
+        function toggleEditMode() {
+            editMode = !editMode;
+            var root = document.getElementById('dashboardRoot');
+            var btn  = document.getElementById('editLayoutBtn');
+            if (editMode) {
+                root.classList.add('dashboard-edit-mode');
+                btn.classList.add('active');
+                btn.title = 'Lopeta muokkaus';
+                if (!sortable) {
+                    sortable = Sortable.create(document.getElementById('widgetContainer'), {
+                        handle: '.widget-drag-handle',
+                        animation: 150,
+                        ghostClass: 'sortable-ghost',
+                        chosenClass: 'sortable-chosen',
+                        onEnd: saveLayout
+                    });
+                }
+            } else {
+                root.classList.remove('dashboard-edit-mode');
+                btn.classList.remove('active');
+                btn.title = 'Muokkaa koontinäyttöä';
+            }
+        }
+
+        function saveLayout() {
+            var widgets = document.querySelectorAll('#widgetContainer .widget[data-widget]');
+            var order = Array.from(widgets).map(w => w.dataset.widget);
+            fetch('/Home/SaveLayout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': getAntiForgeryToken() },
+                body: JSON.stringify(order)
+            });
+        }
+
+        function getAntiForgeryToken() {
+            var el = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (el) return el.value;
+            var meta = document.querySelector('meta[name="__RequestVerificationToken"]');
+            return meta ? meta.content : '';
+        }
+    </script>
+
+    @* Anti-forgery token needed for SaveLayout AJAX call *@
+    @Html.AntiForgeryToken()
 }
 
 @* ── Helper-funktiot ─────────────────────────────────────────── *@

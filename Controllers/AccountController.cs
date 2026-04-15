@@ -4,6 +4,7 @@ using HakaTech.Portal.Models.ViewModels;
 using HakaTech.Portal.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -211,6 +212,28 @@ public class AccountController : Controller
     public IActionResult AccessDenied()
     {
         return View();
+    }
+
+    // ── POST /Account/SetLanguage ─────────────────────────────────────
+    [HttpPost]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    public IActionResult SetLanguage(string culture, string returnUrl = "/")
+    {
+        var allowed = new HashSet<string> { "fi-FI", "sv-SE", "en-US" };
+        if (!allowed.Contains(culture)) culture = "fi-FI";
+
+        Response.Cookies.Append(
+            CookieRequestCultureProvider.DefaultCookieName,
+            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+            new CookieOptions
+            {
+                Expires  = DateTimeOffset.UtcNow.AddYears(1),
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax
+            });
+
+        return LocalRedirect(returnUrl);
     }
 
     // ── Apumetodit ───────────────────────────────────────────────────

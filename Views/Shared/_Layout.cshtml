@@ -1,10 +1,15 @@
+@using Microsoft.Extensions.Localization
+@using HakaTech.Portal.Resources
+@inject IStringLocalizer<SharedResource> L
 <!DOCTYPE html>
-<html lang="fi">
+<html lang="fi" data-bs-theme="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] – HakaTech Portal</title>
     <meta name="description" content="HakaTech asiakasportaali – hallinnoi tikettejä, laskuja ja asiakkuuksia." />
+    @* Anti-flash: apply saved theme before first paint *@
+    <script>(function(){var t=localStorage.getItem('hakatech-theme');if(t)document.documentElement.setAttribute('data-bs-theme',t);})()</script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,7 +19,7 @@
 </head>
 <body class="app-body">
 
-    @* ── Sivupalkki ──────────────────────────────────────────────── *@
+    @* ── Sivupalkki ──────────────────────────────────────────────────── *@
     <aside class="sidebar" id="sidebar">
         <a asp-controller="Home" asp-action="Index" class="sidebar-brand text-decoration-none">
             <img src="~/img/logo.png" alt="HakaTech Logo" class="brand-img" style="height: 44px; width: 44px; border-radius: 10px; object-fit: cover;" />
@@ -22,65 +27,65 @@
         </a>
 
         <nav class="sidebar-nav">
-            <span class="nav-section-label">Päävalikko</span>
+            <span class="nav-section-label">@L["Nav.MainMenu"]</span>
             <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")"
                asp-controller="Home" asp-action="Index">
-                <i class="bi bi-speedometer2"></i><span>Yhteenveto</span>
+                <i class="bi bi-speedometer2"></i><span>@L["Nav.Overview"]</span>
             </a>
 
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Ticket" ? "active" : "")"
                    asp-controller="Ticket" asp-action="Index">
-                    <i class="bi bi-ticket-detailed"></i><span>Tiketit</span>
+                    <i class="bi bi-ticket-detailed"></i><span>@L["Nav.Tickets"]</span>
                 </a>
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Invoice" ? "active" : "")"
                    asp-controller="Invoice" asp-action="Index">
-                    <i class="bi bi-receipt"></i><span>Laskut</span>
+                    <i class="bi bi-receipt"></i><span>@L["Nav.Invoices"]</span>
                 </a>
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ServiceCatalog" ? "active" : "")"
                    asp-controller="ServiceCatalog" asp-action="Index">
-                    <i class="bi bi-grid"></i><span>Palvelut</span>
+                    <i class="bi bi-grid"></i><span>@L["Nav.Services"]</span>
                 </a>
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RemoteDesktop" ? "active" : "")"
                    asp-controller="RemoteDesktop" asp-action="Index">
-                    <i class="bi bi-display"></i><span>Etätyöpöytä</span>
+                    <i class="bi bi-display"></i><span>@L["Nav.RemoteDesktop"]</span>
                 </a>
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "KnowledgeBase" ? "active" : "")"
                    asp-controller="KnowledgeBase" asp-action="Index">
-                    <i class="bi bi-book"></i><span>Tietopankki</span>
+                    <i class="bi bi-book"></i><span>@L["Nav.KnowledgeBase"]</span>
                 </a>
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Booking" ? "active" : "")"
                    asp-controller="Booking" asp-action="Index">
-                    <i class="bi bi-calendar3"></i><span>Kalenteri</span>
+                    <i class="bi bi-calendar3"></i><span>@L["Nav.Calendar"]</span>
                 </a>
 
                 @if (User.IsInRole("Admin"))
                 {
-                    <span class="nav-section-label mt-3">Hallinta</span>
+                    <span class="nav-section-label mt-3">@L["Nav.Management"]</span>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Customer" ? "active" : "")"
                        asp-controller="Customer" asp-action="Index">
-                        <i class="bi bi-building"></i><span>Asiakkaat</span>
+                        <i class="bi bi-building"></i><span>@L["Nav.Customers"]</span>
                     </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Account" && ViewContext.RouteData.Values["action"]?.ToString() == "Register" ? "active" : "")"
                        asp-controller="Account" asp-action="Register">
-                        <i class="bi bi-person-plus"></i><span>Luo käyttäjä</span>
+                        <i class="bi bi-person-plus"></i><span>@L["Nav.CreateUser"]</span>
                     </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Report" ? "active" : "")"
                        asp-controller="Report" asp-action="Index">
-                        <i class="bi bi-bar-chart-line"></i><span>Raportit</span>
+                        <i class="bi bi-bar-chart-line"></i><span>@L["Nav.Reports"]</span>
                     </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Announcement" ? "active" : "")"
                        asp-controller="Announcement" asp-action="Index">
-                        <i class="bi bi-megaphone"></i><span>Tiedotteet</span>
+                        <i class="bi bi-megaphone"></i><span>@L["Nav.Announcements"]</span>
                     </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "KnowledgeBase" && ViewContext.RouteData.Values["action"]?.ToString() == "Manage" ? "active" : "")"
                        asp-controller="KnowledgeBase" asp-action="Manage">
-                        <i class="bi bi-book-half"></i><span>KB: Hallinta</span>
+                        <i class="bi bi-book-half"></i><span>@L["Nav.KBManage"]</span>
                     </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AuditLog" ? "active" : "")"
                        asp-controller="AuditLog" asp-action="Index">
-                        <i class="bi bi-journal-text"></i><span>Tapahtumaloki</span>
+                        <i class="bi bi-journal-text"></i><span>@L["Nav.AuditLog"]</span>
                     </a>
                 }
 
@@ -95,10 +100,10 @@
                         var me = await cu.GetUserAsync(User);
                         if (me?.IsCustomerAdmin == true)
                         {
-                            <span class="nav-section-label mt-3">Hallinta</span>
+                            <span class="nav-section-label mt-3">@L["Nav.Management"]</span>
                             <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "CustomerUser" ? "active" : "")"
                                asp-controller="CustomerUser" asp-action="Index">
-                                <i class="bi bi-people"></i><span>Käyttäjät</span>
+                                <i class="bi bi-people"></i><span>@L["Nav.Users"]</span>
                             </a>
                         }
                     }
@@ -115,24 +120,56 @@
                     </div>
                     <div class="user-details">
                         <span class="user-name">@User.Identity.Name</span>
-                        <span class="user-role">@(User.IsInRole("Admin") ? "Administrator" : "Asiakas")</span>
+                        <span class="user-role">@(User.IsInRole("Admin") ? L["Role.Admin"] : L["Role.Customer"])</span>
                     </div>
                 </div>
                 <div class="sidebar-actions">
-                    <a asp-controller="Account" asp-action="ChangePassword" class="sidebar-action-link" title="Vaihda salasana">
+                    <button id="themeToggle" class="sidebar-action-link" title="Vaihda teema" onclick="toggleTheme()">
+                        <i class="bi bi-moon-stars" id="themeIcon"></i>
+                    </button>
+                    <a asp-controller="Account" asp-action="ChangePassword" class="sidebar-action-link" title="@L["Nav.ChangePassword"]">
                         <i class="bi bi-key"></i>
                     </a>
                     <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                        <button type="submit" class="sidebar-action-link" title="Kirjaudu ulos">
+                        <button type="submit" class="sidebar-action-link" title="@L["Nav.SignOut"]">
                             <i class="bi bi-box-arrow-right"></i>
                         </button>
+                    </form>
+                </div>
+                @* ── Kielivalitsin ──────────────────────────────── *@
+                <div class="lang-switcher mt-2">
+                    @{
+                        var currentCulture = System.Globalization.CultureInfo.CurrentUICulture.Name;
+                    }
+                    <form asp-controller="Account" asp-action="SetLanguage" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="culture" value="fi-FI" />
+                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                        <button type="submit" class="lang-btn @(currentCulture.StartsWith("fi") ? "active" : "")">FI</button>
+                    </form>
+                    <form asp-controller="Account" asp-action="SetLanguage" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="culture" value="sv-SE" />
+                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                        <button type="submit" class="lang-btn @(currentCulture.StartsWith("sv") ? "active" : "")">SV</button>
+                    </form>
+                    <form asp-controller="Account" asp-action="SetLanguage" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="culture" value="en-US" />
+                        <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                        <button type="submit" class="lang-btn @(currentCulture.StartsWith("en") ? "active" : "")">EN</button>
                     </form>
                 </div>
             }
             else
             {
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <button id="themeToggle" class="sidebar-action-link" title="Vaihda teema" onclick="toggleTheme()">
+                        <i class="bi bi-moon-stars" id="themeIcon"></i>
+                    </button>
+                </div>
                 <a asp-controller="Account" asp-action="Login" class="btn-sidebar-login">
-                    <i class="bi bi-box-arrow-in-right"></i> Kirjaudu sisään
+                    <i class="bi bi-box-arrow-in-right"></i> @L["Nav.SignIn"]
                 </a>
             }
         </div>
@@ -166,6 +203,23 @@
             if (!btn) return;
             if (!confirm(btn.dataset.confirm)) e.preventDefault();
         });
+
+        // ── Dark mode toggle ──────────────────────────────────────────
+        function toggleTheme() {
+            var html = document.documentElement;
+            var current = html.getAttribute('data-bs-theme') || 'light';
+            var next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-bs-theme', next);
+            localStorage.setItem('hakatech-theme', next);
+            updateThemeIcon();
+        }
+        function updateThemeIcon() {
+            var current = document.documentElement.getAttribute('data-bs-theme') || 'light';
+            document.querySelectorAll('#themeIcon').forEach(function(icon) {
+                icon.className = current === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
+            });
+        }
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
     </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

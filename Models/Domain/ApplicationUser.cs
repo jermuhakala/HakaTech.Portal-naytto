@@ -12,4 +12,7 @@ public class ApplicationUser : IdentityUser
 
     /// <summary>True = asiakasyrityksen pääkäyttäjä, voi hallita yrityksen muita käyttäjiä.</summary>
     public bool IsCustomerAdmin { get; set; }
+
+    /// <summary>Käyttäjän mukautettu koontinäyttöjärjestys: pilkuilla eroteltu widget-avain lista.</summary>
+    public string? DashboardLayout { get; set; }
 }

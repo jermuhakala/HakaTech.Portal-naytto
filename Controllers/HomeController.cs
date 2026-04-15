@@ -35,12 +35,23 @@ public class HomeController : Controller
         var today       = DateTime.UtcNow.Date;
         var in7Days     = today.AddDays(7);
 
+        // ── Widget-järjestys ───────────────────────────────────────────
+        var defaultWidgets = isAdmin
+            ? new[] { "kpi", "tickets", "invoices", "calendar", "quickactions" }
+            : new[] { "kpi", "tickets", "invoices", "calendar", "quickactions" };
+
+        var savedLayout = currentUser?.DashboardLayout;
+        var widgetOrder = string.IsNullOrWhiteSpace(savedLayout)
+            ? defaultWidgets.ToList()
+            : savedLayout.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+
         var vm = new DashboardViewModel
         {
             IsAdmin     = isAdmin,
             WelcomeName = currentUser?.FullName.Length > 0
                             ? currentUser.FullName
-                            : currentUser?.Email ?? string.Empty
+                            : currentUser?.Email ?? string.Empty,
+            WidgetOrder = widgetOrder
         };
 
         // ── Aktiiviset tiedotteet (kaikille käyttäjille) ───────────────
@@ -182,7 +193,31 @@ public class HomeController : Controller
             }
         }
 
+        // ── Tulevat varaukset (kalenteriwidget) ────────────────────────
+        var nowLocal = DateTime.Now;
+        var in14Days = nowLocal.AddDays(14);
+        vm.UpcomingBookingSlots = await _db.BookingSlots
+            .Include(s => s.Bookings)
+            .Where(s => s.IsActive && s.StartTime >= nowLocal && s.StartTime <= in14Days)
+            .OrderBy(s => s.StartTime)
+            .Take(6)
+            .ToListAsync();
+
         return View(vm);
+    }
+
+    // ── POST /Home/SaveLayout ────────────────────────────────────────
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> SaveLayout([FromBody] string[] order)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null) return Unauthorized();
+        var allowed = new HashSet<string> { "kpi", "tickets", "invoices", "calendar", "quickactions" };
+        var clean   = order.Where(w => allowed.Contains(w)).Distinct().ToArray();
+        user.DashboardLayout = string.Join(",", clean);
+        await _userManager.UpdateAsync(user);
+        return Ok();
     }
 
     [AllowAnonymous]

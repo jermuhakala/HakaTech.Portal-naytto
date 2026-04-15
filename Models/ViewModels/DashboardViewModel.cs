@@ -4,6 +4,11 @@ namespace HakaTech.Portal.Models.ViewModels;
 
 public class DashboardViewModel
 {
+    // ── Mukautettu koontinäyttö ──────────────────────────────────────
+    public List<string> WidgetOrder { get; set; } = [];
+
+    // ── Tulevat varaukset (kalenteriwidget) ──────────────────────────
+    public IList<BookingSlot> UpcomingBookingSlots { get; set; } = [];
     // ── Yleiset tilastot (Admin: kaikki, Asiakas: oma) ───────────────
     public int TotalCustomers     { get; set; }
     public int ActiveCustomers    { get; set; }

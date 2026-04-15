@@ -18,6 +18,9 @@ public class RemoteDesktopConnection
     public bool   IgnoreCert { get; set; } = true;
     public string Security   { get; set; } = "any";
 
+    /// <summary>Guacamole-palvelimen yhteyden ID (haettu Guacamolen hallinnasta).</summary>
+    public string? GuacamoleConnectionId { get; set; }
+
     public string?  Notes     { get; set; }
     public bool     IsActive  { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

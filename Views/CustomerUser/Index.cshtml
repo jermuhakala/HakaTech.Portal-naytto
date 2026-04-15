@@ -1,0 +1,116 @@
+@model IEnumerable<HakaTech.Portal.Models.Domain.ApplicationUser>
+@{
+    var customer  = ViewBag.Customer as HakaTech.Portal.Models.Domain.Customer;
+    bool isAdmin  = ViewBag.IsAdmin == true;
+    ViewData["Title"] = $"Käyttäjät – {customer?.CompanyName}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">
+            <i class="bi bi-people me-2 text-primary"></i>Käyttäjät
+        </h2>
+        <small class="text-muted">@customer?.CompanyName</small>
+    </div>
+    <div class="d-flex gap-2">
+        @if (isAdmin)
+        {
+            <a asp-controller="Customer" asp-action="Details" asp-route-id="@customer?.Id"
+               class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Takaisin
+            </a>
+        }
+        <a asp-action="Create" asp-route-customerId="@customer?.Id"
+           class="btn btn-primary btn-sm">
+            <i class="bi bi-person-plus me-1"></i>Lisää käyttäjä
+        </a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] is string ok)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@ok
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>@err
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-people display-4 d-block mb-3"></i>
+                <p>Ei käyttäjiä.</p>
+                <a asp-action="Create" asp-route-customerId="@customer?.Id" class="btn btn-primary">
+                    <i class="bi bi-person-plus me-1"></i>Lisää ensimmäinen käyttäjä
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nimi</th>
+                            <th>Sähköposti</th>
+                            <th>Rooli</th>
+                            <th class="text-end">Toiminnot</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                             style="width:36px;height:36px;font-size:14px;flex-shrink:0">
+                                            @(u.FullName?.Length > 0 ? u.FullName[0].ToString().ToUpper() : "?")
+                                        </div>
+                                        <span class="fw-medium">@u.FullName</span>
+                                    </div>
+                                </td>
+                                <td class="text-muted small">@u.Email</td>
+                                <td>
+                                    @if (u.IsCustomerAdmin)
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-shield-check me-1"></i>Pääkäyttäjä
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Käyttäjä</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <a asp-action="Edit" asp-route-id="@u.Id"
+                                       class="btn btn-outline-secondary btn-sm me-1">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form asp-action="Delete" asp-route-id="@u.Id"
+                                          method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                data-confirm="Poistetaanko käyttäjä @u.Email?">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

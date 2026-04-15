@@ -19,6 +19,10 @@ public class ReportIndexViewModel
     public decimal TotalBilledExcl  { get; set; }
     public decimal TotalBilledIncl  { get; set; }
     public decimal TotalPaid        { get; set; }
+
+    // Tikettipalaute
+    public double?  AvgFeedbackRating { get; set; }
+    public int      FeedbackCount     { get; set; }
 }
 
 public class WeeklyTicketStat

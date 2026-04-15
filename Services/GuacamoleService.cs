@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using HakaTech.Portal.Models.Domain;
@@ -11,70 +11,49 @@ public class GuacamoleService : IGuacamoleService
 {
     private readonly GuacamoleSettings _settings;
     private readonly IDataProtector    _protector;
+    private readonly HttpClient        _http;
     private readonly ILogger<GuacamoleService> _logger;
 
     public GuacamoleService(
         IOptions<GuacamoleSettings>   options,
         IDataProtectionProvider       dpProvider,
+        HttpClient                    httpClient,
         ILogger<GuacamoleService>     logger)
     {
         _settings = options.Value;
         _protector = dpProvider.CreateProtector("RemoteDesktopPasswords");
+        _http      = httpClient;
         _logger    = logger;
     }
 
     // ── Julkinen rajapinta ───────────────────────────────────────────
 
-    public string? BuildConnectionUrl(RemoteDesktopConnection connection, string userEmail)
+    public async Task<string?> BuildConnectionUrlAsync(RemoteDesktopConnection connection)
     {
         if (!_settings.IsConfigured)
-            return null;
-
-        // 1. Pura salasana suojauksesta
-        string? clearPassword = null;
-        if (!string.IsNullOrEmpty(connection.EncryptedPassword))
         {
-            try
-            {
-                clearPassword = _protector.Unprotect(connection.EncryptedPassword);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex,
-                    "Salasanan purku epäonnistui yhteydelle {Id}.", connection.Id);
-            }
+            _logger.LogWarning("Guacamole ei ole konfiguroitu (BaseUrl/AdminUsername/AdminPassword puuttuu).");
+            return null;
         }
 
-        // 2. Rakenna JSON-payload (Guacamole JSON Auth -formaatti)
-        long expiresMs = DateTimeOffset.UtcNow
-            .AddMinutes(_settings.TokenExpiryMinutes)
-            .ToUnixTimeMilliseconds();
-
-        var parameters = BuildParameters(connection, clearPassword);
-
-        var payload = new
+        if (string.IsNullOrWhiteSpace(connection.GuacamoleConnectionId))
         {
-            username = userEmail,
-            expires  = expiresMs,
-            connections = new Dictionary<string, object>
-            {
-                [connection.Name] = new
-                {
-                    protocol   = connection.Protocol.ToString().ToLowerInvariant(),
-                    parameters = parameters
-                }
-            }
-        };
+            _logger.LogWarning(
+                "Yhteys '{Name}' (Id={Id}) ei sisällä GuacamoleConnectionId-arvoa.",
+                connection.Name, connection.Id);
+            return null;
+        }
 
-        string json = JsonSerializer.Serialize(payload);
+        // 1. Kirjaudu Guacamoleen admin-tunnuksilla → hae authToken
+        string? token = await GetAuthTokenAsync();
+        if (token is null) return null;
 
-        // 3. Salaa AES-128-CBC; avain = ensimmäiset 16 UTF8-tavua secretistä
-        byte[] keyBytes = Encoding.UTF8.GetBytes(
-            _settings.JsonSecretKey.PadRight(16)[..16]);
+        // 2. Rakenna client-URL
+        //    Guacamole client-identifier = base64( {connectionId}\0c\0{dataSource} )
+        string identifier = BuildIdentifier(connection.GuacamoleConnectionId, _settings.DataSource);
+        string baseUrl    = _settings.BaseUrl!.TrimEnd('/');
 
-        string data = EncryptToBase64(json, keyBytes);
-
-        return $"{_settings.BaseUrl!.TrimEnd('/')}/?data={Uri.EscapeDataString(data)}";
+        return $"{baseUrl}/#/client/{identifier}?token={token}";
     }
 
     public string ProtectPassword(string plaintext) =>
@@ -82,52 +61,59 @@ public class GuacamoleService : IGuacamoleService
 
     // ── Yksityiset apumetodit ────────────────────────────────────────
 
-    private static Dictionary<string, string> BuildParameters(
-        RemoteDesktopConnection c, string? clearPassword)
+    private async Task<string?> GetAuthTokenAsync()
     {
-        var p = new Dictionary<string, string>
+        string apiUrl = $"{_settings.BaseUrl!.TrimEnd('/')}/api/tokens";
+
+        var form = new FormUrlEncodedContent(new[]
         {
-            ["hostname"] = c.Hostname,
-            ["port"]     = c.Port.ToString()
-        };
+            new KeyValuePair<string, string>("username", _settings.AdminUsername!),
+            new KeyValuePair<string, string>("password", _settings.AdminPassword!)
+        });
 
-        if (!string.IsNullOrEmpty(c.Username))
-            p["username"] = c.Username;
-
-        if (!string.IsNullOrEmpty(clearPassword))
-            p["password"] = clearPassword;
-
-        if (c.Protocol == RemoteDesktopProtocol.Rdp)
+        try
         {
-            p["ignore-cert"] = c.IgnoreCert ? "true" : "false";
-            p["security"]    = c.Security;
+            var response = await _http.PostAsync(apiUrl, form);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError(
+                    "Guacamole-kirjautuminen epäonnistui: {Status} {Url}",
+                    (int)response.StatusCode, apiUrl);
+                return null;
+            }
+
+            string json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("authToken", out var tokenProp))
+                return tokenProp.GetString();
+
+            _logger.LogError("Guacamole vastaus ei sisältänyt authToken-kenttää: {Json}", json);
+            return null;
         }
-
-        return p;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Guacamole REST API -kutsu epäonnistui: {Url}", apiUrl);
+            return null;
+        }
     }
 
     /// <summary>
-    /// Guacamole JSON auth: AES-128-CBC, PKCS7, 16-tavu random IV.
-    /// IV liitetään salatun datan eteen ennen base64-koodausta.
+    /// Guacamole client-identifier: base64( connectionId + NUL + "c" + NUL + dataSource )
     /// </summary>
-    private static string EncryptToBase64(string json, byte[] key)
+    private static string BuildIdentifier(string connectionId, string dataSource)
     {
-        using var aes = Aes.Create();
-        aes.KeySize = 128;
-        aes.Mode    = CipherMode.CBC;
-        aes.Padding = PaddingMode.PKCS7;
-        aes.Key     = key;
-        aes.GenerateIV();
+        // Muodosta tavu-array: id, 0x00, 'c', 0x00, dataSource
+        byte[] idBytes  = Encoding.UTF8.GetBytes(connectionId);
+        byte[] dsBytes  = Encoding.UTF8.GetBytes(dataSource);
+        byte[] combined = new byte[idBytes.Length + 1 + 1 + 1 + dsBytes.Length];
 
-        using var encryptor = aes.CreateEncryptor();
-        byte[] plainBytes  = Encoding.UTF8.GetBytes(json);
-        byte[] cipherBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
+        int pos = 0;
+        Buffer.BlockCopy(idBytes, 0, combined, pos, idBytes.Length); pos += idBytes.Length;
+        combined[pos++] = 0x00;   // NUL
+        combined[pos++] = (byte)'c';
+        combined[pos++] = 0x00;   // NUL
+        Buffer.BlockCopy(dsBytes, 0, combined, pos, dsBytes.Length);
 
-        // IV (16 tavua) + salattu data
-        byte[] result = new byte[aes.IV.Length + cipherBytes.Length];
-        Buffer.BlockCopy(aes.IV,        0, result, 0,             aes.IV.Length);
-        Buffer.BlockCopy(cipherBytes,   0, result, aes.IV.Length, cipherBytes.Length);
-
-        return Convert.ToBase64String(result);
+        return Convert.ToBase64String(combined);
     }
 }

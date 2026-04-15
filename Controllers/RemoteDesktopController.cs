@@ -95,18 +95,19 @@ public class RemoteDesktopController : Controller
 
         var connection = new RemoteDesktopConnection
         {
-            Name       = model.Name,
-            Protocol   = model.Protocol,
-            Hostname   = model.Hostname,
-            Port       = model.Port,
-            Username   = model.Username,
-            IgnoreCert = model.IgnoreCert,
-            Security   = model.Security,
-            Notes      = model.Notes,
-            IsActive   = model.IsActive,
-            CustomerId = model.CustomerId,
-            CreatedAt  = DateTime.UtcNow,
-            EncryptedPassword = !string.IsNullOrEmpty(model.PlainPassword)
+            Name                 = model.Name,
+            Protocol             = model.Protocol,
+            Hostname             = model.Hostname,
+            Port                 = model.Port,
+            Username             = model.Username,
+            IgnoreCert           = model.IgnoreCert,
+            Security             = model.Security,
+            Notes                = model.Notes,
+            IsActive             = model.IsActive,
+            CustomerId           = model.CustomerId,
+            GuacamoleConnectionId = model.GuacamoleConnectionId,
+            CreatedAt            = DateTime.UtcNow,
+            EncryptedPassword    = !string.IsNullOrEmpty(model.PlainPassword)
                 ? _guacamole.ProtectPassword(model.PlainPassword)
                 : null
         };
@@ -129,18 +130,19 @@ public class RemoteDesktopController : Controller
 
         var model = new RemoteDesktopConnectionFormViewModel
         {
-            Id              = conn.Id,
-            Name            = conn.Name,
-            Protocol        = conn.Protocol,
-            Hostname        = conn.Hostname,
-            Port            = conn.Port,
-            Username        = conn.Username,
-            IgnoreCert      = conn.IgnoreCert,
-            Security        = conn.Security,
-            Notes           = conn.Notes,
-            IsActive        = conn.IsActive,
-            CustomerId      = conn.CustomerId,
-            CustomerOptions = await BuildCustomerOptionsAsync()
+            Id                   = conn.Id,
+            Name                 = conn.Name,
+            Protocol             = conn.Protocol,
+            Hostname             = conn.Hostname,
+            Port                 = conn.Port,
+            Username             = conn.Username,
+            IgnoreCert           = conn.IgnoreCert,
+            Security             = conn.Security,
+            Notes                = conn.Notes,
+            IsActive             = conn.IsActive,
+            CustomerId           = conn.CustomerId,
+            GuacamoleConnectionId = conn.GuacamoleConnectionId,
+            CustomerOptions      = await BuildCustomerOptionsAsync()
             // PlainPassword jätetään tyhjäksi – käyttäjä täyttää vain jos haluaa vaihtaa
         };
         return View(model);
@@ -159,16 +161,17 @@ public class RemoteDesktopController : Controller
         var conn = await _db.RemoteDesktopConnections.FindAsync(id);
         if (conn is null) return NotFound();
 
-        conn.Name       = model.Name;
-        conn.Protocol   = model.Protocol;
-        conn.Hostname   = model.Hostname;
-        conn.Port       = model.Port;
-        conn.Username   = model.Username;
-        conn.IgnoreCert = model.IgnoreCert;
-        conn.Security   = model.Security;
-        conn.Notes      = model.Notes;
-        conn.IsActive   = model.IsActive;
-        conn.CustomerId = model.CustomerId;
+        conn.Name                 = model.Name;
+        conn.Protocol             = model.Protocol;
+        conn.Hostname             = model.Hostname;
+        conn.Port                 = model.Port;
+        conn.Username             = model.Username;
+        conn.IgnoreCert           = model.IgnoreCert;
+        conn.Security             = model.Security;
+        conn.Notes                = model.Notes;
+        conn.IsActive             = model.IsActive;
+        conn.CustomerId           = model.CustomerId;
+        conn.GuacamoleConnectionId = model.GuacamoleConnectionId;
 
         if (!string.IsNullOrEmpty(model.PlainPassword))
             conn.EncryptedPassword = _guacamole.ProtectPassword(model.PlainPassword);
@@ -213,11 +216,11 @@ public class RemoteDesktopController : Controller
         if (!isAdmin && conn.CustomerId != currentUser?.CustomerId)
             return Forbid();
 
-        string? url = _guacamole.BuildConnectionUrl(conn, currentUser!.Email!);
+        string? url = await _guacamole.BuildConnectionUrlAsync(conn);
 
         _logger.LogInformation(
             "Käyttäjä {Email} avaa etäyhteyden '{Name}' (Id={Id}).",
-            currentUser.Email, conn.Name, id);
+            currentUser?.Email ?? "tuntematon", conn.Name, id);
 
         ViewBag.ConnectionName = conn.Name;
         ViewBag.GuacamoleUrl   = url;

@@ -224,6 +224,70 @@
 
     </div>
 
+        @* ── Palautelomake (suljettu tiketti, ei vielä arviota) ─── *@
+        @if (ViewBag.ShowFeedback == true)
+        {
+            <div class="card mb-3 border-success" id="feedback-card">
+                <div class="card-header bg-success bg-opacity-10">
+                    <i class="bi bi-star me-2 text-success"></i>Arvioi palvelu
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-3">Tiketti on suljettu. Anna palaute saadusta palvelusta (1–5 tähteä).</p>
+                    <form asp-action="SubmitFeedback" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="TicketId" value="@Model.Id" />
+
+                        <div class="mb-3">
+                            <div class="d-flex gap-2 justify-content-center fs-3" id="star-row">
+                                @for (int s = 1; s <= 5; s++)
+                                {
+                                    <i class="bi bi-star text-warning star-btn"
+                                       data-value="@s" role="button" style="cursor:pointer"></i>
+                                }
+                            </div>
+                            <input type="hidden" name="Rating" id="rating-input" value="0" required />
+                            <div class="text-center mt-1">
+                                <span id="rating-label" class="small text-muted">Valitse tähtiä</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <textarea name="Comment" class="form-control form-control-sm" rows="2"
+                                      placeholder="Vapaaehtoinen kommentti…" maxlength="1000"></textarea>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" id="btn-submit-feedback" class="btn btn-success btn-sm" disabled>
+                                <i class="bi bi-send me-1"></i>Lähetä palaute
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (Model.Feedback is not null && !isAdmin)
+        {
+            <div class="card mb-3 border-success">
+                <div class="card-header bg-success bg-opacity-10">
+                    <i class="bi bi-star-fill me-2 text-warning"></i>Antamasi palaute
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-1 mb-2">
+                        @for (int s = 1; s <= 5; s++)
+                        {
+                            <i class="bi @(s <= Model.Feedback.Rating ? "bi-star-fill text-warning" : "bi-star text-muted")"></i>
+                        }
+                        <span class="ms-2 small text-muted">@Model.Feedback.SubmittedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Feedback.Comment))
+                    {
+                        <p class="mb-0 small">@Model.Feedback.Comment</p>
+                    }
+                </div>
+            </div>
+        }
+
     <!-- Oikea palkki: metatiedot + admin-toiminnot -->
     <div class="col-md-4">
 
@@ -322,6 +386,40 @@
 </div>
 
 @section Scripts {
+@* ── Tähtipalaute ────────────────────────────────────────────── *@
+@if (ViewBag.ShowFeedback == true)
+{
+<script>
+(function () {
+    const labels = ['', 'Huono', 'Välttävä', 'Hyvä', 'Erittäin hyvä', 'Erinomainen'];
+    const stars   = document.querySelectorAll('.star-btn');
+    const input   = document.getElementById('rating-input');
+    const label   = document.getElementById('rating-label');
+    const btn     = document.getElementById('btn-submit-feedback');
+    let selected  = 0;
+
+    function paint(upTo) {
+        stars.forEach((s, i) => {
+            s.className = i < upTo
+                ? 'bi bi-star-fill text-warning star-btn'
+                : 'bi bi-star text-warning star-btn';
+        });
+    }
+
+    stars.forEach((s, i) => {
+        s.addEventListener('mouseenter', () => paint(i + 1));
+        s.addEventListener('mouseleave', () => paint(selected));
+        s.addEventListener('click', () => {
+            selected    = i + 1;
+            input.value = selected;
+            label.textContent = labels[selected];
+            btn.disabled = false;
+            paint(selected);
+        });
+    });
+})();
+</script>
+}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>

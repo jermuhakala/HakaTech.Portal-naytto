@@ -20,6 +20,7 @@ public class TicketController : Controller
     private readonly IEmailService                 _emailService;
     private readonly IFileStorageService           _fileStorage;
     private readonly IWebHostEnvironment           _env;
+    private readonly IAuditService                 _audit;
 
     public TicketController(
         ApplicationDbContext         db,
@@ -27,7 +28,8 @@ public class TicketController : Controller
         ILogger<TicketController>    logger,
         IEmailService                emailService,
         IFileStorageService          fileStorage,
-        IWebHostEnvironment          env)
+        IWebHostEnvironment          env,
+        IAuditService                audit)
     {
         _db           = db;
         _userManager  = userManager;
@@ -35,6 +37,7 @@ public class TicketController : Controller
         _emailService = emailService;
         _fileStorage  = fileStorage;
         _env          = env;
+        _audit        = audit;
     }
 
     // ── GET /Ticket ──────────────────────────────────────────────────
@@ -106,6 +109,7 @@ public class TicketController : Controller
                 .ThenInclude(c => c.Author)
             .Include(t => t.Attachments.OrderBy(a => a.UploadedAt))
                 .ThenInclude(a => a.UploadedByUser)
+            .Include(t => t.Feedback)
             .FirstOrDefaultAsync(t => t.Id == id);
 
         if (ticket is null)
@@ -114,10 +118,14 @@ public class TicketController : Controller
         if (!isAdmin && ticket.CustomerId != currentUser?.CustomerId)
             return Forbid();
 
-        ViewBag.IsAdmin      = isAdmin;
-        ViewBag.CurrentUser  = currentUser;
-        ViewBag.CommentModel = new TicketCommentViewModel { TicketId = id };
-        ViewBag.EditModel    = isAdmin ? await BuildEditViewModel(ticket) : null;
+        ViewBag.IsAdmin         = isAdmin;
+        ViewBag.CurrentUser     = currentUser;
+        ViewBag.CommentModel    = new TicketCommentViewModel { TicketId = id };
+        ViewBag.EditModel       = isAdmin ? await BuildEditViewModel(ticket) : null;
+        ViewBag.ShowFeedback    = !isAdmin
+                                  && ticket.Status == TicketStatus.Closed
+                                  && ticket.Feedback is null
+                                  && ticket.CreatedByUserId == currentUser?.Id;
 
         return View(ticket);
     }
@@ -185,6 +193,7 @@ public class TicketController : Controller
         await _db.SaveChangesAsync();
 
         _logger.LogInformation("Tiketti #{Id} '{Title}' luotu.", ticket.Id, ticket.Title);
+        await _audit.LogAsync("TicketCreated", "Ticket", ticket.Id.ToString(), ticket.Title);
         TempData["SuccessMessage"] = $"Tiketti #{ticket.Id} luotu onnistuneesti.";
         return RedirectToAction(nameof(Details), new { id = ticket.Id });
     }
@@ -216,6 +225,8 @@ public class TicketController : Controller
             await SendTicketStatusEmailAsync(ticket, model.Status == TicketStatus.InProgress ? "Otettu työn alle" : "Suljettu");
 
         _logger.LogInformation("Tiketin #{Id} tila muutettu → {Status}.", ticket.Id, ticket.Status);
+        await _audit.LogAsync("TicketStatusChanged", "Ticket", ticket.Id.ToString(),
+            $"{oldStatus} → {ticket.Status}");
         TempData["SuccessMessage"] = "Tiketin tila päivitetty.";
         return RedirectToAction(nameof(Details), new { id = model.Id });
     }
@@ -280,6 +291,7 @@ public class TicketController : Controller
         if (oldStatus != TicketStatus.Closed && isAdmin)
             await SendTicketStatusEmailAsync(ticket, "Suljettu");
 
+        await _audit.LogAsync("TicketClosed", "Ticket", id.ToString());
         TempData["SuccessMessage"] = $"Tiketti #{id} suljettu.";
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -368,6 +380,39 @@ public class TicketController : Controller
         await _db.SaveChangesAsync();
 
         TempData["SuccessMessage"] = "Liite poistettu.";
+        return RedirectToAction(nameof(Details), new { id = ticketId });
+    }
+
+    // ── POST /Ticket/SubmitFeedback ──────────────────────────────────
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SubmitFeedback(int ticketId, int rating, string? comment)
+    {
+        if (rating < 1 || rating > 5)
+            return BadRequest();
+
+        var currentUser = await _userManager.GetUserAsync(User);
+        var ticket      = await _db.Tickets
+            .Include(t => t.Feedback)
+            .FirstOrDefaultAsync(t => t.Id == ticketId);
+
+        if (ticket is null) return NotFound();
+        if (ticket.Feedback is not null) return RedirectToAction(nameof(Details), new { id = ticketId });
+        if (ticket.Status != TicketStatus.Closed) return RedirectToAction(nameof(Details), new { id = ticketId });
+        if (ticket.CreatedByUserId != currentUser?.Id) return Forbid();
+
+        _db.TicketFeedbacks.Add(new TicketFeedback
+        {
+            TicketId    = ticketId,
+            UserId      = currentUser.Id,
+            Rating      = rating,
+            Comment     = comment?.Trim(),
+            SubmittedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        await _audit.LogAsync("FeedbackSubmitted", "Ticket", ticketId.ToString(), $"Rating: {rating}");
+
+        TempData["SuccessMessage"] = "Kiitos palautteestasi!";
         return RedirectToAction(nameof(Details), new { id = ticketId });
     }
 

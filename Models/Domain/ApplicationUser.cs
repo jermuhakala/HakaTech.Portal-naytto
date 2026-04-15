@@ -9,4 +9,7 @@ public class ApplicationUser : IdentityUser
     // Navigaatio: asiakas voi olla linkitettynä yhteen yritykseen
     public int? CustomerId { get; set; }
     public Customer? Customer { get; set; }
+
+    /// <summary>True = asiakasyrityksen pääkäyttäjä, voi hallita yrityksen muita käyttäjiä.</summary>
+    public bool IsCustomerAdmin { get; set; }
 }

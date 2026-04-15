@@ -20,6 +20,7 @@ public class InvoiceController : Controller
     private readonly IFileStorageService           _fileStorage;
     private readonly IWebHostEnvironment           _env;
     private readonly IEmailService                 _emailService;
+    private readonly IAuditService                 _audit;
 
     public InvoiceController(
         ApplicationDbContext         db,
@@ -27,7 +28,8 @@ public class InvoiceController : Controller
         ILogger<InvoiceController>   logger,
         IFileStorageService          fileStorage,
         IWebHostEnvironment          env,
-        IEmailService                emailService)
+        IEmailService                emailService,
+        IAuditService                audit)
     {
         _db           = db;
         _userManager  = userManager;
@@ -35,6 +37,7 @@ public class InvoiceController : Controller
         _fileStorage  = fileStorage;
         _env          = env;
         _emailService = emailService;
+        _audit        = audit;
     }
 
     // ── GET /Invoice ─────────────────────────────────────────────────
@@ -131,6 +134,9 @@ public class InvoiceController : Controller
 
         var document = new HakaTech.Portal.Services.InvoicePdfDocument(invoice);
         var pdfBytes = QuestPDF.Fluent.GenerateExtensions.GeneratePdf(document);
+
+        await _audit.LogAsync("InvoiceDownloaded", "Invoice", id.ToString(),
+            $"Lasku {invoice.InvoiceNumber} / {invoice.Customer?.CompanyName}");
 
         return File(pdfBytes, "application/pdf", $"Lasku_{invoice.InvoiceNumber}.pdf");
     }

@@ -46,12 +46,14 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddTransient<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddHttpContextAccessor();
 
 // ── Guacamole ────────────────────────────────────────────────────
 builder.Services.Configure<GuacamoleSettings>(
     builder.Configuration.GetSection("GuacamoleSettings"));
 builder.Services.AddDataProtection();
-builder.Services.AddScoped<IGuacamoleService, GuacamoleService>();
+builder.Services.AddHttpClient<IGuacamoleService, GuacamoleService>();
 
 builder.Services.AddSignalR();
 builder.Services.AddControllersWithViews();

@@ -1,0 +1,88 @@
+@model List<HakaTech.Portal.Models.Domain.KnowledgeBaseCategory>
+@{
+    ViewData["Title"] = "KB: Kategoriat";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-tags me-2"></i>Kategoriat</h2>
+    <div class="d-flex gap-2">
+        <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Artikkelit
+        </a>
+        <a asp-action="CreateCategory" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Uusi kategoria
+        </a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] is string ok)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>@ok
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle me-2"></i>@err
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Nimi</th>
+                    <th>Kuvaus</th>
+                    <th class="text-center">Järjestys</th>
+                    <th class="text-center">Artikkeleita</th>
+                    <th class="text-center">Aktiivinen</th>
+                    <th class="pe-4"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model)
+                {
+                    <tr>
+                        <td class="ps-4 fw-medium">@c.Name</td>
+                        <td class="text-muted small">@(c.Description ?? "–")</td>
+                        <td class="text-center">@c.SortOrder</td>
+                        <td class="text-center">
+                            <a asp-action="Index" asp-route-categoryId="@c.Id" class="text-decoration-none">
+                                @c.Articles.Count
+                            </a>
+                        </td>
+                        <td class="text-center">
+                            @if (c.IsActive)
+                            {
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-x-circle text-muted"></i>
+                            }
+                        </td>
+                        <td class="pe-4 text-end">
+                            <a asp-action="EditCategory" asp-route-id="@c.Id"
+                               class="btn btn-outline-secondary btn-sm me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form asp-action="DeleteCategory" asp-route-id="@c.Id" method="post" class="d-inline kb-delete-form">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger btn-sm"
+                                        data-confirm="Poistetaanko kategoria &quot;@c.Name&quot;?"
+                                        @(c.Articles.Count > 0 ? "disabled" : "")
+                                        title="@(c.Articles.Count > 0 ? "Siirrä artikkelit ensin" : "")">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

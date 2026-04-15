@@ -1,6 +1,7 @@
 using HakaTech.Portal.Data;
 using HakaTech.Portal.Models.Domain;
 using HakaTech.Portal.Models.ViewModels;
+using HakaTech.Portal.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -15,17 +16,20 @@ public class AccountController : Controller
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly ILogger<AccountController>     _logger;
     private readonly ApplicationDbContext           _db;
+    private readonly IAuditService                  _audit;
 
     public AccountController(
         UserManager<ApplicationUser>   userManager,
         SignInManager<ApplicationUser> signInManager,
         ILogger<AccountController>     logger,
-        ApplicationDbContext           db)
+        ApplicationDbContext           db,
+        IAuditService                  audit)
     {
         _userManager   = userManager;
         _signInManager = signInManager;
         _logger        = logger;
         _db            = db;
+        _audit         = audit;
     }
 
     // ── GET /Account/Login ──────────────────────────────────────────
@@ -57,6 +61,7 @@ public class AccountController : Controller
         if (result.Succeeded)
         {
             _logger.LogInformation("Käyttäjä {Email} kirjautui sisään.", model.Email);
+            await _audit.LogAsync("Login", details: model.Email);
 
             if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
                 return Redirect(model.ReturnUrl);
@@ -67,11 +72,13 @@ public class AccountController : Controller
         if (result.IsLockedOut)
         {
             _logger.LogWarning("Käyttäjätili {Email} on lukittu.", model.Email);
+            await _audit.LogAsync("LoginLockedOut", details: model.Email);
             ModelState.AddModelError(string.Empty,
                 "Tili on lukittu liian monien epäonnistuneiden kirjautumisyritysten vuoksi. Yritä myöhemmin uudelleen.");
         }
         else
         {
+            await _audit.LogAsync("LoginFailed", details: model.Email);
             ModelState.AddModelError(string.Empty, "Virheellinen sähköpostiosoite tai salasana.");
         }
 
@@ -84,6 +91,7 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        await _audit.LogAsync("Logout");
         await _signInManager.SignOutAsync();
         _logger.LogInformation("Käyttäjä kirjautui ulos.");
         return RedirectToAction("Login", "Account");
@@ -141,6 +149,7 @@ public class AccountController : Controller
         {
             await _userManager.AddToRoleAsync(user, model.Role);
             _logger.LogInformation("Admin loi uuden käyttäjän {Email} roolilla {Role}.", model.Email, model.Role);
+            await _audit.LogAsync("UserCreated", "User", user.Id, $"{model.Email} / {model.Role}");
             TempData["SuccessMessage"] = $"Käyttäjä {model.Email} luotu onnistuneesti ({model.Role}).";
 
             // Jos luotiin asiakaskäyttäjä, palaa asiakkaan tietoihin
@@ -185,6 +194,7 @@ public class AccountController : Controller
         {
             await _signInManager.RefreshSignInAsync(user);
             _logger.LogInformation("Käyttäjä {Email} vaihtoi salasanansa.", user.Email);
+            await _audit.LogAsync("PasswordChanged", "User", user.Id);
             TempData["SuccessMessage"] = "Salasana vaihdettu onnistuneesti.";
             return RedirectToAction(nameof(ChangePassword));
         }

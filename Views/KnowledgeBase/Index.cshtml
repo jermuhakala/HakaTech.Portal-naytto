@@ -1,0 +1,148 @@
+@model HakaTech.Portal.Models.ViewModels.KbIndexViewModel
+@{
+    ViewData["Title"] = "Tietopankki";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-book me-2 text-primary"></i>Tietopankki</h2>
+        <p class="text-muted mb-0">Löydä vastaukset yleisimpiin kysymyksiin ennen tukitiketin luomista.</p>
+    </div>
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="d-flex gap-2">
+            <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-gear me-1"></i>Hallinta
+            </a>
+            <a asp-action="CreateArticle" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Uusi artikkeli
+            </a>
+        </div>
+    }
+</div>
+
+@* ── Hakupalkki ─────────────────────────────────────────────────────── *@
+<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0d6efd15 0%, #6610f215 100%);">
+    <div class="card-body p-4">
+        <form asp-action="Index" method="get" class="d-flex gap-2">
+            <input type="search" name="q" value="@Model.SearchQuery"
+                   class="form-control form-control-lg"
+                   placeholder="Hae artikkeleita… esim. salasana, lasku, VPN" />
+            <button type="submit" class="btn btn-primary btn-lg px-4">
+                <i class="bi bi-search"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+@* ── Kategoriasuodattimet ────────────────────────────────────────────── *@
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a asp-action="Index" asp-route-q="@Model.SearchQuery"
+       class="btn btn-sm @(Model.CategoryId is null ? "btn-primary" : "btn-outline-secondary")">
+        Kaikki
+    </a>
+    @foreach (var cat in Model.Categories)
+    {
+        <a asp-action="Index" asp-route-q="@Model.SearchQuery" asp-route-categoryId="@cat.Id"
+           class="btn btn-sm @(Model.CategoryId == cat.Id ? "btn-primary" : "btn-outline-secondary")">
+            @cat.Name
+        </a>
+    }
+</div>
+
+@* ── Nostetut artikkelit (vain etusivulla) ──────────────────────────── *@
+@if (Model.Featured.Count > 0)
+{
+    <h5 class="fw-semibold mb-3"><i class="bi bi-star-fill text-warning me-2"></i>Suositut ohjeet</h5>
+    <div class="row g-3 mb-5">
+        @foreach (var a in Model.Featured)
+        {
+            <div class="col-md-6">
+                <a asp-action="Article" asp-route-id="@a.Id"
+                   class="card h-100 border-0 shadow-sm text-decoration-none text-dark hover-card">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-file-earmark-text fs-4 text-primary mt-1 flex-shrink-0"></i>
+                            <div>
+                                <div class="fw-semibold">@a.Title</div>
+                                <div class="text-muted small mt-1">@a.Excerpt</div>
+                                <div class="mt-2">
+                                    <span class="badge bg-light text-secondary border">@a.CategoryName</span>
+                                    <span class="text-muted small ms-2">
+                                        <i class="bi bi-eye me-1"></i>@a.ViewCount
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+}
+
+@* ── Kaikki artikkelit / hakutulokset ───────────────────────────────── *@
+@if (!string.IsNullOrWhiteSpace(Model.SearchQuery) || Model.CategoryId.HasValue)
+{
+    <h5 class="fw-semibold mb-3">
+        @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
+        {
+            <span>Hakutulokset: <em>@Model.SearchQuery</em> (@Model.Articles.Count kpl)</span>
+        }
+        else
+        {
+            <span>@(Model.Categories.FirstOrDefault(c => c.Id == Model.CategoryId)?.Name ?? "") (@Model.Articles.Count kpl)</span>
+        }
+    </h5>
+}
+else if (Model.Featured.Count == 0)
+{
+    <h5 class="fw-semibold mb-3">Kaikki artikkelit</h5>
+}
+else
+{
+    <h5 class="fw-semibold mb-3">Kaikki artikkelit</h5>
+}
+
+@if (Model.Articles.Count == 0)
+{
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-search display-4 d-block mb-3"></i>
+        <p>Ei hakutuloksia haulla "<strong>@Model.SearchQuery</strong>".</p>
+        <a asp-action="Index" class="btn btn-outline-primary btn-sm mt-1">Näytä kaikki artikkelit</a>
+    </div>
+}
+else
+{
+    <div class="list-group list-group-flush shadow-sm rounded">
+        @foreach (var a in Model.Articles)
+        {
+            <a asp-action="Article" asp-route-id="@a.Id"
+               class="list-group-item list-group-item-action py-3 px-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            @if (a.IsFeatured)
+                            {
+                                <i class="bi bi-star-fill text-warning small"></i>
+                            }
+                            <span class="fw-semibold">@a.Title</span>
+                        </div>
+                        <div class="text-muted small mt-1">@a.Excerpt</div>
+                    </div>
+                    <div class="text-end flex-shrink-0 ms-3">
+                        <span class="badge bg-light text-secondary border small">@a.CategoryName</span>
+                        <div class="text-muted small mt-1">
+                            <i class="bi bi-eye me-1"></i>@a.ViewCount
+                        </div>
+                    </div>
+                </div>
+            </a>
+        }
+    </div>
+}
+
+<style>
+    .hover-card { transition: transform .15s, box-shadow .15s; }
+    .hover-card:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important; }
+</style>

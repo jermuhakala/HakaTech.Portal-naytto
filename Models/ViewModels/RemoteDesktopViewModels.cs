@@ -43,6 +43,10 @@ public class RemoteDesktopConnectionFormViewModel
     [Display(Name = "Suojaustaso (RDP)")]
     public string Security { get; set; } = "any";
 
+    [StringLength(100, ErrorMessage = "Guacamole-yhteyden ID voi olla enintään 100 merkkiä.")]
+    [Display(Name = "Guacamole-yhteyden ID")]
+    public string? GuacamoleConnectionId { get; set; }
+
     [StringLength(2000, ErrorMessage = "Muistiinpanot voivat olla enintään 2000 merkkiä.")]
     [Display(Name = "Muistiinpanot")]
     public string? Notes { get; set; }

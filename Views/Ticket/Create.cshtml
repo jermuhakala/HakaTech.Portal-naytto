@@ -42,8 +42,21 @@
                     <div class="mb-3">
                         <label asp-for="Title" class="form-label fw-semibold"></label>
                         <input asp-for="Title" class="form-control" id="create-title"
-                               placeholder="Lyhyt ja kuvaava otsikko" />
+                               placeholder="Lyhyt ja kuvaava otsikko" autocomplete="off" />
                         <span asp-validation-for="Title" class="text-danger small"></span>
+
+                        @* KB-ehdotukset *@
+                        <div id="kb-suggestions" class="mt-2" style="display:none">
+                            <div class="card border-warning-subtle shadow-sm">
+                                <div class="card-body py-2 px-3">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <i class="bi bi-lightbulb-fill text-warning"></i>
+                                        <span class="fw-semibold small">Löysimme aiheeseen liittyviä ohjeita tietopankista:</span>
+                                    </div>
+                                    <ul id="kb-suggestion-list" class="list-unstyled mb-0"></ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -90,4 +103,46 @@
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script>
+        (function () {
+            const titleInput  = document.getElementById('create-title');
+            const panel       = document.getElementById('kb-suggestions');
+            const list        = document.getElementById('kb-suggestion-list');
+            let   debounce;
+
+            titleInput.addEventListener('input', function () {
+                clearTimeout(debounce);
+                const q = this.value.trim();
+                if (q.length < 3) { panel.style.display = 'none'; return; }
+
+                debounce = setTimeout(async function () {
+                    try {
+                        const res  = await fetch(`/KnowledgeBase/Search?q=${encodeURIComponent(q)}`);
+                        const data = await res.json();
+
+                        if (!data || data.length === 0) { panel.style.display = 'none'; return; }
+
+                        list.innerHTML = data.map(a => `
+                            <li class="mb-1">
+                                <a href="/KnowledgeBase/Article/${a.id}" target="_blank"
+                                   class="d-flex align-items-start gap-2 text-decoration-none text-body">
+                                    <i class="bi bi-file-earmark-text text-primary mt-1 flex-shrink-0"></i>
+                                    <div>
+                                        <span class="fw-medium small">${a.title}</span>
+                                        <span class="badge bg-light text-secondary border ms-1" style="font-size:.7rem">${a.category}</span>
+                                        <div class="text-muted" style="font-size:.78rem">${a.excerpt}</div>
+                                    </div>
+                                </a>
+                            </li>`).join('');
+
+                        panel.style.display = 'block';
+                    } catch { panel.style.display = 'none'; }
+                }, 350);
+            });
+
+            titleInput.addEventListener('blur', function () {
+                setTimeout(() => { panel.style.display = 'none'; }, 300);
+            });
+        })();
+    </script>
 }

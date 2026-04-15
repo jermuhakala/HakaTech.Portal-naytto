@@ -46,6 +46,10 @@
                    asp-controller="RemoteDesktop" asp-action="Index">
                     <i class="bi bi-display"></i><span>Etätyöpöytä</span>
                 </a>
+                <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "KnowledgeBase" ? "active" : "")"
+                   asp-controller="KnowledgeBase" asp-action="Index">
+                    <i class="bi bi-book"></i><span>Tietopankki</span>
+                </a>
 
                 @if (User.IsInRole("Admin"))
                 {
@@ -66,6 +70,34 @@
                        asp-controller="Announcement" asp-action="Index">
                         <i class="bi bi-megaphone"></i><span>Tiedotteet</span>
                     </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "KnowledgeBase" && ViewContext.RouteData.Values["action"]?.ToString() == "Manage" ? "active" : "")"
+                       asp-controller="KnowledgeBase" asp-action="Manage">
+                        <i class="bi bi-book-half"></i><span>KB: Hallinta</span>
+                    </a>
+                    <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AuditLog" ? "active" : "")"
+                       asp-controller="AuditLog" asp-action="Index">
+                        <i class="bi bi-journal-text"></i><span>Tapahtumaloki</span>
+                    </a>
+                }
+
+                @* Pääkäyttäjä-linkki asiakaskäyttäjille *@
+                @if (!User.IsInRole("Admin"))
+                {
+                    var cu = ViewContext.HttpContext.RequestServices
+                        .GetService(typeof(Microsoft.AspNetCore.Identity.UserManager<HakaTech.Portal.Models.Domain.ApplicationUser>))
+                        as Microsoft.AspNetCore.Identity.UserManager<HakaTech.Portal.Models.Domain.ApplicationUser>;
+                    if (cu is not null)
+                    {
+                        var me = await cu.GetUserAsync(User);
+                        if (me?.IsCustomerAdmin == true)
+                        {
+                            <span class="nav-section-label mt-3">Hallinta</span>
+                            <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "CustomerUser" ? "active" : "")"
+                               asp-controller="CustomerUser" asp-action="Index">
+                                <i class="bi bi-people"></i><span>Käyttäjät</span>
+                            </a>
+                        }
+                    }
                 }
             }
         </nav>
@@ -123,6 +155,14 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        // Poistonapit: data-confirm-attribuutti → confirm-dialogi
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-confirm]');
+            if (!btn) return;
+            if (!confirm(btn.dataset.confirm)) e.preventDefault();
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -55,6 +55,8 @@ public class Ticket
     public Customer? Customer { get; set; }
 
     // Navigaatio kommentteihin ja liitteisiin
-    public ICollection<TicketComment> Comments { get; set; } = new List<TicketComment>();
+    public ICollection<TicketComment>    Comments    { get; set; } = new List<TicketComment>();
     public ICollection<TicketAttachment> Attachments { get; set; } = new List<TicketAttachment>();
+
+    public TicketFeedback? Feedback { get; set; }
 }

@@ -20,7 +20,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ServiceCatalogItem>    ServiceCatalogItems      { get; set; }
     public DbSet<QuoteRequest>          QuoteRequests            { get; set; }
     public DbSet<Announcement>          Announcements            { get; set; }
-    public DbSet<RemoteDesktopConnection> RemoteDesktopConnections { get; set; }
+    public DbSet<RemoteDesktopConnection>  RemoteDesktopConnections   { get; set; }
+    public DbSet<KnowledgeBaseCategory>   KnowledgeBaseCategories    { get; set; }
+    public DbSet<KnowledgeBaseArticle>    KnowledgeBaseArticles      { get; set; }
+    public DbSet<TicketFeedback>          TicketFeedbacks            { get; set; }
+    public DbSet<AuditLog>                AuditLogs                  { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -211,6 +215,64 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
              .WithMany(c => c.RemoteDesktopConnections)
              .HasForeignKey(r => r.CustomerId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── TicketFeedback ─────────────────────────────────────
+        builder.Entity<TicketFeedback>(e =>
+        {
+            e.HasKey(f => f.Id);
+            e.HasIndex(f => f.TicketId).IsUnique();  // yksi palaute per tiketti
+            e.Property(f => f.Comment).HasMaxLength(2000);
+
+            e.HasOne(f => f.Ticket)
+             .WithOne(t => t.Feedback)
+             .HasForeignKey<TicketFeedback>(f => f.TicketId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(f => f.User)
+             .WithMany()
+             .HasForeignKey(f => f.UserId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── AuditLog ───────────────────────────────────────────
+        builder.Entity<AuditLog>(e =>
+        {
+            e.HasKey(a => a.Id);
+            e.Property(a => a.Action).IsRequired().HasMaxLength(100);
+            e.Property(a => a.EntityType).HasMaxLength(50);
+            e.Property(a => a.EntityId).HasMaxLength(50);
+            e.Property(a => a.UserEmail).HasMaxLength(256);
+            e.Property(a => a.Details).HasMaxLength(1000);
+            e.Property(a => a.IpAddress).HasMaxLength(50);
+            e.HasIndex(a => a.Timestamp);
+            e.HasIndex(a => a.UserId);
+        });
+
+        // ── KnowledgeBaseCategory ──────────────────────────────
+        builder.Entity<KnowledgeBaseCategory>(e =>
+        {
+            e.HasKey(c => c.Id);
+            e.Property(c => c.Name).IsRequired().HasMaxLength(100);
+            e.Property(c => c.Description).HasMaxLength(500);
+        });
+
+        // ── KnowledgeBaseArticle ───────────────────────────────
+        builder.Entity<KnowledgeBaseArticle>(e =>
+        {
+            e.HasKey(a => a.Id);
+            e.Property(a => a.Title).IsRequired().HasMaxLength(300);
+            e.Property(a => a.Content).IsRequired();
+
+            e.HasOne(a => a.Category)
+             .WithMany(c => c.Articles)
+             .HasForeignKey(a => a.CategoryId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(a => a.CreatedByUser)
+             .WithMany()
+             .HasForeignKey(a => a.CreatedByUserId)
+             .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

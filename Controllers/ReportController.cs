@@ -58,6 +58,11 @@ public class ReportController : Controller
         vm.TotalBilledIncl = vm.MonthlyStats.Sum(s => s.TotalIncl);
         vm.TotalPaid       = vm.MonthlyStats.Sum(s => s.PaidAmount);
 
+        // Palautekeskiarvo
+        var feedbacks = await _db.TicketFeedbacks.ToListAsync();
+        vm.FeedbackCount     = feedbacks.Count;
+        vm.AvgFeedbackRating = feedbacks.Count > 0 ? feedbacks.Average(f => (double)f.Rating) : null;
+
         return View(vm);
     }
 

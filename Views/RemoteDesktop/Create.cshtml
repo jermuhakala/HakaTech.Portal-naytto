@@ -97,6 +97,18 @@
                         </div>
                     </div>
 
+                    @* Guacamole-yhteyden ID *@
+                    <div class="mb-3">
+                        <label asp-for="GuacamoleConnectionId" class="form-label fw-medium"></label>
+                        <input asp-for="GuacamoleConnectionId" class="form-control font-monospace"
+                               placeholder="esim. 1" />
+                        <div class="form-text">
+                            Guacamolen hallinnasta: <strong>Settings → Connections</strong> → yhteyden numero URL:ssa
+                            (<code>/guacamole/#/manage/mysql/connections/<strong>1</strong></code>).
+                        </div>
+                        <span asp-validation-for="GuacamoleConnectionId" class="text-danger small"></span>
+                    </div>
+
                     @* Muistiinpanot *@
                     <div class="mb-3">
                         <label asp-for="Notes" class="form-label fw-medium"></label>

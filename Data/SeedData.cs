@@ -47,9 +47,11 @@ public static class SeedData
         var admin2 = await CreateUserAsync(userManager, "support@hakatech.fi", "Asiakastuki", null, Roles.Admin, defaultPassword);
 
         // 4. Luo Asiakaskäyttäjät yrityksille
-        var matti = await CreateUserAsync(userManager, "matti@digimolli.fi", "Matti Meikäläinen", digimolli.Id, Roles.Customer, defaultPassword);
+        var matti = await CreateUserAsync(userManager, "matti@digimolli.fi", "Matti Meikäläinen", digimolli.Id, Roles.Customer, defaultPassword, isCustomerAdmin: true);
         var kalle = await CreateUserAsync(userManager, "kalle@kivikangas.fi", "Kalle Kivikangas", kivikangas.Id, Roles.Customer, defaultPassword);
         var miia = await CreateUserAsync(userManager, "miia@techsolutions.fi", "Miia Mäkelä", techsol.Id, Roles.Customer, defaultPassword);
+        // Lisäkäyttäjä DigiMöllille (pääkäyttäjän hallitsema)
+        await CreateUserAsync(userManager, "laura@digimolli.fi", "Laura Leinonen", digimolli.Id, Roles.Customer, defaultPassword);
 
         // 5. Luo Palvelusopimukset
         dbContext.Contracts.AddRange(
@@ -151,59 +153,217 @@ public static class SeedData
         dbContext.RemoteDesktopConnections.AddRange(
             new RemoteDesktopConnection
             {
-                Name      = "Pääpalvelin (RDP)",
-                Protocol  = RemoteDesktopProtocol.Rdp,
-                Hostname  = "192.168.10.10",
-                Port      = 3389,
-                Username  = "administrator",
-                EncryptedPassword = guacamole.ProtectPassword("DemoSalasana1!"),
-                IgnoreCert = true,
-                Security   = "any",
-                Notes      = "Tuotantoliikenteen pääpalvelin. Käytä varoen.",
-                IsActive   = true,
-                CustomerId = techsol.Id
-            },
-            new RemoteDesktopConnection
+                Name                 = "HakaTech targethost (RDP)",
+                Protocol             = RemoteDesktopProtocol.Rdp,
+                Hostname             = "20.223.119.171",
+                Port                 = 3389,
+                Username             = "administrator",
+                EncryptedPassword    = guacamole.ProtectPassword("DemoSalasana1!"),
+                IgnoreCert           = true,
+                Security             = "any",
+                GuacamoleConnectionId = "1",
+                Notes                = "HakaTech-kohdepalvelin Guacamolen kautta.",
+                IsActive             = true,
+                CustomerId           = techsol.Id
+            }
+        );
+        await dbContext.SaveChangesAsync();
+
+        // 10b. Tikettipalautteet (suljetuille tiketeille)
+        dbContext.TicketFeedbacks.AddRange(
+            new TicketFeedback { TicketId = t3.Id, UserId = kalle.Id, Rating = 5, Comment = "Nopea ja asiantunteva palvelu, tulostin toimii taas!", SubmittedAt = DateTime.UtcNow.AddDays(-18) }
+        );
+        await dbContext.SaveChangesAsync();
+
+        // 11. Tietopankki – kategoriat ja artikkelit
+        var kbYleinen    = new KnowledgeBaseCategory { Name = "Yleistä",          SortOrder = 1, IsActive = true };
+        var kbLaskutus   = new KnowledgeBaseCategory { Name = "Laskutus",         SortOrder = 2, IsActive = true };
+        var kbTekniset   = new KnowledgeBaseCategory { Name = "Tekniset ohjeet",  SortOrder = 3, IsActive = true };
+        var kbTietoturva = new KnowledgeBaseCategory { Name = "Tietoturva",       SortOrder = 4, IsActive = true };
+
+        dbContext.KnowledgeBaseCategories.AddRange(kbYleinen, kbLaskutus, kbTekniset, kbTietoturva);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.KnowledgeBaseArticles.AddRange(
+            new KnowledgeBaseArticle
             {
-                Name      = "Kehityspalvelin (SSH)",
-                Protocol  = RemoteDesktopProtocol.Ssh,
-                Hostname  = "192.168.10.20",
-                Port      = 22,
-                Username  = "devops",
-                EncryptedPassword = guacamole.ProtectPassword("DemoSalasana2!"),
-                IgnoreCert = false,
-                Security   = "any",
-                Notes      = "SSH-yhteys kehitys- ja testipalvelimelle.",
-                IsActive   = true,
-                CustomerId = techsol.Id
+                Title      = "Miten luon tukitiketin?",
+                CategoryId = kbYleinen.Id,
+                IsFeatured = true,
+                IsPublished = true,
+                CreatedByUserId = admin1.Id,
+                CreatedAt  = DateTime.UtcNow,
+                UpdatedAt  = DateTime.UtcNow,
+                Content    = """
+                    <h2>Tiketin luominen portaalissa</h2>
+                    <p>Tukitiketin luominen on nopeaa. Seuraa näitä vaiheita:</p>
+                    <ol>
+                        <li>Siirry <strong>Tiketit</strong>-osioon vasemmasta valikosta.</li>
+                        <li>Klikkaa <strong>Uusi tiketti</strong> -painiketta.</li>
+                        <li>Kirjoita lyhyt ja kuvaava otsikko.</li>
+                        <li>Kuvaile ongelma mahdollisimman tarkasti: mitä tapahtui, milloin ja miten se voidaan toistaa.</li>
+                        <li>Valitse sopiva <strong>kategoria</strong> ja <strong>prioriteetti</strong>.</li>
+                        <li>Klikkaa <strong>Lähetä tiketti</strong>.</li>
+                    </ol>
+                    <p>Tukitiimimme vastaa arkisin 8–17 välillä. Kiireellisissä asioissa valitse prioriteetiksi <em>Kiireellinen</em>.</p>
+                    <h3>Vinkkejä hyvään tikettiin</h3>
+                    <ul>
+                        <li>Liitä mukaan kuvakaappaukset tai virheilmoitukset.</li>
+                        <li>Mainitse, monelle käyttäjälle ongelma vaikuttaa.</li>
+                        <li>Kerro, onko ongelma toistuva vai kertaluonteinen.</li>
+                    </ul>
+                    """
             },
-            new RemoteDesktopConnection
+            new KnowledgeBaseArticle
             {
-                Name      = "Toimistotyöasema (RDP)",
-                Protocol  = RemoteDesktopProtocol.Rdp,
-                Hostname  = "10.0.1.50",
-                Port      = 3389,
-                Username  = "kayttaja",
-                EncryptedPassword = guacamole.ProtectPassword("DemoSalasana3!"),
-                IgnoreCert = true,
-                Security   = "any",
-                Notes      = "Toimiston Windows-työasema etähallintaa varten.",
-                IsActive   = true,
-                CustomerId = digimolli.Id
+                Title      = "Laskun maksaminen ja eräpäivä",
+                CategoryId = kbLaskutus.Id,
+                IsFeatured = true,
+                IsPublished = true,
+                CreatedByUserId = admin1.Id,
+                CreatedAt  = DateTime.UtcNow,
+                UpdatedAt  = DateTime.UtcNow,
+                Content    = """
+                    <h2>Laskutuskäytännöt</h2>
+                    <p>HakaTechin laskut lähetetään kuukauden lopussa sähköpostitse PDF-muodossa.</p>
+                    <h3>Maksuaika</h3>
+                    <p>Maksuaika on <strong>14 päivää</strong> laskun päiväyksestä. Eräpäivä näkyy laskun oikeassa yläkulmassa.</p>
+                    <h3>Maksutavat</h3>
+                    <ul>
+                        <li>Verkkopankkisiirto (IBAN näkyy laskulla)</li>
+                        <li>E-lasku — pyydä aktivointi tukitiimiltä</li>
+                    </ul>
+                    <h3>Myöhästynyt maksu</h3>
+                    <p>Viivästymisestä peritään viivästyskorko lain mukaisesti. Maksamattomista laskuista lähetään muistutus 7 päivää eräpäivän jälkeen.</p>
+                    <h3>Laskuun liittyvät kysymykset</h3>
+                    <p>Jos laskussa on virhe tai tarvitset hyvityslaskun, ota yhteyttä laskutustiimiin tikettijärjestelmän kautta ja valitse kategoriaksi <em>Laskutus</em>.</p>
+                    """
+            },
+            new KnowledgeBaseArticle
+            {
+                Title      = "VPN-yhteyden muodostaminen",
+                CategoryId = kbTekniset.Id,
+                IsFeatured = true,
+                IsPublished = true,
+                CreatedByUserId = admin1.Id,
+                CreatedAt  = DateTime.UtcNow,
+                UpdatedAt  = DateTime.UtcNow,
+                Content    = """
+                    <h2>VPN-yhteys HakaTechin verkkoon</h2>
+                    <p>Tarvitset VPN-yhteyden päästäksesi asiakasverkon sisäisiin resursseihin.</p>
+                    <h3>Vaatimukset</h3>
+                    <ul>
+                        <li>VPN-asiakasohjelmisto (toimitetaan onboardingin yhteydessä)</li>
+                        <li>Henkilökohtainen VPN-sertifikaatti</li>
+                        <li>Toimiva internet-yhteys</li>
+                    </ul>
+                    <h3>Yhteyden muodostaminen</h3>
+                    <ol>
+                        <li>Avaa VPN-asiakasohjelma.</li>
+                        <li>Valitse profiiliksi <strong>HakaTech-Asiakkaat</strong>.</li>
+                        <li>Syötä käyttäjätunnus (sama kuin portaalissa) ja salasana.</li>
+                        <li>Klikkaa <strong>Yhdistä</strong>.</li>
+                    </ol>
+                    <h3>Yleisimmät ongelmat</h3>
+                    <p><strong>Yhteys ei muodostu:</strong> Tarkista palomuuriasetukset. UDP-portin 1194 täytyy olla auki.</p>
+                    <p><strong>Sertifikaatti vanhentunut:</strong> Pyydä uusi sertifikaatti tukitiketillä.</p>
+                    """
+            },
+            new KnowledgeBaseArticle
+            {
+                Title      = "Salasanan vaihtaminen ja nollaaminen",
+                CategoryId = kbTietoturva.Id,
+                IsFeatured = true,
+                IsPublished = true,
+                CreatedByUserId = admin1.Id,
+                CreatedAt  = DateTime.UtcNow,
+                UpdatedAt  = DateTime.UtcNow,
+                Content    = """
+                    <h2>Salasanan hallinta</h2>
+                    <h3>Salasanan vaihto portaalissa</h3>
+                    <ol>
+                        <li>Klikkaa profiilikuvakettasi sivupalkin alaosassa.</li>
+                        <li>Valitse <strong>Vaihda salasana</strong> (avainikkoni).</li>
+                        <li>Syötä nykyinen salasana ja uusi salasana kahdesti.</li>
+                        <li>Klikkaa <strong>Tallenna</strong>.</li>
+                    </ol>
+                    <h3>Unohtunut salasana</h3>
+                    <p>Jos olet unohtanut salasanasi, ota yhteyttä tukitiimiin. Salasanoja ei voida palauttaa, mutta admin voi asettaa uuden salasanan.</p>
+                    <h3>Salasanavaatimukset</h3>
+                    <ul>
+                        <li>Vähintään 8 merkkiä</li>
+                        <li>Vähintään yksi iso kirjain</li>
+                        <li>Vähintään yksi numero tai erikoismerkki</li>
+                    </ul>
+                    <h3>Tietoturvaohjeet</h3>
+                    <p>Älä jaa salasanaa kenellekään, myös tukihenkilöstö ei tarvitse sitä. Vaihda salasana säännöllisesti (suositus: 3 kuukauden välein).</p>
+                    """
+            },
+            new KnowledgeBaseArticle
+            {
+                Title      = "Palvelutasosopimus (SLA) ja vasteajat",
+                CategoryId = kbYleinen.Id,
+                IsPublished = true,
+                CreatedByUserId = admin1.Id,
+                CreatedAt  = DateTime.UtcNow,
+                UpdatedAt  = DateTime.UtcNow,
+                Content    = """
+                    <h2>Palvelutasosopimus</h2>
+                    <p>HakaTechin palvelutasosopimus määrittelee vasteajat tiketin prioriteetin mukaan.</p>
+                    <table class="table table-bordered table-sm mt-3">
+                        <thead class="table-light">
+                            <tr><th>Prioriteetti</th><th>Ensivaste</th><th>Ratkaisu</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><span class="badge bg-danger">Kriittinen</span></td><td>1 tunti</td><td>4 tuntia</td></tr>
+                            <tr><td><span class="badge bg-warning text-dark">Kiireellinen</span></td><td>4 tuntia</td><td>1 työpäivä</td></tr>
+                            <tr><td><span class="badge bg-primary">Normaali</span></td><td>1 työpäivä</td><td>3 työpäivää</td></tr>
+                            <tr><td><span class="badge bg-secondary">Matala</span></td><td>2 työpäivää</td><td>5 työpäivää</td></tr>
+                        </tbody>
+                    </table>
+                    <p class="text-muted small">Vasteajat koskevat arkipäiviä klo 8–17. Kriittiset häiriöt 24/7.</p>
+                    """
+            },
+            new KnowledgeBaseArticle
+            {
+                Title      = "Varmuuskopiointi ja tietojen palautus",
+                CategoryId = kbTekniset.Id,
+                IsPublished = true,
+                CreatedByUserId = admin1.Id,
+                CreatedAt  = DateTime.UtcNow,
+                UpdatedAt  = DateTime.UtcNow,
+                Content    = """
+                    <h2>Varmuuskopiointikäytännöt</h2>
+                    <p>HakaTech varmuuskopioi asiakkaiden tiedot automaattisesti seuraavasti:</p>
+                    <ul>
+                        <li><strong>Päivittäinen varmuuskopio</strong> – säilytetään 30 päivää</li>
+                        <li><strong>Viikoittainen varmuuskopio</strong> – säilytetään 3 kuukautta</li>
+                        <li><strong>Kuukausittainen varmuuskopio</strong> – säilytetään 1 vuosi</li>
+                    </ul>
+                    <h3>Tietojen palautus</h3>
+                    <p>Pyydä palautusta tukitiketillä. Mainitse:</p>
+                    <ol>
+                        <li>Mitä tiedostoja tai tietokantoja haluat palauttaa</li>
+                        <li>Mihin ajankohtaan palautetaan (päivämäärä ja kellonaika)</li>
+                        <li>Palautetaanko alkuperäiseen sijaintiin vai väliaikaiseen kansioon</li>
+                    </ol>
+                    <p><strong>Huom:</strong> Palautuspyyntöihin vastataan seuraavana arkipäivänä. Kiireellisissä tapauksissa merkitse tiketti prioriteetiltaan <em>Kiireellinen</em>.</p>
+                    """
             }
         );
         await dbContext.SaveChangesAsync();
     }
 
-    private static async Task<ApplicationUser> CreateUserAsync(UserManager<ApplicationUser> userManager, string email, string fullName, int? customerId, string role, string password)
+    private static async Task<ApplicationUser> CreateUserAsync(UserManager<ApplicationUser> userManager, string email, string fullName, int? customerId, string role, string password, bool isCustomerAdmin = false)
     {
         var user = new ApplicationUser
         {
-            UserName = email,
-            Email = email,
-            FullName = fullName,
-            CustomerId = customerId,
-            EmailConfirmed = true
+            UserName        = email,
+            Email           = email,
+            FullName        = fullName,
+            CustomerId      = customerId,
+            IsCustomerAdmin = isCustomerAdmin,
+            EmailConfirmed  = true
         };
         var result = await userManager.CreateAsync(user, password);
         if (result.Succeeded)

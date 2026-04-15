@@ -5,10 +5,10 @@ namespace HakaTech.Portal.Services;
 public interface IGuacamoleService
 {
     /// <summary>
-    /// Rakentaa allekirjoitetun Guacamole-URL:n yhteydelle.
-    /// Palauttaa null jos Guacamole ei ole konfiguroitu.
+    /// Kirjautuu Guacamoleen admin-tunnuksilla ja rakentaa yhteys-URL:n.
+    /// Palauttaa null jos Guacamole ei ole konfiguroitu tai kirjautuminen epäonnistuu.
     /// </summary>
-    string? BuildConnectionUrl(RemoteDesktopConnection connection, string userEmail);
+    Task<string?> BuildConnectionUrlAsync(RemoteDesktopConnection connection);
 
     /// <summary>Salaa salasanan IDataProtectorilla tallennusta varten.</summary>
     string ProtectPassword(string plaintext);

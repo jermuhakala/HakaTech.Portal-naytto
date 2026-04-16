@@ -7,12 +7,27 @@
     var statusModel    = ViewBag.StatusModel as InvoiceStatusViewModel;
     var history        = ViewBag.CustomerHistory as List<Invoice> ?? new List<Invoice>();
 
-    string badgeCss = Model.Status switch {
+    static string StatusLabel(InvoiceStatus s) => s switch {
+        InvoiceStatus.Draft   => "Luonnos",
+        InvoiceStatus.Sent    => "Lähetetty",
+        InvoiceStatus.Unpaid  => "Maksamatta",
+        InvoiceStatus.Paid    => "Maksettu",
+        InvoiceStatus.Overdue => "Erääntynyt",
+        _                     => s.ToString()
+    };
+    static string BadgeCss(InvoiceStatus s) => s switch {
         InvoiceStatus.Paid    => "bg-success",
         InvoiceStatus.Overdue => "bg-danger",
         InvoiceStatus.Sent    => "bg-primary",
         InvoiceStatus.Unpaid  => "bg-warning text-dark",
         _                     => "bg-secondary"
+    };
+    static string HistoryCss(InvoiceStatus s) => s switch {
+        InvoiceStatus.Paid    => "text-success",
+        InvoiceStatus.Overdue => "text-danger",
+        InvoiceStatus.Sent    => "text-primary",
+        InvoiceStatus.Unpaid  => "text-warning",
+        _                     => "text-muted"
     };
 }
 
@@ -51,7 +66,7 @@
                     <small class="text-muted">@(Model.Customer?.CompanyName)</small>
                 </div>
                 <div class="d-flex align-items-center gap-3">
-                    <span class="badge @badgeCss fs-6">@Model.Status</span>
+                    <span class="badge @BadgeCss(Model.Status) fs-6">@StatusLabel(Model.Status)</span>
                     <a asp-action="DownloadPdf" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary rounded-pill">
                         <i class="bi bi-file-earmark-pdf me-1"></i> Lataa PDF
                     </a>
@@ -235,14 +250,7 @@
                                     onchange="togglePaidDate(this.value)">
                                 @foreach (var s in Enum.GetValues<InvoiceStatus>())
                                 {
-                                    if (statusModel.Status == s)
-                                    {
-                                        <option value="@s" selected>@s</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="@s">@s</option>
-                                    }
+                                    <option value="@s" selected="@(statusModel.Status == s)">@StatusLabel(s)</option>
                                 }
                             </select>
                         </div>
@@ -275,13 +283,7 @@
                     <ul class="invoice-list">
                         @foreach (var inv in history)
                         {
-                            var hCss = inv.Status switch {
-                                InvoiceStatus.Paid    => "text-success",
-                                InvoiceStatus.Overdue => "text-danger",
-                                InvoiceStatus.Sent    => "text-primary",
-                                InvoiceStatus.Unpaid  => "text-warning",
-                                _                     => "text-muted"
-                            };
+                            var hCss = HistoryCss(inv.Status);
 
                             <li>
                                 <div class="inv-left">
@@ -294,7 +296,7 @@
                                 </div>
                                 <div class="inv-right d-flex align-items-center gap-2">
                                     <span class="inv-amount">@inv.TotalAmount.ToString("N2") €</span>
-                                    <i class="bi bi-circle-fill @hCss" style="font-size: 0.5rem;" title="@inv.Status"></i>
+                                    <i class="bi bi-circle-fill @hCss" style="font-size: 0.5rem;" title="@StatusLabel(inv.Status)"></i>
                                 </div>
                             </li>
                         }

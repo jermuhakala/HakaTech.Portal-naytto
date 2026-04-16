@@ -6,6 +6,31 @@
     var statusFilter  = ViewBag.StatusFilter  as TicketStatus?;
     var priorityFilter= ViewBag.PriorityFilter as TicketPriority?;
     string? search    = ViewBag.Search;
+
+    static string StatusLabel(TicketStatus s) => s switch {
+        TicketStatus.Open            => "Avoin",
+        TicketStatus.InProgress      => "Käsittelyssä",
+        TicketStatus.WaitingCustomer => "Odottaa asiakasta",
+        TicketStatus.Resolved        => "Ratkaistu",
+        TicketStatus.Closed          => "Suljettu",
+        _                            => s.ToString()
+    };
+    static string PriorityLabel(TicketPriority p) => p switch {
+        TicketPriority.Low      => "Matala",
+        TicketPriority.Normal   => "Normaali",
+        TicketPriority.High     => "Korkea",
+        TicketPriority.Critical => "Kriittinen",
+        _                       => p.ToString()
+    };
+    static string CategoryLabel(TicketCategory c) => c switch {
+        TicketCategory.Network  => "Verkko",
+        TicketCategory.Hardware => "Laitteisto",
+        TicketCategory.Software => "Ohjelmisto",
+        TicketCategory.Email    => "Sähköposti",
+        TicketCategory.Access   => "Käyttöoikeudet",
+        TicketCategory.Other    => "Muu",
+        _                       => c.ToString()
+    };
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -35,14 +60,7 @@
             <option value="">Kaikki tilat</option>
             @foreach (var s in Enum.GetValues<TicketStatus>())
             {
-                if (statusFilter == s)
-                {
-                    <option value="@s" selected>@s</option>
-                }
-                else
-                {
-                    <option value="@s">@s</option>
-                }
+                <option value="@s" selected="@(statusFilter == s)">@StatusLabel(s)</option>
             }
         </select>
     </div>
@@ -51,14 +69,7 @@
             <option value="">Kaikki prioriteetit</option>
             @foreach (var p in Enum.GetValues<TicketPriority>())
             {
-                if (priorityFilter == p)
-                {
-                    <option value="@p" selected>@p</option>
-                }
-                else
-                {
-                    <option value="@p">@p</option>
-                }
+                <option value="@p" selected="@(priorityFilter == p)">@PriorityLabel(p)</option>
             }
         </select>
     </div>
@@ -74,8 +85,15 @@
 
 @if (!Model.Any())
 {
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle me-1"></i>Ei tikettejä valituilla suodattimilla.
+    <div class="card border-0 shadow-sm text-center py-5">
+        <div class="card-body">
+            <i class="bi bi-ticket-perforated text-muted" style="font-size:3rem"></i>
+            <p class="mt-3 mb-1 fw-semibold text-muted">Ei tikettejä</p>
+            <p class="text-muted small mb-3">Ei tikettejä valituilla suodattimilla.</p>
+            <a asp-action="Create" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Luo uusi tiketti
+            </a>
+        </div>
     </div>
 }
 else
@@ -108,7 +126,7 @@ else
                         {
                             <td class="small text-muted">@(t.Customer?.CompanyName ?? "—")</td>
                         }
-                        <td class="small">@t.Category</td>
+                        <td class="small text-muted">@CategoryLabel(t.Category)</td>
                         <td>
                             @{
                                 var pBadge = t.Priority switch {
@@ -118,7 +136,7 @@ else
                                     _                       => "bg-secondary"
                                 };
                             }
-                            <span class="badge @pBadge">@t.Priority</span>
+                            <span class="badge @pBadge">@PriorityLabel(t.Priority)</span>
                         </td>
                         <td>
                             @{
@@ -131,7 +149,7 @@ else
                                     _                            => "bg-light text-dark"
                                 };
                             }
-                            <span class="badge @sBadge">@t.Status</span>
+                            <span class="badge @sBadge">@StatusLabel(t.Status)</span>
                         </td>
                         <td class="small text-muted">@t.CreatedAt.ToString("dd.MM.yy")</td>
                         <td class="small text-muted">@(t.AssignedToUser?.FullName ?? "—")</td>

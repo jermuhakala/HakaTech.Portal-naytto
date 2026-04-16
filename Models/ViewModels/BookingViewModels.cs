@@ -10,9 +10,12 @@ public class BookingCalendarViewModel
     public int  Month       { get; set; }
     public int? SelectedDay { get; set; }
 
-    public List<BookingSlot> AllSlots      { get; set; } = [];
+    /// <summary>null = kaikki palvelutyypit</summary>
+    public BookingSlotType? ServiceTypeFilter { get; set; }
+
+    public List<BookingSlot> AllSlots        { get; set; } = [];
     public HashSet<int>      MyBookedSlotIds { get; set; } = [];
-    public bool              IsAdmin       { get; set; }
+    public bool              IsAdmin         { get; set; }
 
     // ── Kalenteriapurit ─────────────────────────────────────────────
     public DateTime FirstDay     => new(Year, Month, 1);

@@ -25,6 +25,9 @@
         BookingSlotType.RemoteSupport => "bi-display",
         _                             => "bi-calendar-event"
     };
+
+    // Palvelusuodatin – apumuuttuja linkkejä varten
+    var sf = Model.ServiceTypeFilter;
 }
 
 @* ── Otsikkorivi ────────────────────────────────────────────────── *@
@@ -66,6 +69,34 @@
     </div>
 }
 
+@* ── Palveluvalikkopalkki ──────────────────────────────────────── *@
+<div class="service-filter-bar mb-4">
+    <span class="service-filter-label">
+        <i class="bi bi-funnel me-1"></i>Valitse palvelu:
+    </span>
+    <div class="service-filter-btns">
+        <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
+           class="service-btn @(sf is null ? "active" : "")">
+            <i class="bi bi-grid me-1"></i>Kaikki
+        </a>
+        <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
+           asp-route-service="@BookingSlotType.Maintenance"
+           class="service-btn service-btn-warning @(sf == BookingSlotType.Maintenance ? "active" : "")">
+            <i class="bi bi-wrench-adjustable me-1"></i>Huolto
+        </a>
+        <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
+           asp-route-service="@BookingSlotType.Consulting"
+           class="service-btn service-btn-primary @(sf == BookingSlotType.Consulting ? "active" : "")">
+            <i class="bi bi-person-video3 me-1"></i>Konsultointi
+        </a>
+        <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
+           asp-route-service="@BookingSlotType.RemoteSupport"
+           class="service-btn service-btn-success @(sf == BookingSlotType.RemoteSupport ? "active" : "")">
+            <i class="bi bi-display me-1"></i>Etätuki
+        </a>
+    </div>
+</div>
+
 <div class="row g-3 align-items-start">
 
     @* ── Kalenteriruudukko ──────────────────────────────────────── *@
@@ -73,11 +104,13 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center py-2">
                 <a asp-action="Index" asp-route-year="@prevY" asp-route-month="@prevM"
+                   asp-route-service="@sf"
                    class="btn btn-sm btn-link text-secondary p-0 px-1 text-decoration-none">
                     <i class="bi bi-chevron-left"></i>
                 </a>
                 <span class="fw-semibold">@Model.MonthName</span>
                 <a asp-action="Index" asp-route-year="@nextY" asp-route-month="@nextM"
+                   asp-route-service="@sf"
                    class="btn btn-sm btn-link text-secondary p-0 px-1 text-decoration-none">
                     <i class="bi bi-chevron-right"></i>
                 </a>
@@ -111,7 +144,7 @@
                                 int? targetDay = isSelected ? null : (int?)d;
                                 <a asp-action="Index"
                                    asp-route-year="@Model.Year" asp-route-month="@Model.Month"
-                                   asp-route-day="@targetDay"
+                                   asp-route-day="@targetDay" asp-route-service="@sf"
                                    class="cal-cell-link text-decoration-none" style="color:inherit">
                                     <span class="cal-num">@d</span>
                                     <div class="cal-dots">
@@ -155,6 +188,7 @@
             @if (Model.SelectedDay.HasValue)
             {
                 <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
+                   asp-route-service="@sf"
                    class="btn btn-link btn-sm p-0 text-decoration-none">
                     <i class="bi bi-x me-1"></i>Näytä kaikki
                 </a>
@@ -314,6 +348,52 @@
 
 @section Scripts {
 <style>
+/* ── Palveluvalikkopalkki ── */
+.service-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: var(--bs-body-bg, #fff);
+    border: 1px solid var(--bs-border-color, #e2e8f0);
+    border-radius: 10px;
+    padding: 10px 16px;
+}
+.service-filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    white-space: nowrap;
+}
+.service-filter-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.service-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1.5px solid #e2e8f0;
+    color: #475569;
+    background: transparent;
+    transition: background .15s, color .15s, border-color .15s;
+}
+.service-btn:hover { background: #f1f5f9; color: #1e293b; }
+.service-btn.active { background: #1e293b; color: #fff; border-color: #1e293b; }
+
+.service-btn-warning.active  { background: #d97706; border-color: #d97706; color: #fff; }
+.service-btn-primary.active  { background: #2563eb; border-color: #2563eb; color: #fff; }
+.service-btn-success.active  { background: #16a34a; border-color: #16a34a; color: #fff; }
+
+.service-btn-warning:not(.active):hover  { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+.service-btn-primary:not(.active):hover  { background: #dbeafe; border-color: #3b82f6; color: #1e40af; }
+.service-btn-success:not(.active):hover  { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+
 /* ── Kalenteriruudukko ── */
 .cal-header-row,
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }

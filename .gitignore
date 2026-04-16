@@ -64,3 +64,6 @@ secrets.json
 # Web root built assets (Optional depending on build process)
 # wwwroot/lib/
 # wwwroot/css/site.min.css
+
+# Local dev settings with credentials
+appsettings.Development.json

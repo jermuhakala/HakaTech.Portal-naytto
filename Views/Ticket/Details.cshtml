@@ -22,6 +22,30 @@
         TicketPriority.Normal   => "bg-primary",
         _                       => "bg-secondary"
     };
+    static string StatusLabel(TicketStatus s) => s switch {
+        TicketStatus.Open            => "Avoin",
+        TicketStatus.InProgress      => "Käsittelyssä",
+        TicketStatus.WaitingCustomer => "Odottaa asiakasta",
+        TicketStatus.Resolved        => "Ratkaistu",
+        TicketStatus.Closed          => "Suljettu",
+        _                            => s.ToString()
+    };
+    static string PriorityLabel(TicketPriority p) => p switch {
+        TicketPriority.Low      => "Matala",
+        TicketPriority.Normal   => "Normaali",
+        TicketPriority.High     => "Korkea",
+        TicketPriority.Critical => "Kriittinen",
+        _                       => p.ToString()
+    };
+    static string CategoryLabel(TicketCategory c) => c switch {
+        TicketCategory.Network  => "Verkko",
+        TicketCategory.Hardware => "Laitteisto",
+        TicketCategory.Software => "Ohjelmisto",
+        TicketCategory.Email    => "Sähköposti",
+        TicketCategory.Access   => "Käyttöoikeudet",
+        TicketCategory.Other    => "Muu",
+        _                       => c.ToString()
+    };
 
     var visibleComments = isAdmin
         ? Model.Comments.OrderBy(c => c.CreatedAt).ToList()
@@ -65,9 +89,9 @@
             <span class="text-muted fw-light">#@Model.Id</span>
             @Model.Title
         </h2>
-        <span class="badge @statusBadge me-1">@Model.Status</span>
-        <span class="badge @priorityBadge me-1">@Model.Priority</span>
-        <span class="badge bg-light text-dark border">@Model.Category</span>
+        <span class="badge @statusBadge me-1">@StatusLabel(Model.Status)</span>
+        <span class="badge @priorityBadge me-1">@PriorityLabel(Model.Priority)</span>
+        <span class="badge bg-light text-dark border">@CategoryLabel(Model.Category)</span>
     </div>
     <div class="d-flex gap-2 flex-wrap">
         @if (Model.Status != TicketStatus.Closed)

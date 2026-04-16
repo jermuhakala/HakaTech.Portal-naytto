@@ -92,7 +92,7 @@ else
             </span>
             <hr class="flex-grow-1 my-0 opacity-25">
         </div>
-        <div class="row row-cols-1 row-cols-md-2 g-4 mb-2">
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-4 mb-2">
             @foreach (var service in group)
             {
                 <div class="col">
@@ -109,6 +109,10 @@ else
                                         <span class="text-@(color)-emphasis price-tag">
                                             alkaen @service.Price.Value.ToString("N0") €
                                         </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small fst-italic">Hinta sopimuksen mukaan</span>
                                     }
                                 </div>
                             </div>

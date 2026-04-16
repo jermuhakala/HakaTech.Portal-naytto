@@ -36,7 +36,7 @@ public class BookingController : Controller
     }
 
     // ── GET /Booking ─────────────────────────────────────────────────
-    public async Task<IActionResult> Index(int? year, int? month, int? day)
+    public async Task<IActionResult> Index(int? year, int? month, int? day, BookingSlotType? service)
     {
         var currentUser = await _userManager.GetUserAsync(User);
         bool isAdmin    = User.IsInRole("Admin");
@@ -56,6 +56,9 @@ public class BookingController : Controller
         if (!isAdmin)
             slotsQuery = slotsQuery.Where(s => s.IsActive);
 
+        if (service.HasValue)
+            slotsQuery = slotsQuery.Where(s => s.SlotType == service.Value);
+
         var slots = await slotsQuery.OrderBy(s => s.StartTime).ToListAsync();
 
         var myBookedSlotIds = new HashSet<int>();
@@ -71,12 +74,13 @@ public class BookingController : Controller
 
         var vm = new BookingCalendarViewModel
         {
-            Year            = y,
-            Month           = m,
-            SelectedDay     = day,
-            AllSlots        = slots,
-            MyBookedSlotIds = myBookedSlotIds,
-            IsAdmin         = isAdmin
+            Year              = y,
+            Month             = m,
+            SelectedDay       = day,
+            ServiceTypeFilter = service,
+            AllSlots          = slots,
+            MyBookedSlotIds   = myBookedSlotIds,
+            IsAdmin           = isAdmin
         };
 
         return View(vm);

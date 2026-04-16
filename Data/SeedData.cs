@@ -20,11 +20,12 @@ public static class SeedData
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var dbContext   = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        // ── HUOM! DEMO-TILA ──────────────────────────────────────────────
-        // Tyhjennetään ja luodaan tietokanta kokonaan uudestaan joka kerta
-        await dbContext.Database.EnsureDeletedAsync();
+        // Aja puuttuvat migraatiot (idempotent — turvallinen ajaa aina)
         await dbContext.Database.MigrateAsync();
-        // ─────────────────────────────────────────────────────────────────
+
+        // Jos kantaan on jo selattu dataa, ei tehdä mitään
+        if (await dbContext.Customers.AnyAsync())
+            return;
 
         // 1. Luo roolit
         foreach (var role in new[] { Roles.Admin, Roles.Customer })

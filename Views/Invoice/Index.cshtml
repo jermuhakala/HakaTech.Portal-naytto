@@ -5,6 +5,15 @@
     bool isAdmin        = (bool)(ViewBag.IsAdmin ?? false);
     var statusFilter    = ViewBag.StatusFilter as InvoiceStatus?;
     int? customerFilter = ViewBag.CustomerFilter;
+
+    static string StatusLabel(InvoiceStatus s) => s switch {
+        InvoiceStatus.Draft   => "Luonnos",
+        InvoiceStatus.Sent    => "Lähetetty",
+        InvoiceStatus.Unpaid  => "Maksamatta",
+        InvoiceStatus.Paid    => "Maksettu",
+        InvoiceStatus.Overdue => "Erääntynyt",
+        _                     => s.ToString()
+    };
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -36,14 +45,7 @@
             <option value="">Kaikki tilat</option>
             @foreach (var s in Enum.GetValues<InvoiceStatus>())
             {
-                if (statusFilter == s)
-                {
-                    <option value="@s" selected>@s</option>
-                }
-                else
-                {
-                    <option value="@s">@s</option>
-                }
+                <option value="@s" selected="@(statusFilter == s)">@StatusLabel(s)</option>
             }
         </select>
     </div>
@@ -59,8 +61,12 @@
 
 @if (!Model.Any())
 {
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle me-1"></i>Ei laskuja valituilla suodattimilla.
+    <div class="card border-0 shadow-sm text-center py-5">
+        <div class="card-body">
+            <i class="bi bi-receipt text-muted" style="font-size:3rem"></i>
+            <p class="mt-3 mb-1 fw-semibold text-muted">Ei laskuja</p>
+            <p class="text-muted small mb-0">Ei laskuja valituilla suodattimilla.</p>
+        </div>
     </div>
 }
 else
@@ -104,7 +110,7 @@ else
                             @inv.DueDate.ToString("dd.MM.yyyy")
                         </td>
                         <td class="text-end fw-semibold">@inv.TotalAmount.ToString("C")</td>
-                        <td><span class="badge @badgeCss">@inv.Status</span></td>
+                        <td><span class="badge @badgeCss">@StatusLabel(inv.Status)</span></td>
                         <td>
                             <a asp-action="Details" asp-route-id="@inv.Id"
                                class="btn btn-sm btn-outline-primary">

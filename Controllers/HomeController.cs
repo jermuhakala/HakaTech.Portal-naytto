@@ -48,7 +48,7 @@ public class HomeController : Controller
         var vm = new DashboardViewModel
         {
             IsAdmin     = isAdmin,
-            WelcomeName = currentUser?.FullName.Length > 0
+            WelcomeName = !string.IsNullOrWhiteSpace(currentUser?.FullName)
                             ? currentUser.FullName
                             : currentUser?.Email ?? string.Empty,
             WidgetOrder = widgetOrder

@@ -249,11 +249,13 @@ public class BookingController : Controller
             return RedirectToAction(nameof(ManageBookings));
 
         var currentUser = await _userManager.GetUserAsync(User);
-        var now         = DateTime.Now;
+        if (currentUser is null) return Unauthorized();
+
+        var now = DateTime.Now;
 
         var bookings = await _db.Bookings
             .Include(b => b.BookingSlot)
-            .Where(b => b.UserId == currentUser!.Id)
+            .Where(b => b.UserId == currentUser.Id)
             .OrderByDescending(b => b.BookingSlot!.StartTime)
             .ToListAsync();
 

@@ -222,6 +222,13 @@ public class RemoteDesktopController : Controller
             "Käyttäjä {Email} avaa etäyhteyden '{Name}' (Id={Id}).",
             currentUser?.Email ?? "tuntematon", conn.Name, id);
 
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            _logger.LogWarning("Guacamole-URL on tyhjä yhteydelle '{Name}' (Id={Id}).", conn.Name, id);
+            TempData["ErrorMessage"] = "Etäyhteyden muodostaminen epäonnistui. Tarkista yhteyden asetukset.";
+            return RedirectToAction(nameof(Index));
+        }
+
         ViewBag.ConnectionName = conn.Name;
         ViewBag.GuacamoleUrl   = url;
         return View();

@@ -285,6 +285,8 @@ public class InvoiceController : Controller
     {
         var currentUser = await _userManager.GetUserAsync(User);
 
+        if (currentUser is null) return Unauthorized();
+
         var invoice = await _db.Invoices.FindAsync(invoiceId);
         if (invoice is null) return NotFound();
 
@@ -300,6 +302,15 @@ public class InvoiceController : Controller
             return RedirectToAction(nameof(Details), new { id = invoiceId });
         }
 
+        var allowedExt = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".txt", ".png", ".jpg", ".jpeg", ".gif", ".zip" };
+        var ext = Path.GetExtension(file.FileName);
+        if (string.IsNullOrEmpty(ext) || !allowedExt.Contains(ext))
+        {
+            TempData["ErrorMessage"] = $"Tiedostotyyppi '{ext}' ei ole sallittu.";
+            return RedirectToAction(nameof(Details), new { id = invoiceId });
+        }
+
         var filePath = await _fileStorage.SaveFileAsync(file, "invoices");
 
         _db.InvoiceAttachments.Add(new InvoiceAttachment
@@ -308,7 +319,7 @@ public class InvoiceController : Controller
             FileName         = Path.GetFileName(file.FileName),
             FilePath         = filePath,
             UploadedAt       = DateTime.UtcNow,
-            UploadedByUserId = currentUser!.Id
+            UploadedByUserId = currentUser.Id
         });
         await _db.SaveChangesAsync();
 

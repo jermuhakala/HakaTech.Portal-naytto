@@ -50,7 +50,7 @@ public class KnowledgeBaseController : Controller
             {
                 Id           = a.Id,
                 Title        = a.Title,
-                CategoryName = a.Category!.Name,
+                CategoryName = a.Category != null ? a.Category.Name : "",
                 CategoryId   = a.CategoryId,
                 ViewCount    = a.ViewCount,
                 IsFeatured   = a.IsFeatured,
@@ -99,7 +99,7 @@ public class KnowledgeBaseController : Controller
             {
                 Id           = a.Id,
                 Title        = a.Title,
-                CategoryName = a.Category!.Name,
+                CategoryName = a.Category != null ? a.Category.Name : "",
                 CategoryId   = a.CategoryId,
                 ViewCount    = a.ViewCount,
                 UpdatedAt    = a.UpdatedAt,
@@ -143,7 +143,7 @@ public class KnowledgeBaseController : Controller
                 Id       = a.Id,
                 Title    = a.Title,
                 Excerpt  = MakeExcerpt(a.Content, 100),
-                Category = a.Category!.Name
+                Category = a.Category != null ? a.Category.Name : ""
             })
             .ToListAsync();
 
@@ -187,6 +187,8 @@ public class KnowledgeBaseController : Controller
         }
 
         var user = await _userManager.GetUserAsync(User);
+        if (user is null) return Unauthorized();
+
         var article = new KnowledgeBaseArticle
         {
             Title           = model.Title,
@@ -194,7 +196,7 @@ public class KnowledgeBaseController : Controller
             CategoryId      = model.CategoryId,
             IsPublished     = model.IsPublished,
             IsFeatured      = model.IsFeatured,
-            CreatedByUserId = user!.Id,
+            CreatedByUserId = user.Id,
             CreatedAt       = DateTime.UtcNow,
             UpdatedAt       = DateTime.UtcNow
         };

@@ -2,7 +2,7 @@
 @using HakaTech.Portal.Models.Domain
 @using HakaTech.Portal.Models.ViewModels
 @{
-    ViewData["Title"] = $"Tiketti #{Model.Id}";
+    ViewData["Title"] = $"#{Model.Id} {Model.Title}";
     bool isAdmin             = (bool)(ViewBag.IsAdmin ?? false);
     var commentModel         = ViewBag.CommentModel as TicketCommentViewModel;
     var editModel            = ViewBag.EditModel    as TicketEditViewModel;
@@ -22,30 +22,9 @@
         TicketPriority.Normal   => "bg-primary",
         _                       => "bg-secondary"
     };
-    static string StatusLabel(TicketStatus s) => s switch {
-        TicketStatus.Open            => "Avoin",
-        TicketStatus.InProgress      => "Käsittelyssä",
-        TicketStatus.WaitingCustomer => "Odottaa asiakasta",
-        TicketStatus.Resolved        => "Ratkaistu",
-        TicketStatus.Closed          => "Suljettu",
-        _                            => s.ToString()
-    };
-    static string PriorityLabel(TicketPriority p) => p switch {
-        TicketPriority.Low      => "Matala",
-        TicketPriority.Normal   => "Normaali",
-        TicketPriority.High     => "Korkea",
-        TicketPriority.Critical => "Kriittinen",
-        _                       => p.ToString()
-    };
-    static string CategoryLabel(TicketCategory c) => c switch {
-        TicketCategory.Network  => "Verkko",
-        TicketCategory.Hardware => "Laitteisto",
-        TicketCategory.Software => "Ohjelmisto",
-        TicketCategory.Email    => "Sähköposti",
-        TicketCategory.Access   => "Käyttöoikeudet",
-        TicketCategory.Other    => "Muu",
-        _                       => c.ToString()
-    };
+    string StatusLabel(TicketStatus s) => L[$"TicketStatus.{s}"].Value;
+    string PriorityLabel(TicketPriority p) => L[$"TicketPriority.{p}"].Value;
+    string CategoryLabel(TicketCategory c) => L[$"TicketCategory.{c}"].Value;
 
     var visibleComments = isAdmin
         ? Model.Comments.OrderBy(c => c.CreatedAt).ToList()
@@ -54,7 +33,7 @@
 
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index">Tiketit</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">@L["Ticket.Index.Title"]</a></li>
         @if (isAdmin && Model.Customer is not null)
         {
             <li class="breadcrumb-item">
@@ -63,7 +42,7 @@
                 </a>
             </li>
         }
-        <li class="breadcrumb-item active">Tiketti #@Model.Id</li>
+        <li class="breadcrumb-item active">#@Model.Id</li>
     </ol>
 </nav>
 
@@ -82,7 +61,6 @@
     </div>
 }
 
-<!-- Otsikkorivi -->
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
         <h2 class="mb-1">
@@ -97,10 +75,10 @@
         @if (Model.Status != TicketStatus.Closed)
         {
             <form asp-action="Close" asp-route-id="@Model.Id" method="post"
-                  onsubmit="return confirm('Suljetaanko tiketti #@Model.Id?');">
+                  onsubmit="return confirm(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(string.Format(L["Ticket.Details.CloseConfirm"].Value, Model.Id))));">
                 @Html.AntiForgeryToken()
                 <button type="submit" id="btn-ticket-close" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle me-1"></i>Sulje tiketti
+                    <i class="bi bi-x-circle me-1"></i>@L["Ticket.Details.Close"]
                 </button>
             </form>
         }
@@ -108,25 +86,22 @@
 </div>
 
 <div class="row g-3">
-    <!-- Vasen palkki: kuvaus + chat + liitteet -->
     <div class="col-md-8">
 
-        <!-- Kuvaus -->
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-card-text me-2"></i>Kuvaus</div>
+            <div class="card-header"><i class="bi bi-card-text me-2"></i>@L["Common.Description"]</div>
             <div class="card-body">
                 <p class="mb-0" style="white-space:pre-wrap;">@Model.Description</p>
             </div>
         </div>
 
-        <!-- Viestit (real-time chat) -->
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>
-                    <i class="bi bi-chat-dots me-2"></i>Viestit
+                    <i class="bi bi-chat-dots me-2"></i>@L["Ticket.Details.Messages"]
                     <span class="badge bg-secondary ms-1">@visibleComments.Count</span>
                 </span>
-                <span id="chat-badge" class="badge bg-secondary" title="SignalR-yhteyden tila">Yhdistetään…</span>
+                <span id="chat-badge" class="badge bg-secondary" title="@L["Ticket.Details.SignalrState"]">@L["Ticket.Details.Connecting"]</span>
             </div>
 
             <div id="chat-messages"
@@ -134,7 +109,7 @@
                  style="max-height:500px; overflow-y:auto;">
                 @if (!visibleComments.Any())
                 {
-                    <p class="text-muted p-3 mb-0" id="chat-empty">Ei vielä viestejä.</p>
+                    <p class="text-muted p-3 mb-0" id="chat-empty">@L["Ticket.Details.NoMessages"]</p>
                 }
                 @foreach (var c in visibleComments)
                 {
@@ -148,7 +123,7 @@
                                 @c.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
                                 @if (c.IsInternal)
                                 {
-                                    <span class="badge bg-warning text-dark ms-2">Sisäinen</span>
+                                    <span class="badge bg-warning text-dark ms-2">@L["Ticket.Details.Internal"]</span>
                                 }
                             </span>
                         </div>
@@ -164,7 +139,7 @@
                         <div class="flex-grow-1">
                             <textarea id="chat-input" rows="2"
                                       class="form-control form-control-sm"
-                                      placeholder="Kirjoita viesti… (Enter lähettää, Shift+Enter rivinvaihto)"
+                                      placeholder="@L["Ticket.Details.ChatPlaceholder"]"
                                       maxlength="4000" disabled></textarea>
                         </div>
                         <div class="d-flex flex-column align-items-end gap-1">
@@ -172,7 +147,7 @@
                             {
                                 <div class="form-check mb-1">
                                     <input type="checkbox" id="chat-internal" class="form-check-input" />
-                                    <label class="form-check-label small" for="chat-internal">Sisäinen</label>
+                                    <label class="form-check-label small" for="chat-internal">@L["Ticket.Details.Internal"]</label>
                                 </div>
                             }
                             <button id="btn-chat-send" class="btn btn-primary btn-sm" disabled>
@@ -184,10 +159,9 @@
             }
         </div>
 
-        <!-- Liitteet -->
         <div class="card mb-3">
             <div class="card-header">
-                <i class="bi bi-paperclip me-2"></i>Liitteet
+                <i class="bi bi-paperclip me-2"></i>@L["Ticket.Details.Attachments"]
                 <span class="badge bg-secondary ms-1">@Model.Attachments.Count</span>
             </div>
 
@@ -209,7 +183,7 @@
                             @if (isAdmin)
                             {
                                 <form asp-action="DeleteAttachment" asp-route-id="@a.Id" method="post"
-                                      onsubmit="return confirm('Poistetaanko liite?');"
+                                      onsubmit="return confirm(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.DeleteAttachmentConfirm"].Value)));"
                                       class="d-inline">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-outline-danger btn-sm py-0">
@@ -224,7 +198,7 @@
             else
             {
                 <div class="card-body py-2">
-                    <p class="text-muted mb-0 small">Ei liitteitä.</p>
+                    <p class="text-muted mb-0 small">@L["Ticket.Details.NoAttachments"]</p>
                 </div>
             }
 
@@ -237,7 +211,7 @@
                         <div class="input-group input-group-sm">
                             <input type="file" name="file" class="form-control form-control-sm" required />
                             <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-upload me-1"></i>Lataa
+                                <i class="bi bi-upload me-1"></i>@L["Common.Upload"]
                             </button>
                         </div>
                         <small class="text-muted">Max 20 MB</small>
@@ -248,15 +222,14 @@
 
     </div>
 
-        @* ── Palautelomake (suljettu tiketti, ei vielä arviota) ─── *@
         @if (ViewBag.ShowFeedback == true)
         {
             <div class="card mb-3 border-success" id="feedback-card">
                 <div class="card-header bg-success bg-opacity-10">
-                    <i class="bi bi-star me-2 text-success"></i>Arvioi palvelu
+                    <i class="bi bi-star me-2 text-success"></i>@L["Ticket.Feedback.Title"]
                 </div>
                 <div class="card-body">
-                    <p class="small text-muted mb-3">Tiketti on suljettu. Anna palaute saadusta palvelusta (1–5 tähteä).</p>
+                    <p class="small text-muted mb-3">@L["Ticket.Feedback.Intro"]</p>
                     <form asp-action="SubmitFeedback" method="post">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="TicketId" value="@Model.Id" />
@@ -271,18 +244,18 @@
                             </div>
                             <input type="hidden" name="Rating" id="rating-input" value="0" required />
                             <div class="text-center mt-1">
-                                <span id="rating-label" class="small text-muted">Valitse tähtiä</span>
+                                <span id="rating-label" class="small text-muted">@L["Ticket.Feedback.SelectStars"]</span>
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <textarea name="Comment" class="form-control form-control-sm" rows="2"
-                                      placeholder="Vapaaehtoinen kommentti…" maxlength="1000"></textarea>
+                                      placeholder="@L["Ticket.Feedback.CommentPlaceholder"]" maxlength="1000"></textarea>
                         </div>
 
                         <div class="d-grid">
                             <button type="submit" id="btn-submit-feedback" class="btn btn-success btn-sm" disabled>
-                                <i class="bi bi-send me-1"></i>Lähetä palaute
+                                <i class="bi bi-send me-1"></i>@L["Ticket.Feedback.Submit"]
                             </button>
                         </div>
                     </form>
@@ -294,7 +267,7 @@
         {
             <div class="card mb-3 border-success">
                 <div class="card-header bg-success bg-opacity-10">
-                    <i class="bi bi-star-fill me-2 text-warning"></i>Antamasi palaute
+                    <i class="bi bi-star-fill me-2 text-warning"></i>@L["Ticket.Feedback.Yours"]
                 </div>
                 <div class="card-body">
                     <div class="d-flex gap-1 mb-2">
@@ -312,14 +285,13 @@
             </div>
         }
 
-    <!-- Oikea palkki: metatiedot + admin-toiminnot -->
     <div class="col-md-4">
 
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-info-circle me-2"></i>Tiedot</div>
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i>@L["Common.Details"]</div>
             <div class="card-body">
                 <dl class="row mb-0 small">
-                    <dt class="col-6">Asiakas</dt>
+                    <dt class="col-6">@L["Dash.Col.Customer"]</dt>
                     <dd class="col-6">
                         @if (isAdmin && Model.Customer is not null)
                         {
@@ -328,64 +300,63 @@
                         }
                         else { @(Model.Customer?.CompanyName ?? "—") }
                     </dd>
-                    <dt class="col-6">Luonut</dt>
+                    <dt class="col-6">@L["Ticket.Details.CreatedBy"]</dt>
                     <dd class="col-6">@(Model.CreatedByUser?.FullName ?? Model.CreatedByUser?.Email ?? "—")</dd>
-                    <dt class="col-6">Luotu</dt>
+                    <dt class="col-6">@L["Dash.Col.Created"]</dt>
                     <dd class="col-6">@Model.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
-                    <dt class="col-6">Päivitetty</dt>
+                    <dt class="col-6">@L["Ticket.Details.Updated"]</dt>
                     <dd class="col-6">@Model.UpdatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
                     @if (Model.ResolvedAt.HasValue)
                     {
-                        <dt class="col-6">Ratkaistu</dt>
+                        <dt class="col-6">@L["Ticket.Details.Resolved"]</dt>
                         <dd class="col-6">@Model.ResolvedAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
                     }
-                    <dt class="col-6">Vastuuhenkilö</dt>
-                    <dd class="col-6">@(Model.AssignedToUser?.FullName ?? "Ei osoitettu")</dd>
+                    <dt class="col-6">@L["Ticket.Col.AssignedTo"]</dt>
+                    <dd class="col-6">@(Model.AssignedToUser?.FullName ?? L["Ticket.Details.NotAssigned"].Value)</dd>
                 </dl>
             </div>
         </div>
 
-        <!-- Admin: muuta tila/vastuuhenkilö -->
         @if (isAdmin && editModel is not null && Model.Status != TicketStatus.Closed)
         {
             <div class="card border-warning">
                 <div class="card-header bg-warning bg-opacity-25">
-                    <i class="bi bi-sliders me-2"></i>Admin-toiminnot
+                    <i class="bi bi-sliders me-2"></i>@L["Ticket.Details.AdminActions"]
                 </div>
                 <div class="card-body">
                     <form asp-action="UpdateStatus" method="post">
                         <input type="hidden" asp-for="@editModel.Id" name="Id" />
 
                         <div class="mb-2">
-                            <label class="form-label small fw-semibold">Tila</label>
+                            <label class="form-label small fw-semibold">@L["Dash.Col.Status"]</label>
                             <select name="Status" id="admin-status" class="form-select form-select-sm">
                                 @foreach (var s in Enum.GetValues<TicketStatus>())
                                 {
                                     if (editModel.Status == s)
-                                    { <option value="@s" selected>@s</option> }
+                                    { <option value="@s" selected>@StatusLabel(s)</option> }
                                     else
-                                    { <option value="@s">@s</option> }
+                                    { <option value="@s">@StatusLabel(s)</option> }
                                 }
                             </select>
                         </div>
 
                         <div class="mb-2">
-                            <label class="form-label small fw-semibold">Prioriteetti</label>
+                            <label class="form-label small fw-semibold">@L["Dash.Col.Priority"]</label>
                             <select name="Priority" id="admin-priority" class="form-select form-select-sm">
                                 @foreach (var p in Enum.GetValues<TicketPriority>())
                                 {
                                     if (editModel.Priority == p)
-                                    { <option value="@p" selected>@p</option> }
+                                    { <option value="@p" selected>@PriorityLabel(p)</option> }
                                     else
-                                    { <option value="@p">@p</option> }
+                                    { <option value="@p">@PriorityLabel(p)</option> }
                                 }
                             </select>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label small fw-semibold">Vastuuhenkilö</label>
+                            <label class="form-label small fw-semibold">@L["Ticket.Col.AssignedTo"]</label>
                             <select name="AssignedToUserId" id="admin-assign" class="form-select form-select-sm">
-                                <option value="">— Ei osoitettu —</option>
+                                <option value="">@L["Ticket.Details.SelectAssignee"]</option>
                                 @foreach (var opt in editModel.StaffOptions)
                                 {
                                     if (editModel.AssignedToUserId == opt.Value)
@@ -398,7 +369,7 @@
 
                         <div class="d-grid">
                             <button type="submit" id="btn-admin-save" class="btn btn-warning btn-sm fw-semibold">
-                                <i class="bi bi-check-lg me-1"></i>Tallenna muutokset
+                                <i class="bi bi-check-lg me-1"></i>@L["Common.SaveChanges"]
                             </button>
                         </div>
                     </form>
@@ -410,12 +381,18 @@
 </div>
 
 @section Scripts {
-@* ── Tähtipalaute ────────────────────────────────────────────── *@
 @if (ViewBag.ShowFeedback == true)
 {
 <script>
 (function () {
-    const labels = ['', 'Huono', 'Välttävä', 'Hyvä', 'Erittäin hyvä', 'Erinomainen'];
+    const labels = [
+        '',
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Feedback.Star1"].Value)),
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Feedback.Star2"].Value)),
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Feedback.Star3"].Value)),
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Feedback.Star4"].Value)),
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Feedback.Star5"].Value))
+    ];
     const stars   = document.querySelectorAll('.star-btn');
     const input   = document.getElementById('rating-input');
     const label   = document.getElementById('rating-label');
@@ -452,15 +429,22 @@
     const currentUserId = '@Html.Raw(currentUser?.Id ?? "")';
     const isAdmin       = @(isAdmin ? "true" : "false");
 
+    const T = {
+        reconnecting: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.Reconnecting"].Value)),
+        connected:    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.Connected"].Value)),
+        disconnected: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.Disconnected"].Value)),
+        noConnection: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.NoConnection"].Value)),
+        internal:     @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.Internal"].Value)),
+        sendFailed:   @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.SendFailed"].Value))
+    };
+
     const chatMessages = document.getElementById('chat-messages');
     const chatInput    = document.getElementById('chat-input');
     const btnSend      = document.getElementById('btn-chat-send');
     const badge        = document.getElementById('chat-badge');
 
-    // Scroll to bottom on page load
     if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // No chat input on closed ticket
     if (!btnSend) return;
 
     const connection = new signalR.HubConnectionBuilder()
@@ -477,21 +461,21 @@
 
     connection.onreconnecting(() => {
         badge.className   = 'badge bg-warning text-dark';
-        badge.textContent = 'Yhdistetään uudelleen…';
+        badge.textContent = T.reconnecting;
         chatInput.disabled = true;
         btnSend.disabled   = true;
     });
 
     connection.onreconnected(() => {
         badge.className    = 'badge bg-success';
-        badge.textContent  = 'Yhdistetty';
+        badge.textContent  = T.connected;
         chatInput.disabled = false;
         btnSend.disabled   = false;
     });
 
     connection.onclose(() => {
         badge.className   = 'badge bg-danger';
-        badge.textContent = 'Yhteys katkaistu';
+        badge.textContent = T.disconnected;
         chatInput.disabled = true;
         btnSend.disabled   = true;
     });
@@ -501,12 +485,12 @@
             await connection.start();
             await connection.invoke('JoinTicketGroup', ticketId.toString());
             badge.className    = 'badge bg-success';
-            badge.textContent  = 'Yhdistetty';
+            badge.textContent  = T.connected;
             chatInput.disabled = false;
             btnSend.disabled   = false;
         } catch (e) {
             badge.className   = 'badge bg-danger';
-            badge.textContent = 'Ei yhteyttä';
+            badge.textContent = T.noConnection;
             setTimeout(startConnection, 5000);
         }
     }
@@ -523,7 +507,7 @@
         const div = document.createElement('div');
         div.className = 'p-3 border-bottom' + (msg.isInternal ? ' bg-warning bg-opacity-10' : '');
         const internalBadge = msg.isInternal
-            ? '<span class="badge bg-warning text-dark ms-2">Sisäinen</span>' : '';
+            ? `<span class="badge bg-warning text-dark ms-2">${escHtml(T.internal)}</span>` : '';
         div.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-1">
                 <span class="fw-semibold small">
@@ -547,8 +531,8 @@
             const internalChk = document.getElementById('chat-internal');
             if (internalChk) internalChk.checked = false;
         } catch (e) {
-            console.error('Lähetys epäonnistui:', e);
-            alert('Viestin lähetys epäonnistui. Yritä uudelleen.');
+            console.error(e);
+            alert(T.sendFailed);
         } finally {
             btnSend.disabled = false;
             chatInput.focus();

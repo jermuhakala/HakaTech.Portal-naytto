@@ -1,7 +1,5 @@
-@using Microsoft.Extensions.Localization
-@inject IStringLocalizer<HakaTech.Portal.SharedResource> L
 <!DOCTYPE html>
-<html lang="fi" data-bs-theme="light">
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" data-bs-theme="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -29,62 +27,62 @@
         <nav class="sidebar-nav">
             <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")"
                asp-controller="Home" asp-action="Index">
-                <i class="bi bi-speedometer2"></i><span>Yhteenveto</span>
+                <i class="bi bi-speedometer2"></i><span>@L["Nav.Overview"]</span>
             </a>
 
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Ticket" ? "active" : "")"
                    asp-controller="Ticket" asp-action="Index">
-                    <i class="bi bi-ticket-detailed"></i><span>Tiketit</span>
+                    <i class="bi bi-ticket-detailed"></i><span>@L["Nav.Tickets"]</span>
                 </a>
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Invoice" ? "active" : "")"
                    asp-controller="Invoice" asp-action="Index">
-                    <i class="bi bi-receipt"></i><span>Laskut</span>
+                    <i class="bi bi-receipt"></i><span>@L["Nav.Invoices"]</span>
                 </a>
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "ServiceCatalog" ? "active" : "")"
                    asp-controller="ServiceCatalog" asp-action="Index">
-                    <i class="bi bi-grid"></i><span>Palvelut</span>
+                    <i class="bi bi-grid"></i><span>@L["Nav.Services"]</span>
                 </a>
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "RemoteDesktop" ? "active" : "")"
                    asp-controller="RemoteDesktop" asp-action="Index">
-                    <i class="bi bi-display"></i><span>Etäyhteydet</span>
+                    <i class="bi bi-display"></i><span>@L["Nav.RemoteDesktop"]</span>
                 </a>
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "KnowledgeBase" ? "active" : "")"
                    asp-controller="KnowledgeBase" asp-action="Index">
-                    <i class="bi bi-book"></i><span>Tietopankki</span>
+                    <i class="bi bi-book"></i><span>@L["Nav.KnowledgeBase"]</span>
                 </a>
                 <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Booking" ? "active" : "")"
                    asp-controller="Booking" asp-action="Index">
-                    <i class="bi bi-calendar3"></i><span>Kalenteri</span>
+                    <i class="bi bi-calendar3"></i><span>@L["Nav.Calendar"]</span>
                 </a>
 
                 @if (User.IsInRole("Admin"))
                 {
-                    <span class="nav-section-label mt-3">Hallinta</span>
+                    <span class="nav-section-label mt-3">@L["Nav.Management"]</span>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Customer" ? "active" : "")"
                        asp-controller="Customer" asp-action="Index">
-                        <i class="bi bi-building"></i><span>Asiakkaat</span>
+                        <i class="bi bi-building"></i><span>@L["Nav.Customers"]</span>
                     </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Account" && ViewContext.RouteData.Values["action"]?.ToString() == "Register" ? "active" : "")"
                        asp-controller="Account" asp-action="Register">
-                        <i class="bi bi-person-plus"></i><span>Luo käyttäjä</span>
+                        <i class="bi bi-person-plus"></i><span>@L["Nav.CreateUser"]</span>
                     </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Report" ? "active" : "")"
                        asp-controller="Report" asp-action="Index">
-                        <i class="bi bi-bar-chart-line"></i><span>Raportit</span>
+                        <i class="bi bi-bar-chart-line"></i><span>@L["Nav.Reports"]</span>
                     </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Announcement" ? "active" : "")"
                        asp-controller="Announcement" asp-action="Index">
-                        <i class="bi bi-megaphone"></i><span>Tiedotteet</span>
+                        <i class="bi bi-megaphone"></i><span>@L["Nav.Announcements"]</span>
                     </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "KnowledgeBase" && ViewContext.RouteData.Values["action"]?.ToString() == "Manage" ? "active" : "")"
                        asp-controller="KnowledgeBase" asp-action="Manage">
-                        <i class="bi bi-book-half"></i><span>KB: Hallinta</span>
+                        <i class="bi bi-book-half"></i><span>@L["Nav.KBManage"]</span>
                     </a>
                     <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "AuditLog" ? "active" : "")"
                        asp-controller="AuditLog" asp-action="Index">
-                        <i class="bi bi-journal-text"></i><span>Tapahtumaloki</span>
+                        <i class="bi bi-journal-text"></i><span>@L["Nav.AuditLog"]</span>
                     </a>
                 }
 
@@ -99,10 +97,10 @@
                         var me = await cu.GetUserAsync(User);
                         if (me?.IsCustomerAdmin == true)
                         {
-                            <span class="nav-section-label mt-3">Hallinta</span>
+                            <span class="nav-section-label mt-3">@L["Nav.Management"]</span>
                             <a class="sidebar-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "CustomerUser" ? "active" : "")"
                                asp-controller="CustomerUser" asp-action="Index">
-                                <i class="bi bi-people"></i><span>Käyttäjät</span>
+                                <i class="bi bi-people"></i><span>@L["Nav.Users"]</span>
                             </a>
                         }
                     }
@@ -123,7 +121,7 @@
                     </div>
                 </div>
                 <div class="sidebar-actions">
-                    <button id="themeToggle" class="sidebar-action-link" title="Vaihda teema" onclick="toggleTheme()">
+                    <button id="themeToggle" class="sidebar-action-link" title="@L["Nav.ToggleTheme"]" onclick="toggleTheme()">
                         <i class="bi bi-moon-stars" id="themeIcon"></i>
                     </button>
                     <a asp-controller="Account" asp-action="ChangePassword" class="sidebar-action-link" title="@L["Nav.ChangePassword"]">
@@ -163,7 +161,7 @@
             else
             {
                 <div class="d-flex align-items-center justify-content-between mb-2">
-                    <button id="themeToggle" class="sidebar-action-link" title="Vaihda teema" onclick="toggleTheme()">
+                    <button id="themeToggle" class="sidebar-action-link" title="@L["Nav.ToggleTheme"]" onclick="toggleTheme()">
                         <i class="bi bi-moon-stars" id="themeIcon"></i>
                     </button>
                 </div>
@@ -188,7 +186,7 @@
         </main>
 
         <footer class="main-footer">
-            <span>&copy; 2026 HakaTech &mdash; <a asp-action="Privacy" asp-controller="Home">Tietosuoja</a></span>
+            <span>&copy; 2026 HakaTech &mdash; <a asp-action="Privacy" asp-controller="Home">@L["Common.Privacy"]</a></span>
         </footer>
     </div>
 

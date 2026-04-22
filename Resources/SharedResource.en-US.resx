@@ -18,15 +18,328 @@
   <data name="Nav.Calendar" xml:space="preserve"><value>Calendar</value></data>
   <data name="Nav.Management" xml:space="preserve"><value>Management</value></data>
   <data name="Nav.Customers" xml:space="preserve"><value>Customers</value></data>
-  <data name="Nav.CreateUser" xml:space="preserve"><value>Create User</value></data>
+  <data name="Nav.CreateUser" xml:space="preserve"><value>Create user</value></data>
   <data name="Nav.Reports" xml:space="preserve"><value>Reports</value></data>
   <data name="Nav.Announcements" xml:space="preserve"><value>Announcements</value></data>
   <data name="Nav.KBManage" xml:space="preserve"><value>KB: Manage</value></data>
-  <data name="Nav.AuditLog" xml:space="preserve"><value>Audit Log</value></data>
+  <data name="Nav.AuditLog" xml:space="preserve"><value>Audit log</value></data>
   <data name="Nav.Users" xml:space="preserve"><value>Users</value></data>
   <data name="Nav.SignIn" xml:space="preserve"><value>Sign in</value></data>
   <data name="Nav.SignOut" xml:space="preserve"><value>Sign out</value></data>
   <data name="Nav.ChangePassword" xml:space="preserve"><value>Change password</value></data>
+  <data name="Nav.ToggleTheme" xml:space="preserve"><value>Toggle theme</value></data>
   <data name="Role.Admin" xml:space="preserve"><value>Administrator</value></data>
   <data name="Role.Customer" xml:space="preserve"><value>Customer</value></data>
+
+  <data name="Common.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common.SaveChanges" xml:space="preserve"><value>Save changes</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common.Back" xml:space="preserve"><value>Back</value></data>
+  <data name="Common.Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Common.Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Common.Create" xml:space="preserve"><value>Create</value></data>
+  <data name="Common.Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Common.Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Common.Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Common.Filter" xml:space="preserve"><value>Filter</value></data>
+  <data name="Common.ClearFilter" xml:space="preserve"><value>Clear</value></data>
+  <data name="Common.View" xml:space="preserve"><value>View</value></data>
+  <data name="Common.Download" xml:space="preserve"><value>Download</value></data>
+  <data name="Common.Upload" xml:space="preserve"><value>Upload</value></data>
+  <data name="Common.Send" xml:space="preserve"><value>Send</value></data>
+  <data name="Common.Yes" xml:space="preserve"><value>Yes</value></data>
+  <data name="Common.No" xml:space="preserve"><value>No</value></data>
+  <data name="Common.Details" xml:space="preserve"><value>Details</value></data>
+  <data name="Common.Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Common.Actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="Common.Active" xml:space="preserve"><value>Active</value></data>
+  <data name="Common.Inactive" xml:space="preserve"><value>Inactive</value></data>
+  <data name="Common.None" xml:space="preserve"><value>—</value></data>
+  <data name="Common.Loading" xml:space="preserve"><value>Loading…</value></data>
+  <data name="Common.Privacy" xml:space="preserve"><value>Privacy</value></data>
+  <data name="Common.BackToHome" xml:space="preserve"><value>Back to home</value></data>
+  <data name="Common.ValidUntil" xml:space="preserve"><value>valid until {0}</value></data>
+  <data name="Common.Days" xml:space="preserve"><value>d</value></data>
+  <data name="Common.Today" xml:space="preserve"><value>Today!</value></data>
+  <data name="Common.Total" xml:space="preserve"><value>Total</value></data>
+  <data name="Common.All" xml:space="preserve"><value>All</value></data>
+  <data name="Common.SelectEllipsis" xml:space="preserve"><value>— Select —</value></data>
+
+  <data name="Auth.Login.Title" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Auth.Login.Subtitle" xml:space="preserve"><value>Enter your credentials to continue</value></data>
+  <data name="Auth.Login.RememberMe" xml:space="preserve"><value>Remember me</value></data>
+  <data name="Auth.Login.Submit" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Auth.Login.EmailPlaceholder" xml:space="preserve"><value>example@company.com</value></data>
+  <data name="Auth.Register.Title" xml:space="preserve"><value>Create account</value></data>
+  <data name="Auth.Register.Heading" xml:space="preserve"><value>Create a new account</value></data>
+  <data name="Auth.Register.FullNamePlaceholder" xml:space="preserve"><value>First name Last name</value></data>
+  <data name="Auth.Register.PasswordPlaceholder" xml:space="preserve"><value>At least 8 characters</value></data>
+  <data name="Auth.Register.ConfirmPlaceholder" xml:space="preserve"><value>Repeat password</value></data>
+  <data name="Auth.Register.RoleCustomer" xml:space="preserve"><value>Customer user</value></data>
+  <data name="Auth.Register.RoleAdmin" xml:space="preserve"><value>System administrator (Admin)</value></data>
+  <data name="Auth.Register.SelectCompany" xml:space="preserve"><value>— Select company —</value></data>
+  <data name="Auth.Register.Submit" xml:space="preserve"><value>Create account</value></data>
+  <data name="Auth.ChangePassword.Title" xml:space="preserve"><value>Change password</value></data>
+  <data name="Auth.ChangePassword.Submit" xml:space="preserve"><value>Change password</value></data>
+  <data name="Auth.AccessDenied.Title" xml:space="preserve"><value>Access denied</value></data>
+  <data name="Auth.AccessDenied.Message" xml:space="preserve"><value>You do not have permission to access this page. Please contact your administrator if you believe this is an error.</value></data>
+
+  <data name="Dash.Welcome" xml:space="preserve"><value>Welcome, {0}</value></data>
+  <data name="Dash.EditLayout" xml:space="preserve"><value>Customize dashboard</value></data>
+  <data name="Dash.StopEditing" xml:space="preserve"><value>Finish editing</value></data>
+  <data name="Dash.Kpi.TotalCustomers" xml:space="preserve"><value>Total customers</value></data>
+  <data name="Dash.Kpi.ActiveCustomers" xml:space="preserve"><value>{0} active</value></data>
+  <data name="Dash.Kpi.OpenTickets" xml:space="preserve"><value>Open tickets</value></data>
+  <data name="Dash.Kpi.InProgress" xml:space="preserve"><value>{0} in progress</value></data>
+  <data name="Dash.Kpi.CriticalTickets" xml:space="preserve"><value>Critical tickets</value></data>
+  <data name="Dash.Kpi.HighPriority" xml:space="preserve"><value>{0} high priority</value></data>
+  <data name="Dash.Kpi.OverdueInvoices" xml:space="preserve"><value>Overdue invoices</value></data>
+  <data name="Dash.Kpi.TotalInvoices" xml:space="preserve"><value>{0} invoices total</value></data>
+  <data name="Dash.Kpi.Unpaid" xml:space="preserve"><value>Unpaid</value></data>
+  <data name="Dash.Kpi.UnpaidSub" xml:space="preserve"><value>open invoices total</value></data>
+  <data name="Dash.Tickets.StatusDistribution" xml:space="preserve"><value>Ticket status distribution</value></data>
+  <data name="Dash.Tickets.OpenByPriority" xml:space="preserve"><value>Open tickets (by priority)</value></data>
+  <data name="Dash.Tickets.Mine" xml:space="preserve"><value>My tickets</value></data>
+  <data name="Dash.Tickets.None" xml:space="preserve"><value>No open tickets.</value></data>
+  <data name="Dash.Tickets.All" xml:space="preserve"><value>All tickets</value></data>
+  <data name="Dash.Col.Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Dash.Col.Customer" xml:space="preserve"><value>Customer</value></data>
+  <data name="Dash.Col.Priority" xml:space="preserve"><value>Priority</value></data>
+  <data name="Dash.Col.Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Dash.Col.Created" xml:space="preserve"><value>Created</value></data>
+  <data name="Dash.Invoices.DueSoon" xml:space="preserve"><value>Due soon (7 d)</value></data>
+  <data name="Dash.Invoices.Overdue" xml:space="preserve"><value>Overdue invoices</value></data>
+  <data name="Dash.Invoices.All" xml:space="preserve"><value>All invoices</value></data>
+  <data name="Dash.Invoices.None" xml:space="preserve"><value>No open invoices.</value></data>
+  <data name="Dash.Calendar.Upcoming" xml:space="preserve"><value>Upcoming bookings (14 d)</value></data>
+  <data name="Dash.Calendar.NoneSoon" xml:space="preserve"><value>No upcoming bookings.</value></data>
+  <data name="Dash.Calendar.Full" xml:space="preserve"><value>Full calendar</value></data>
+  <data name="Dash.Calendar.Book" xml:space="preserve"><value>Book</value></data>
+  <data name="Dash.Calendar.Fully" xml:space="preserve"><value>Full</value></data>
+  <data name="Dash.Calendar.Booked" xml:space="preserve"><value>booked</value></data>
+  <data name="Dash.Quick.Title" xml:space="preserve"><value>Quick links</value></data>
+  <data name="Dash.Quick.NewTicket" xml:space="preserve"><value>New ticket</value></data>
+  <data name="Dash.Quick.NewCustomer" xml:space="preserve"><value>New customer</value></data>
+  <data name="Dash.Alert.QuoteRequests" xml:space="preserve"><value>{0} quote request(s) awaiting review.</value></data>
+  <data name="Dash.Alert.QuoteRequestsSub" xml:space="preserve"><value>Please review and respond to customers as soon as possible.</value></data>
+  <data name="Dash.Alert.ViewRequests" xml:space="preserve"><value>View requests</value></data>
+  <data name="Dash.Alert.NewInvoices" xml:space="preserve"><value>You have {0} new invoice(s).</value></data>
+  <data name="Dash.Alert.DueDate" xml:space="preserve"><value>due</value></data>
+
+  <data name="TicketPriority.Low" xml:space="preserve"><value>Low</value></data>
+  <data name="TicketPriority.Normal" xml:space="preserve"><value>Normal</value></data>
+  <data name="TicketPriority.High" xml:space="preserve"><value>High</value></data>
+  <data name="TicketPriority.Critical" xml:space="preserve"><value>Critical</value></data>
+  <data name="TicketStatus.Open" xml:space="preserve"><value>Open</value></data>
+  <data name="TicketStatus.InProgress" xml:space="preserve"><value>In progress</value></data>
+  <data name="TicketStatus.WaitingCustomer" xml:space="preserve"><value>Waiting on customer</value></data>
+  <data name="TicketStatus.Resolved" xml:space="preserve"><value>Resolved</value></data>
+  <data name="TicketStatus.Closed" xml:space="preserve"><value>Closed</value></data>
+  <data name="TicketCategory.Network" xml:space="preserve"><value>Network</value></data>
+  <data name="TicketCategory.Hardware" xml:space="preserve"><value>Hardware</value></data>
+  <data name="TicketCategory.Software" xml:space="preserve"><value>Software</value></data>
+  <data name="TicketCategory.Email" xml:space="preserve"><value>Email</value></data>
+  <data name="TicketCategory.Access" xml:space="preserve"><value>Access</value></data>
+  <data name="TicketCategory.Other" xml:space="preserve"><value>Other</value></data>
+
+  <data name="Ticket.Index.Title" xml:space="preserve"><value>Tickets</value></data>
+  <data name="Ticket.Index.New" xml:space="preserve"><value>New ticket</value></data>
+  <data name="Ticket.Index.SearchPlaceholder" xml:space="preserve"><value>Search by title or description…</value></data>
+  <data name="Ticket.Index.AllStatuses" xml:space="preserve"><value>All statuses</value></data>
+  <data name="Ticket.Index.AllPriorities" xml:space="preserve"><value>All priorities</value></data>
+  <data name="Ticket.Index.Empty.Title" xml:space="preserve"><value>No tickets</value></data>
+  <data name="Ticket.Index.Empty.Sub" xml:space="preserve"><value>No tickets match the selected filters.</value></data>
+  <data name="Ticket.Index.Empty.Create" xml:space="preserve"><value>Create a new ticket</value></data>
+  <data name="Ticket.Col.Category" xml:space="preserve"><value>Category</value></data>
+  <data name="Ticket.Col.AssignedTo" xml:space="preserve"><value>Assigned to</value></data>
+  <data name="Ticket.Total" xml:space="preserve"><value>Total: {0} ticket(s).</value></data>
+  <data name="Ticket.Create.Title" xml:space="preserve"><value>New ticket</value></data>
+  <data name="Ticket.Create.Heading" xml:space="preserve"><value>Create a new ticket</value></data>
+  <data name="Ticket.Create.SelectCustomer" xml:space="preserve"><value>— Select customer —</value></data>
+  <data name="Ticket.Create.TitlePlaceholder" xml:space="preserve"><value>Short, descriptive title</value></data>
+  <data name="Ticket.Create.DescriptionPlaceholder" xml:space="preserve"><value>Describe the issue in detail: what happened, when, and how to reproduce it…</value></data>
+  <data name="Ticket.Create.KbSuggestions" xml:space="preserve"><value>We found related articles in the knowledge base:</value></data>
+  <data name="Ticket.Create.Submit" xml:space="preserve"><value>Submit ticket</value></data>
+  <data name="Ticket.Details.CloseConfirm" xml:space="preserve"><value>Close ticket #{0}?</value></data>
+  <data name="Ticket.Details.Close" xml:space="preserve"><value>Close ticket</value></data>
+  <data name="Ticket.Details.Messages" xml:space="preserve"><value>Messages</value></data>
+  <data name="Ticket.Details.Attachments" xml:space="preserve"><value>Attachments</value></data>
+  <data name="Ticket.Details.NoAttachments" xml:space="preserve"><value>No attachments.</value></data>
+  <data name="Ticket.Details.NoMessages" xml:space="preserve"><value>No messages yet.</value></data>
+  <data name="Ticket.Details.Internal" xml:space="preserve"><value>Internal</value></data>
+  <data name="Ticket.Details.ChatPlaceholder" xml:space="preserve"><value>Type a message… (Enter sends, Shift+Enter for new line)</value></data>
+  <data name="Ticket.Details.Connecting" xml:space="preserve"><value>Connecting…</value></data>
+  <data name="Ticket.Details.Reconnecting" xml:space="preserve"><value>Reconnecting…</value></data>
+  <data name="Ticket.Details.Connected" xml:space="preserve"><value>Connected</value></data>
+  <data name="Ticket.Details.Disconnected" xml:space="preserve"><value>Disconnected</value></data>
+  <data name="Ticket.Details.NoConnection" xml:space="preserve"><value>No connection</value></data>
+  <data name="Ticket.Details.SignalrState" xml:space="preserve"><value>SignalR connection state</value></data>
+  <data name="Ticket.Details.DeleteAttachmentConfirm" xml:space="preserve"><value>Delete attachment?</value></data>
+  <data name="Ticket.Details.AdminActions" xml:space="preserve"><value>Admin actions</value></data>
+  <data name="Ticket.Details.NotAssigned" xml:space="preserve"><value>Unassigned</value></data>
+  <data name="Ticket.Details.SelectAssignee" xml:space="preserve"><value>— Unassigned —</value></data>
+  <data name="Ticket.Details.CreatedBy" xml:space="preserve"><value>Created by</value></data>
+  <data name="Ticket.Details.Updated" xml:space="preserve"><value>Updated</value></data>
+  <data name="Ticket.Details.Resolved" xml:space="preserve"><value>Resolved</value></data>
+  <data name="Ticket.Details.SendFailed" xml:space="preserve"><value>Failed to send message. Please try again.</value></data>
+  <data name="Ticket.Feedback.Title" xml:space="preserve"><value>Rate the service</value></data>
+  <data name="Ticket.Feedback.Intro" xml:space="preserve"><value>This ticket is closed. Please rate the service you received (1–5 stars).</value></data>
+  <data name="Ticket.Feedback.SelectStars" xml:space="preserve"><value>Select stars</value></data>
+  <data name="Ticket.Feedback.CommentPlaceholder" xml:space="preserve"><value>Optional comment…</value></data>
+  <data name="Ticket.Feedback.Submit" xml:space="preserve"><value>Submit feedback</value></data>
+  <data name="Ticket.Feedback.Yours" xml:space="preserve"><value>Your feedback</value></data>
+  <data name="Ticket.Feedback.Star1" xml:space="preserve"><value>Poor</value></data>
+  <data name="Ticket.Feedback.Star2" xml:space="preserve"><value>Fair</value></data>
+  <data name="Ticket.Feedback.Star3" xml:space="preserve"><value>Good</value></data>
+  <data name="Ticket.Feedback.Star4" xml:space="preserve"><value>Very good</value></data>
+  <data name="Ticket.Feedback.Star5" xml:space="preserve"><value>Excellent</value></data>
+
+  <data name="InvoiceStatus.Draft" xml:space="preserve"><value>Draft</value></data>
+  <data name="InvoiceStatus.Sent" xml:space="preserve"><value>Sent</value></data>
+  <data name="InvoiceStatus.Unpaid" xml:space="preserve"><value>Unpaid</value></data>
+  <data name="InvoiceStatus.Paid" xml:space="preserve"><value>Paid</value></data>
+  <data name="InvoiceStatus.Overdue" xml:space="preserve"><value>Overdue</value></data>
+
+  <data name="Invoice.Index.Title" xml:space="preserve"><value>Invoices</value></data>
+  <data name="Invoice.Index.New" xml:space="preserve"><value>New invoice</value></data>
+  <data name="Invoice.Index.Empty.Title" xml:space="preserve"><value>No invoices</value></data>
+  <data name="Invoice.Index.Empty.Sub" xml:space="preserve"><value>No invoices match the selected filters.</value></data>
+  <data name="Invoice.Col.Number" xml:space="preserve"><value>Invoice number</value></data>
+  <data name="Invoice.Col.Date" xml:space="preserve"><value>Date</value></data>
+  <data name="Invoice.Col.DueDate" xml:space="preserve"><value>Due date</value></data>
+  <data name="Invoice.Col.Total" xml:space="preserve"><value>Total (VAT)</value></data>
+  <data name="Invoice.TotalRow" xml:space="preserve"><value>Total ({0} invoices)</value></data>
+  <data name="Invoice.Create.Title" xml:space="preserve"><value>New invoice</value></data>
+  <data name="Invoice.Create.Heading" xml:space="preserve"><value>Create a new invoice</value></data>
+  <data name="Invoice.Create.SelectCustomer" xml:space="preserve"><value>— Select customer —</value></data>
+  <data name="Invoice.Create.VatHint" xml:space="preserve"><value>E.g. 0.255 = 25.5%</value></data>
+  <data name="Invoice.Create.NotesPlaceholder" xml:space="preserve"><value>Optional note…</value></data>
+  <data name="Invoice.Create.Lines" xml:space="preserve"><value>Invoice lines</value></data>
+  <data name="Invoice.Create.Col.Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Invoice.Create.Col.Quantity" xml:space="preserve"><value>Quantity</value></data>
+  <data name="Invoice.Create.Col.UnitPrice" xml:space="preserve"><value>Unit price (€)</value></data>
+  <data name="Invoice.Create.Col.LineTotal" xml:space="preserve"><value>Line total</value></data>
+  <data name="Invoice.Create.LineDescPlaceholder" xml:space="preserve"><value>Service description</value></data>
+  <data name="Invoice.Create.RemoveLine" xml:space="preserve"><value>Remove line</value></data>
+  <data name="Invoice.Create.AddLine" xml:space="preserve"><value>Add line</value></data>
+  <data name="Invoice.Create.Subtotal" xml:space="preserve"><value>Subtotal</value></data>
+  <data name="Invoice.Create.Vat" xml:space="preserve"><value>VAT</value></data>
+  <data name="Invoice.Create.Submit" xml:space="preserve"><value>Save invoice</value></data>
+  <data name="Invoice.Details.Title" xml:space="preserve"><value>Invoice</value></data>
+  <data name="Invoice.Details.DownloadPdf" xml:space="preserve"><value>Download PDF</value></data>
+  <data name="Invoice.Details.MarkPaid" xml:space="preserve"><value>Mark as paid</value></data>
+  <data name="Invoice.Details.MarkSent" xml:space="preserve"><value>Mark as sent</value></data>
+  <data name="Invoice.Details.Attachments" xml:space="preserve"><value>Attachments</value></data>
+  <data name="Invoice.Details.NoAttachments" xml:space="preserve"><value>No attachments.</value></data>
+  <data name="Invoice.Details.Notes" xml:space="preserve"><value>Notes</value></data>
+  <data name="Invoice.Details.InvoiceDate" xml:space="preserve"><value>Invoice date</value></data>
+  <data name="Invoice.Details.PaidAt" xml:space="preserve"><value>Paid</value></data>
+  <data name="Invoice.Details.VatRate" xml:space="preserve"><value>VAT %</value></data>
+  <data name="Invoice.Details.SubTotal" xml:space="preserve"><value>Subtotal</value></data>
+  <data name="Invoice.Details.Summary" xml:space="preserve"><value>Summary</value></data>
+  <data name="Invoice.Details.Payable" xml:space="preserve"><value>Amount due</value></data>
+  <data name="Invoice.Details.Manage" xml:space="preserve"><value>Manage</value></data>
+  <data name="Invoice.Details.PaidDate" xml:space="preserve"><value>Payment date</value></data>
+  <data name="Invoice.Details.CustomerHistory" xml:space="preserve"><value>Customer history</value></data>
+  <data name="Invoice.Details.DeleteAttachmentConfirm" xml:space="preserve"><value>Delete attachment?</value></data>
+
+  <data name="Customer.Index.Title" xml:space="preserve"><value>Customers</value></data>
+  <data name="Customer.Index.Add" xml:space="preserve"><value>Add customer</value></data>
+  <data name="Customer.Index.SearchPlaceholder" xml:space="preserve"><value>Search by name, business ID or email…</value></data>
+  <data name="Customer.Index.ClearSearch" xml:space="preserve"><value>Clear search</value></data>
+  <data name="Customer.Index.Empty" xml:space="preserve"><value>No customers yet. Add the first one using the button above.</value></data>
+  <data name="Customer.Index.SearchEmpty" xml:space="preserve"><value>No customers found for "{0}".</value></data>
+  <data name="Customer.Col.Name" xml:space="preserve"><value>Company name</value></data>
+  <data name="Customer.Col.BusinessId" xml:space="preserve"><value>Business ID</value></data>
+  <data name="Customer.Col.Email" xml:space="preserve"><value>Email</value></data>
+  <data name="Customer.Col.Phone" xml:space="preserve"><value>Phone</value></data>
+  <data name="Customer.Total" xml:space="preserve"><value>Total: {0} customer(s).</value></data>
+  <data name="Customer.Details.Contacts" xml:space="preserve"><value>Contact info</value></data>
+  <data name="Customer.Details.Address" xml:space="preserve"><value>Address</value></data>
+  <data name="Customer.Details.Contracts" xml:space="preserve"><value>Contracts</value></data>
+  <data name="Customer.Details.NoContracts" xml:space="preserve"><value>No contracts.</value></data>
+  <data name="Customer.Details.ContractEnded" xml:space="preserve"><value>Ended</value></data>
+  <data name="Customer.Details.Users" xml:space="preserve"><value>User accounts</value></data>
+  <data name="Customer.Details.AddUser" xml:space="preserve"><value>Add user</value></data>
+  <data name="Customer.Details.NoUsers" xml:space="preserve"><value>No user accounts.</value></data>
+  <data name="Customer.Details.Col.Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Customer.Details.Col.UserName" xml:space="preserve"><value>Username</value></data>
+  <data name="Customer.Details.RecentTickets" xml:space="preserve"><value>Recent tickets</value></data>
+  <data name="Customer.Details.RecentInvoices" xml:space="preserve"><value>Recent invoices</value></data>
+  <data name="Customer.Details.NoTickets" xml:space="preserve"><value>No tickets.</value></data>
+  <data name="Customer.Details.NoInvoices" xml:space="preserve"><value>No invoices.</value></data>
+  <data name="Customer.Details.Activate" xml:space="preserve"><value>Activate</value></data>
+  <data name="Customer.Details.Deactivate" xml:space="preserve"><value>Deactivate</value></data>
+  <data name="Customer.Details.CreateAccount" xml:space="preserve"><value>Create account</value></data>
+  <data name="Customer.Details.DeleteConfirm" xml:space="preserve"><value>Are you sure you want to delete customer {0}?</value></data>
+
+  <data name="KB.Index.Title" xml:space="preserve"><value>Knowledge base</value></data>
+  <data name="KB.Index.SearchPlaceholder" xml:space="preserve"><value>Search articles…</value></data>
+  <data name="KB.Index.Empty" xml:space="preserve"><value>No articles.</value></data>
+  <data name="KB.Manage.Title" xml:space="preserve"><value>Knowledge base – manage</value></data>
+  <data name="KB.Categories" xml:space="preserve"><value>Categories</value></data>
+  <data name="KB.Articles" xml:space="preserve"><value>Articles</value></data>
+  <data name="KB.NewArticle" xml:space="preserve"><value>New article</value></data>
+  <data name="KB.NewCategory" xml:space="preserve"><value>New category</value></data>
+  <data name="KB.Index.Intro" xml:space="preserve"><value>Find answers to common questions before opening a support ticket.</value></data>
+  <data name="KB.Manage" xml:space="preserve"><value>Manage</value></data>
+  <data name="KB.SearchBigPlaceholder" xml:space="preserve"><value>Search articles…</value></data>
+  <data name="KB.Popular" xml:space="preserve"><value>Popular articles</value></data>
+  <data name="KB.AllArticles" xml:space="preserve"><value>All articles</value></data>
+  <data name="KB.OtherArticles" xml:space="preserve"><value>Other articles</value></data>
+  <data name="KB.SearchResults" xml:space="preserve"><value>Search results</value></data>
+  <data name="KB.NoResults" xml:space="preserve"><value>No results.</value></data>
+  <data name="KB.ShowAll" xml:space="preserve"><value>Show all articles</value></data>
+
+  <data name="Booking.Index.Title" xml:space="preserve"><value>Calendar</value></data>
+  <data name="Booking.MyBookings" xml:space="preserve"><value>My bookings</value></data>
+  <data name="Booking.Manage" xml:space="preserve"><value>Manage bookings</value></data>
+  <data name="Booking.Book" xml:space="preserve"><value>Book a slot</value></data>
+  <data name="Booking.NewSlot" xml:space="preserve"><value>New slot</value></data>
+
+  <data name="Announcement.Index.Title" xml:space="preserve"><value>Announcements</value></data>
+  <data name="Announcement.New" xml:space="preserve"><value>New announcement</value></data>
+  <data name="Announcement.Edit" xml:space="preserve"><value>Edit announcement</value></data>
+
+  <data name="Report.Index.Title" xml:space="preserve"><value>Reports</value></data>
+  <data name="AuditLog.Index.Title" xml:space="preserve"><value>Audit log</value></data>
+
+  <data name="Service.Index.Title" xml:space="preserve"><value>Services</value></data>
+  <data name="Service.Manage" xml:space="preserve"><value>Manage services</value></data>
+  <data name="Service.Requests" xml:space="preserve"><value>Quote requests</value></data>
+  <data name="Service.New" xml:space="preserve"><value>New service</value></data>
+  <data name="Service.Edit" xml:space="preserve"><value>Edit service</value></data>
+  <data name="Service.ManageTitle" xml:space="preserve"><value>Service catalog – Manage</value></data>
+  <data name="Service.Request.Details" xml:space="preserve"><value>Quote request #{0}</value></data>
+  <data name="KB.ArticleNew" xml:space="preserve"><value>New article</value></data>
+  <data name="KB.ArticleEdit" xml:space="preserve"><value>Edit article</value></data>
+  <data name="KB.CategoryNew" xml:space="preserve"><value>New category</value></data>
+  <data name="KB.CategoryEdit" xml:space="preserve"><value>Edit category</value></data>
+  <data name="KB.CategoriesTitle" xml:space="preserve"><value>KB: Categories</value></data>
+  <data name="CustomerUser.Add" xml:space="preserve"><value>Add user</value></data>
+  <data name="CustomerUser.Edit" xml:space="preserve"><value>Edit user</value></data>
+  <data name="CustomerUser.IndexTitle" xml:space="preserve"><value>Users – {0}</value></data>
+  <data name="Announcement.Create.Title" xml:space="preserve"><value>New announcement</value></data>
+  <data name="Announcement.Edit.Title" xml:space="preserve"><value>Edit announcement</value></data>
+  <data name="Booking.BookTitle" xml:space="preserve"><value>Book slot</value></data>
+  <data name="Booking.MaintenanceCalendar" xml:space="preserve"><value>Maintenance calendar</value></data>
+  <data name="Booking.SlotNew" xml:space="preserve"><value>Add slot</value></data>
+  <data name="Booking.SlotEdit" xml:space="preserve"><value>Edit slot</value></data>
+  <data name="RemoteDesktop.CreateTitle" xml:space="preserve"><value>Add connection</value></data>
+  <data name="RemoteDesktop.EditTitle" xml:space="preserve"><value>Edit connection</value></data>
+  <data name="RemoteDesktop.ManageTitle" xml:space="preserve"><value>Remote desktop – Manage</value></data>
+  <data name="RemoteDesktop.IndexTitle" xml:space="preserve"><value>Remote desktop</value></data>
+
+  <data name="CustomerUser.Index.Title" xml:space="preserve"><value>Users</value></data>
+  <data name="CustomerUser.New" xml:space="preserve"><value>New user</value></data>
+
+  <data name="RemoteDesktop.Index.Title" xml:space="preserve"><value>Remote desktop</value></data>
+  <data name="RemoteDesktop.Manage" xml:space="preserve"><value>Manage connections</value></data>
+  <data name="RemoteDesktop.New" xml:space="preserve"><value>New connection</value></data>
+  <data name="RemoteDesktop.Connect" xml:space="preserve"><value>Connect</value></data>
+
+  <data name="Privacy.Title" xml:space="preserve"><value>Privacy</value></data>
+  <data name="Error.Title" xml:space="preserve"><value>Error</value></data>
+  <data name="Error.Heading" xml:space="preserve"><value>An error occurred.</value></data>
+  <data name="Error.Message" xml:space="preserve"><value>An error occurred while processing your request.</value></data>
 </root>

@@ -1,6 +1,6 @@
 @model HakaTech.Portal.Models.ViewModels.LoginViewModel
 @{
-    ViewData["Title"] = "Kirjaudu sisään";
+    ViewData["Title"] = L["Auth.Login.Title"].Value;
     Layout = "~/Views/Shared/_AuthLayout.cshtml";
 }
 
@@ -9,8 +9,8 @@
         <img src="~/img/logo.png" alt="HakaTech Logo" style="height: 48px; width: 48px; border-radius: 12px; object-fit: cover;" />
         <span>HakaTech Portal</span>
     </div>
-    <h1 class="auth-title">Kirjaudu sisään</h1>
-    <p class="auth-sub">Syötä tunnuksesi jatkaaksesi</p>
+    <h1 class="auth-title">@L["Auth.Login.Title"]</h1>
+    <p class="auth-sub">@L["Auth.Login.Subtitle"]</p>
 
     <form asp-action="Login" method="post">
         <input type="hidden" asp-for="ReturnUrl" />
@@ -20,7 +20,7 @@
             <label asp-for="Email" class="auth-label"></label>
             <div class="auth-input-wrap">
                 <i class="bi bi-envelope auth-input-icon"></i>
-                <input asp-for="Email" class="auth-input" placeholder="esimerkki@yritys.fi"
+                <input asp-for="Email" class="auth-input" placeholder="@L["Auth.Login.EmailPlaceholder"]"
                        id="login-email" autocomplete="username" />
             </div>
             <span asp-validation-for="Email" class="field-validation-error"></span>
@@ -38,11 +38,11 @@
 
         <div class="auth-check">
             <input asp-for="RememberMe" class="auth-checkbox" id="login-remember" />
-            <label asp-for="RememberMe" class="auth-check-label">Muista minut</label>
+            <label asp-for="RememberMe" class="auth-check-label">@L["Auth.Login.RememberMe"]</label>
         </div>
 
         <button type="submit" id="login-submit" class="auth-btn">
-            <i class="bi bi-box-arrow-in-right me-2"></i>Kirjaudu sisään
+            <i class="bi bi-box-arrow-in-right me-2"></i>@L["Auth.Login.Submit"]
         </button>
     </form>
 </div>

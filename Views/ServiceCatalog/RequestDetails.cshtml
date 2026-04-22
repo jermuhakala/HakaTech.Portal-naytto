@@ -2,7 +2,7 @@
 @using HakaTech.Portal.Models.Domain
 @using HakaTech.Portal.Models.ViewModels
 @{
-    ViewData["Title"] = $"Tarjouspyyntö #{Model.Id}";
+    ViewData["Title"] = string.Format(L["Service.Request.Details"].Value, Model.Id);
     var updateModel = ViewBag.UpdateModel as QuoteRequestUpdateViewModel;
 }
 

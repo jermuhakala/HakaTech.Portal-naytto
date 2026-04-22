@@ -7,14 +7,7 @@
     var statusModel    = ViewBag.StatusModel as InvoiceStatusViewModel;
     var history        = ViewBag.CustomerHistory as List<Invoice> ?? new List<Invoice>();
 
-    static string StatusLabel(InvoiceStatus s) => s switch {
-        InvoiceStatus.Draft   => "Luonnos",
-        InvoiceStatus.Sent    => "Lähetetty",
-        InvoiceStatus.Unpaid  => "Maksamatta",
-        InvoiceStatus.Paid    => "Maksettu",
-        InvoiceStatus.Overdue => "Erääntynyt",
-        _                     => s.ToString()
-    };
+    string StatusLabel(InvoiceStatus s) => L[$"InvoiceStatus.{s}"].Value;
     static string BadgeCss(InvoiceStatus s) => s switch {
         InvoiceStatus.Paid    => "bg-success",
         InvoiceStatus.Overdue => "bg-danger",
@@ -33,7 +26,7 @@
 
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index">Laskut</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">@L["Invoice.Index.Title"]</a></li>
         @if (isAdmin && Model.Customer is not null)
         {
             <li class="breadcrumb-item">
@@ -55,7 +48,6 @@
 }
 
 <div class="row g-3">
-    <!-- Laskun pääsisältö -->
     <div class="col-md-8">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center py-3">
@@ -68,32 +60,31 @@
                 <div class="d-flex align-items-center gap-3">
                     <span class="badge @BadgeCss(Model.Status) fs-6">@StatusLabel(Model.Status)</span>
                     <a asp-action="DownloadPdf" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary rounded-pill">
-                        <i class="bi bi-file-earmark-pdf me-1"></i> Lataa PDF
+                        <i class="bi bi-file-earmark-pdf me-1"></i> @L["Invoice.Details.DownloadPdf"]
                     </a>
                 </div>
             </div>
             <div class="card-body">
 
-                <!-- Perustiedot -->
                 <div class="row mb-3">
                     <div class="col-sm-6">
                         <dl class="row mb-0 small">
-                            <dt class="col-5">Laskun pvm</dt>
+                            <dt class="col-5">@L["Invoice.Details.InvoiceDate"]</dt>
                             <dd class="col-7">@Model.InvoiceDate.ToString("dd.MM.yyyy")</dd>
-                            <dt class="col-5">Eräpäivä</dt>
+                            <dt class="col-5">@L["Invoice.Col.DueDate"]</dt>
                             <dd class="col-7 @(Model.DueDate < DateTime.Today && Model.Status != InvoiceStatus.Paid ? "text-danger fw-semibold" : "")">
                                 @Model.DueDate.ToString("dd.MM.yyyy")
                             </dd>
                             @if (Model.PaidAt.HasValue)
                             {
-                                <dt class="col-5">Maksettu</dt>
+                                <dt class="col-5">@L["Invoice.Details.PaidAt"]</dt>
                                 <dd class="col-7 text-success fw-semibold">@Model.PaidAt.Value.ToLocalTime().ToString("dd.MM.yyyy")</dd>
                             }
                         </dl>
                     </div>
                     <div class="col-sm-6">
                         <dl class="row mb-0 small">
-                            <dt class="col-5">ALV-%</dt>
+                            <dt class="col-5">@L["Invoice.Details.VatRate"]</dt>
                             <dd class="col-7">@((Model.VatRate * 100).ToString("0.#")) %</dd>
                         </dl>
                     </div>
@@ -106,15 +97,14 @@
                     </div>
                 }
 
-                <!-- Laskurivit -->
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Kuvaus</th>
-                                <th class="text-end" style="width:90px">Määrä</th>
-                                <th class="text-end" style="width:120px">À-hinta</th>
-                                <th class="text-end" style="width:120px">Yhteensä</th>
+                                <th>@L["Invoice.Create.Col.Description"]</th>
+                                <th class="text-end" style="width:90px">@L["Invoice.Create.Col.Quantity"]</th>
+                                <th class="text-end" style="width:120px">@L["Invoice.Create.Col.UnitPrice"]</th>
+                                <th class="text-end" style="width:120px">@L["Common.Total"]</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -130,17 +120,17 @@
                         </tbody>
                         <tfoot class="table-light">
                             <tr>
-                                <td colspan="3" class="text-end">Veroton yhteensä</td>
+                                <td colspan="3" class="text-end">@L["Invoice.Details.SubTotal"]</td>
                                 <td class="text-end">@Model.SubTotal.ToString("C")</td>
                             </tr>
                             <tr>
                                 <td colspan="3" class="text-end">
-                                    ALV @((Model.VatRate * 100).ToString("0.#")) %
+                                    @L["Invoice.Create.Vat"] @((Model.VatRate * 100).ToString("0.#")) %
                                 </td>
                                 <td class="text-end">@Model.VatAmount.ToString("C")</td>
                             </tr>
                             <tr class="fw-bold fs-6">
-                                <td colspan="3" class="text-end">Yhteensä</td>
+                                <td colspan="3" class="text-end">@L["Common.Total"]</td>
                                 <td class="text-end text-primary">@Model.TotalAmount.ToString("C")</td>
                             </tr>
                         </tfoot>
@@ -150,10 +140,9 @@
             </div>
         </div>
 
-        <!-- Liitteet -->
         <div class="card mt-3">
             <div class="card-header">
-                <i class="bi bi-paperclip me-2"></i>Liitteet
+                <i class="bi bi-paperclip me-2"></i>@L["Invoice.Details.Attachments"]
                 <span class="badge bg-secondary ms-1">@Model.Attachments.Count</span>
             </div>
 
@@ -174,7 +163,7 @@
                             @if (isAdmin)
                             {
                                 <form asp-action="DeleteAttachment" asp-route-id="@a.Id" method="post"
-                                      onsubmit="return confirm('Poistetaanko liite?');"
+                                      onsubmit="return confirm(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Invoice.Details.DeleteAttachmentConfirm"].Value)));"
                                       class="d-inline">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-outline-danger btn-sm py-0">
@@ -189,7 +178,7 @@
             else
             {
                 <div class="card-body py-2">
-                    <p class="text-muted mb-0 small">Ei liitteitä.</p>
+                    <p class="text-muted mb-0 small">@L["Invoice.Details.NoAttachments"]</p>
                 </div>
             }
 
@@ -202,10 +191,10 @@
                         <div class="input-group input-group-sm">
                             <input type="file" name="file" class="form-control form-control-sm" required />
                             <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-upload me-1"></i>Lataa
+                                <i class="bi bi-upload me-1"></i>@L["Common.Upload"]
                             </button>
                         </div>
-                        <small class="text-muted">Max 20 MB (PDF, sopimukset…)</small>
+                        <small class="text-muted">Max 20 MB</small>
                     </form>
                 </div>
             }
@@ -213,22 +202,21 @@
 
     </div>
 
-    <!-- Admin-paneeli -->
     <div class="col-md-4">
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Yhteenveto</div>
+            <div class="card-header"><i class="bi bi-bar-chart me-2"></i>@L["Invoice.Details.Summary"]</div>
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-1">
-                    <span class="text-muted small">Veroton</span>
+                    <span class="text-muted small">@L["Invoice.Create.Subtotal"]</span>
                     <span class="fw-semibold small">@Model.SubTotal.ToString("C")</span>
                 </div>
                 <div class="d-flex justify-content-between mb-1">
-                    <span class="text-muted small">ALV</span>
+                    <span class="text-muted small">@L["Invoice.Create.Vat"]</span>
                     <span class="fw-semibold small">@Model.VatAmount.ToString("C")</span>
                 </div>
                 <hr class="my-2" />
                 <div class="d-flex justify-content-between">
-                    <span class="fw-bold">Maksettava</span>
+                    <span class="fw-bold">@L["Invoice.Details.Payable"]</span>
                     <span class="fw-bold text-primary fs-5">@Model.TotalAmount.ToString("C")</span>
                 </div>
             </div>
@@ -238,14 +226,14 @@
         {
             <div class="card border-warning">
                 <div class="card-header bg-warning bg-opacity-25">
-                    <i class="bi bi-sliders me-2"></i>Hallinta
+                    <i class="bi bi-sliders me-2"></i>@L["Invoice.Details.Manage"]
                 </div>
                 <div class="card-body">
                     <form asp-action="UpdateStatus" method="post">
                         <input type="hidden" asp-for="@statusModel.Id" name="Id" />
 
                         <div class="mb-3">
-                            <label class="form-label small fw-semibold">Tila</label>
+                            <label class="form-label small fw-semibold">@L["Dash.Col.Status"]</label>
                             <select name="Status" id="invoice-status-admin" class="form-select form-select-sm"
                                     onchange="togglePaidDate(this.value)">
                                 @foreach (var s in Enum.GetValues<InvoiceStatus>())
@@ -257,7 +245,7 @@
 
                         <div id="paid-date-row" class="mb-3"
                              style="display:@(statusModel.Status == InvoiceStatus.Paid ? "block" : "none")">
-                            <label class="form-label small fw-semibold">Maksupäivä</label>
+                            <label class="form-label small fw-semibold">@L["Invoice.Details.PaidDate"]</label>
                             <input type="date" name="PaidAt" id="invoice-paid-at"
                                    class="form-control form-control-sm"
                                    value="@(statusModel.PaidAt?.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" />
@@ -265,7 +253,7 @@
 
                         <div class="d-grid">
                             <button type="submit" id="btn-invoice-save" class="btn btn-warning btn-sm fw-semibold">
-                                <i class="bi bi-check-lg me-1"></i>Tallenna
+                                <i class="bi bi-check-lg me-1"></i>@L["Common.Save"]
                             </button>
                         </div>
                     </form>
@@ -277,7 +265,7 @@
         {
             <div class="card mt-3">
                 <div class="card-header bg-surface2">
-                    <i class="bi bi-clock-history me-2"></i>Asiakkaan historia
+                    <i class="bi bi-clock-history me-2"></i>@L["Invoice.Details.CustomerHistory"]
                 </div>
                 <div class="card-body p-0">
                     <ul class="invoice-list">

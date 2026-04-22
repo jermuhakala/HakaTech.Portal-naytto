@@ -1,7 +1,7 @@
 @model HakaTech.Portal.Models.ViewModels.ReportIndexViewModel
 @using System.Text.Json
 @{
-    ViewData["Title"] = "Raportit";
+    ViewData["Title"] = L["Report.Index.Title"].Value;
 
     var chartLabels   = JsonSerializer.Serialize(Model.WeeklyStats.Select(s => s.Label));
     var chartCreated  = JsonSerializer.Serialize(Model.WeeklyStats.Select(s => s.Created));

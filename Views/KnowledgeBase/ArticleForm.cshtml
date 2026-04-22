@@ -2,7 +2,7 @@
 @{
     bool   isNew  = Model.Id == 0;
     string action = isNew ? "CreateArticle" : "EditArticle";
-    ViewData["Title"] = isNew ? "Uusi artikkeli" : "Muokkaa artikkelia";
+    ViewData["Title"] = (isNew ? L["KB.ArticleNew"] : L["KB.ArticleEdit"]).Value;
 }
 
 <div class="mb-3">

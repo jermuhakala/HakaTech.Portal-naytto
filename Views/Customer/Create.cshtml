@@ -1,12 +1,12 @@
 @model HakaTech.Portal.Models.ViewModels.CustomerFormViewModel
 @{
-    ViewData["Title"] = "Lisää asiakas";
+    ViewData["Title"] = L["Customer.Index.Add"].Value;
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index">Asiakkaat</a></li>
-        <li class="breadcrumb-item active">Lisää asiakas</li>
+        <li class="breadcrumb-item"><a asp-action="Index">@L["Customer.Index.Title"]</a></li>
+        <li class="breadcrumb-item active">@L["Customer.Index.Add"]</li>
     </ol>
 </nav>
 
@@ -14,7 +14,7 @@
     <div class="col-md-7">
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white py-3">
-                <h5 class="mb-0"><i class="bi bi-building-add me-2"></i>Uusi asiakas</h5>
+                <h5 class="mb-0"><i class="bi bi-building-add me-2"></i>@L["Customer.Index.Add"]</h5>
             </div>
             <div class="card-body p-4">
 
@@ -24,32 +24,27 @@
                     <div class="row g-3">
                         <div class="col-md-8">
                             <label asp-for="CompanyName" class="form-label fw-semibold"></label>
-                            <input asp-for="CompanyName" class="form-control" id="create-company"
-                                   placeholder="Esimerkki Oy" />
+                            <input asp-for="CompanyName" class="form-control" id="create-company" />
                             <span asp-validation-for="CompanyName" class="text-danger small"></span>
                         </div>
                         <div class="col-md-4">
                             <label asp-for="BusinessId" class="form-label fw-semibold"></label>
-                            <input asp-for="BusinessId" class="form-control" id="create-businessid"
-                                   placeholder="1234567-8" />
+                            <input asp-for="BusinessId" class="form-control" id="create-businessid" />
                             <span asp-validation-for="BusinessId" class="text-danger small"></span>
                         </div>
                         <div class="col-md-7">
                             <label asp-for="ContactEmail" class="form-label fw-semibold"></label>
-                            <input asp-for="ContactEmail" class="form-control" id="create-email"
-                                   placeholder="info@yritys.fi" />
+                            <input asp-for="ContactEmail" class="form-control" id="create-email" />
                             <span asp-validation-for="ContactEmail" class="text-danger small"></span>
                         </div>
                         <div class="col-md-5">
                             <label asp-for="Phone" class="form-label fw-semibold"></label>
-                            <input asp-for="Phone" class="form-control" id="create-phone"
-                                   placeholder="+358 40 123 4567" />
+                            <input asp-for="Phone" class="form-control" id="create-phone" />
                             <span asp-validation-for="Phone" class="text-danger small"></span>
                         </div>
                         <div class="col-12">
                             <label asp-for="Address" class="form-label fw-semibold"></label>
-                            <input asp-for="Address" class="form-control" id="create-address"
-                                   placeholder="Esimerkkikatu 1, 00100 Helsinki" />
+                            <input asp-for="Address" class="form-control" id="create-address" />
                             <span asp-validation-for="Address" class="text-danger small"></span>
                         </div>
                         <div class="col-12">
@@ -62,9 +57,9 @@
 
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" id="create-submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>Tallenna
+                            <i class="bi bi-check-lg me-1"></i>@L["Common.Save"]
                         </button>
-                        <a asp-action="Index" class="btn btn-outline-secondary">Peruuta</a>
+                        <a asp-action="Index" class="btn btn-outline-secondary">@L["Common.Cancel"]</a>
                     </div>
                 </form>
 

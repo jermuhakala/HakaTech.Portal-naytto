@@ -1,6 +1,7 @@
 using HakaTech.Portal.Data;
 using HakaTech.Portal.Models.Domain;
 using HakaTech.Portal.Models.ViewModels;
+using HakaTech.Portal.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -15,13 +16,16 @@ public class KnowledgeBaseController : Controller
 {
     private readonly ApplicationDbContext         _db;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IHtmlSanitizerService        _sanitizer;
 
     public KnowledgeBaseController(
         ApplicationDbContext         db,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        IHtmlSanitizerService        sanitizer)
     {
         _db          = db;
         _userManager = userManager;
+        _sanitizer   = sanitizer;
     }
 
     // ── GET /KnowledgeBase ───────────────────────────────────────────
@@ -192,7 +196,7 @@ public class KnowledgeBaseController : Controller
         var article = new KnowledgeBaseArticle
         {
             Title           = model.Title,
-            Content         = model.Content,
+            Content         = _sanitizer.Sanitize(model.Content),
             CategoryId      = model.CategoryId,
             IsPublished     = model.IsPublished,
             IsFeatured      = model.IsFeatured,
@@ -242,7 +246,7 @@ public class KnowledgeBaseController : Controller
         if (article is null) return NotFound();
 
         article.Title       = model.Title;
-        article.Content     = model.Content;
+        article.Content     = _sanitizer.Sanitize(model.Content);
         article.CategoryId  = model.CategoryId;
         article.IsPublished = model.IsPublished;
         article.IsFeatured  = model.IsFeatured;

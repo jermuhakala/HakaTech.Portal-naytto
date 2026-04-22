@@ -1,33 +1,32 @@
 @model HakaTech.Portal.Models.ViewModels.KbIndexViewModel
 @{
-    ViewData["Title"] = "Tietopankki";
+    ViewData["Title"] = L["KB.Index.Title"].Value;
 }
 
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
-        <h2 class="fw-bold mb-1"><i class="bi bi-book me-2 text-primary"></i>Tietopankki</h2>
-        <p class="text-muted mb-0">Löydä vastaukset yleisimpiin kysymyksiin ennen tukitiketin luomista.</p>
+        <h2 class="fw-bold mb-1"><i class="bi bi-book me-2 text-primary"></i>@L["KB.Index.Title"]</h2>
+        <p class="text-muted mb-0">@L["KB.Index.Intro"]</p>
     </div>
     @if (User.IsInRole("Admin"))
     {
         <div class="d-flex gap-2">
             <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-gear me-1"></i>Hallinta
+                <i class="bi bi-gear me-1"></i>@L["KB.Manage"]
             </a>
             <a asp-action="CreateArticle" class="btn btn-primary btn-sm">
-                <i class="bi bi-plus-lg me-1"></i>Uusi artikkeli
+                <i class="bi bi-plus-lg me-1"></i>@L["KB.NewArticle"]
             </a>
         </div>
     }
 </div>
 
-@* ── Hakupalkki ─────────────────────────────────────────────────────── *@
 <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0d6efd15 0%, #6610f215 100%);">
     <div class="card-body p-4">
         <form asp-action="Index" method="get" class="d-flex gap-2">
             <input type="search" name="q" value="@Model.SearchQuery"
                    class="form-control form-control-lg"
-                   placeholder="Hae artikkeleita… esim. salasana, lasku, VPN" />
+                   placeholder="@L["KB.SearchBigPlaceholder"]" />
             <button type="submit" class="btn btn-primary btn-lg px-4">
                 <i class="bi bi-search"></i>
             </button>
@@ -35,11 +34,10 @@
     </div>
 </div>
 
-@* ── Kategoriasuodattimet ────────────────────────────────────────────── *@
 <div class="d-flex flex-wrap gap-2 mb-4">
     <a asp-action="Index" asp-route-q="@Model.SearchQuery"
        class="btn btn-sm @(Model.CategoryId is null ? "btn-primary" : "btn-outline-secondary")">
-        Kaikki
+        @L["Common.All"]
     </a>
     @foreach (var cat in Model.Categories)
     {
@@ -50,10 +48,9 @@
     }
 </div>
 
-@* ── Nostetut artikkelit (vain etusivulla) ──────────────────────────── *@
 @if (Model.Featured.Count > 0)
 {
-    <h5 class="fw-semibold mb-3"><i class="bi bi-star-fill text-warning me-2"></i>Suositut ohjeet</h5>
+    <h5 class="fw-semibold mb-3"><i class="bi bi-star-fill text-warning me-2"></i>@L["KB.Popular"]</h5>
     <div class="row g-3 mb-5">
         @foreach (var a in Model.Featured)
         {
@@ -81,35 +78,34 @@
     </div>
 }
 
-@* ── Kaikki artikkelit / hakutulokset ───────────────────────────────── *@
 @if (!string.IsNullOrWhiteSpace(Model.SearchQuery) || Model.CategoryId.HasValue)
 {
     <h5 class="fw-semibold mb-3">
         @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
         {
-            <span>Hakutulokset: <em>@Model.SearchQuery</em> (@Model.Articles.Count kpl)</span>
+            <span>@L["KB.SearchResults"]: <em>@Model.SearchQuery</em> (@Model.Articles.Count)</span>
         }
         else
         {
-            <span>@(Model.Categories.FirstOrDefault(c => c.Id == Model.CategoryId)?.Name ?? "") (@Model.Articles.Count kpl)</span>
+            <span>@(Model.Categories.FirstOrDefault(c => c.Id == Model.CategoryId)?.Name ?? "") (@Model.Articles.Count)</span>
         }
     </h5>
 }
 else if (Model.Featured.Count == 0)
 {
-    <h5 class="fw-semibold mb-3">Kaikki artikkelit</h5>
+    <h5 class="fw-semibold mb-3">@L["KB.AllArticles"]</h5>
 }
 else
 {
-    <h5 class="fw-semibold mb-3">Muut artikkelit</h5>
+    <h5 class="fw-semibold mb-3">@L["KB.OtherArticles"]</h5>
 }
 
 @if (Model.Articles.Count == 0)
 {
     <div class="text-center text-muted py-5">
         <i class="bi bi-search display-4 d-block mb-3"></i>
-        <p>Ei hakutuloksia haulla "<strong>@Model.SearchQuery</strong>".</p>
-        <a asp-action="Index" class="btn btn-outline-primary btn-sm mt-1">Näytä kaikki artikkelit</a>
+        <p>@L["KB.NoResults"] "<strong>@Model.SearchQuery</strong>".</p>
+        <a asp-action="Index" class="btn btn-outline-primary btn-sm mt-1">@L["KB.ShowAll"]</a>
     </div>
 }
 else

@@ -1,7 +1,7 @@
 @model IEnumerable<HakaTech.Portal.Models.ViewModels.RemoteDesktopConnectionCardViewModel>
 @using HakaTech.Portal.Models.Domain
 @{
-    ViewData["Title"] = "Etätyöpöytä";
+    ViewData["Title"] = L["RemoteDesktop.IndexTitle"].Value;
 
     static (string color, string icon) ProtoStyle(RemoteDesktopProtocol p) => p switch {
         RemoteDesktopProtocol.Rdp => ("primary", "bi-windows"),

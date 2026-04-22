@@ -209,6 +209,16 @@ public class TicketController : Controller
 
         var oldStatus = ticket.Status;
 
+        if (!string.IsNullOrEmpty(model.AssignedToUserId))
+        {
+            var assignee = await _userManager.FindByIdAsync(model.AssignedToUserId);
+            if (assignee is null || !await _userManager.IsInRoleAsync(assignee, "Admin"))
+            {
+                TempData["ErrorMessage"] = "Vastuuhenkilön tulee olla Admin-roolissa.";
+                return RedirectToAction(nameof(Details), new { id = model.Id });
+            }
+        }
+
         ticket.Status           = model.Status;
         ticket.Priority         = model.Priority;
         ticket.AssignedToUserId = model.AssignedToUserId;
@@ -365,8 +375,8 @@ public class TicketController : Controller
         if (!isAdmin && attachment.Ticket?.CustomerId != currentUser?.CustomerId)
             return Forbid();
 
-        var fullPath = Path.Combine(_env.WebRootPath, attachment.FilePath.TrimStart('/'));
-        if (!System.IO.File.Exists(fullPath))
+        var fullPath = _fileStorage.ResolveSafePath(attachment.FilePath);
+        if (fullPath is null || !System.IO.File.Exists(fullPath))
             return NotFound();
 
         var provider = new FileExtensionContentTypeProvider();

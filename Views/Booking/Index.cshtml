@@ -1,7 +1,7 @@
 @model HakaTech.Portal.Models.ViewModels.BookingCalendarViewModel
 @using HakaTech.Portal.Models.Domain
 @{
-    ViewData["Title"] = "Huoltokalenteri";
+    ViewData["Title"] = L["Booking.MaintenanceCalendar"].Value;
     var fi     = new System.Globalization.CultureInfo("fi-FI");
     var today  = DateTime.Today;
     var (prevY, prevM) = Model.PrevMonth;

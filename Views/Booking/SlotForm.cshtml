@@ -2,7 +2,7 @@
 @using HakaTech.Portal.Models.Domain
 @{
     bool isEdit = Model.Id > 0;
-    ViewData["Title"] = isEdit ? "Muokkaa aikaväliä" : "Lisää aikaväli";
+    ViewData["Title"] = (isEdit ? L["Booking.SlotEdit"] : L["Booking.SlotNew"]).Value;
     string formAction = ViewBag.FormAction as string ?? (isEdit ? "EditSlot" : "CreateSlot");
 }
 

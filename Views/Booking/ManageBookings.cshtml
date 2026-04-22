@@ -1,7 +1,7 @@
 @model IEnumerable<HakaTech.Portal.Models.Domain.Booking>
 @using HakaTech.Portal.Models.Domain
 @{
-    ViewData["Title"] = "Varausten hallinta";
+    ViewData["Title"] = L["Booking.Manage"].Value;
     var fi            = new System.Globalization.CultureInfo("fi-FI");
 
     BookingStatus? statusFilter   = ViewBag.StatusFilter   as BookingStatus?;

@@ -1,7 +1,7 @@
 @model IEnumerable<HakaTech.Portal.Models.Domain.QuoteRequest>
 @using HakaTech.Portal.Models.Domain
 @{
-    ViewData["Title"] = "Tarjouspyynnöt";
+    ViewData["Title"] = L["Service.Requests"].Value;
     var statusFilter = ViewBag.StatusFilter as QuoteRequestStatus?;
 }
 

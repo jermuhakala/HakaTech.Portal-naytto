@@ -1,5 +1,6 @@
 using HakaTech.Portal.Data;
 using HakaTech.Portal.Models.Domain;
+using HakaTech.Portal.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
@@ -12,11 +13,19 @@ public class TicketHub : Hub
 {
     private readonly ApplicationDbContext         _db;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IAuditService                _audit;
+    private readonly ILogger<TicketHub>           _logger;
 
-    public TicketHub(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+    public TicketHub(
+        ApplicationDbContext         db,
+        UserManager<ApplicationUser> userManager,
+        IAuditService                audit,
+        ILogger<TicketHub>           logger)
     {
         _db          = db;
         _userManager = userManager;
+        _audit       = audit;
+        _logger      = logger;
     }
 
     public async Task JoinTicketGroup(string ticketId)
@@ -44,9 +53,19 @@ public class TicketHub : Hub
         bool isAdmin = Context.User!.IsInRole("Admin");
 
         var ticket = await _db.Tickets.FindAsync(ticketId);
-        if (ticket is null) return;
+        if (ticket is null)
+        {
+            _logger.LogWarning("TicketHub: user {UserId} attempted to post to non-existent ticket {TicketId}", user.Id, ticketId);
+            await _audit.LogAsync("TicketAccessDenied", "Ticket", ticketId.ToString(), "NotFound");
+            return;
+        }
 
-        if (!isAdmin && ticket.CustomerId != user.CustomerId) return;
+        if (!isAdmin && ticket.CustomerId != user.CustomerId)
+        {
+            _logger.LogWarning("TicketHub: user {UserId} denied access to ticket {TicketId}", user.Id, ticketId);
+            await _audit.LogAsync("TicketAccessDenied", "Ticket", ticketId.ToString(), "IDOR attempt");
+            return;
+        }
         if (ticket.Status == TicketStatus.Closed) return;
 
         if (!isAdmin) isInternal = false;

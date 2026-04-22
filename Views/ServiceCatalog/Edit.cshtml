@@ -1,13 +1,13 @@
 @model HakaTech.Portal.Models.ViewModels.ServiceCatalogItemFormViewModel
 @{
-    ViewData["Title"] = "Muokkaa palvelua";
+    ViewData["Title"] = L["Service.Edit"].Value;
 }
 
 <div class="d-flex align-items-center gap-3 mb-3">
     <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
     </a>
-    <h2 class="mb-0"><i class="bi bi-pencil me-2"></i>Muokkaa palvelua</h2>
+    <h2 class="mb-0"><i class="bi bi-pencil me-2"></i>@L["Service.Edit"]</h2>
 </div>
 
 <div class="card shadow-sm border-0" style="max-width:640px;">

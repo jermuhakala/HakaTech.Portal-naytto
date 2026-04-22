@@ -1,12 +1,13 @@
 @model HakaTech.Portal.Models.ViewModels.InvoiceCreateViewModel
 @{
-    ViewData["Title"] = "Uusi lasku";
+    ViewData["Title"] = L["Invoice.Create.Title"].Value;
+    var uiCulture = System.Globalization.CultureInfo.CurrentUICulture;
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index">Laskut</a></li>
-        <li class="breadcrumb-item active">Uusi lasku</li>
+        <li class="breadcrumb-item"><a asp-action="Index">@L["Invoice.Index.Title"]</a></li>
+        <li class="breadcrumb-item active">@L["Invoice.Create.Title"]</li>
     </ol>
 </nav>
 
@@ -14,20 +15,19 @@
     <div class="col-lg-9">
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white py-3">
-                <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Luo uusi lasku</h5>
+                <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>@L["Invoice.Create.Heading"]</h5>
             </div>
             <div class="card-body p-4">
 
                 <form asp-action="Create" method="post" id="invoice-form">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-                    <!-- Perustiedot -->
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <label asp-for="CustomerId" class="form-label fw-semibold"></label>
                             <select asp-for="CustomerId" asp-items="Model.CustomerOptions"
                                     id="invoice-customer" class="form-select">
-                                <option value="0">— Valitse asiakas —</option>
+                                <option value="0">@L["Invoice.Create.SelectCustomer"]</option>
                             </select>
                             <span asp-validation-for="CustomerId" class="text-danger small"></span>
                         </div>
@@ -54,25 +54,24 @@
                                        value="@Model.VatRate.ToString("0.000")" />
                                 <span class="input-group-text">%×100</span>
                             </div>
-                            <div class="form-text">Esim. 0.255 = 25,5 %</div>
+                            <div class="form-text">@L["Invoice.Create.VatHint"]</div>
                         </div>
                         <div class="col-12">
                             <label asp-for="Notes" class="form-label fw-semibold"></label>
                             <textarea asp-for="Notes" class="form-control" id="invoice-notes"
-                                      rows="2" placeholder="Vapaaehtoinen lisätieto…"></textarea>
+                                      rows="2" placeholder="@L["Invoice.Create.NotesPlaceholder"]"></textarea>
                         </div>
                     </div>
 
-                    <!-- Laskurivit -->
-                    <h6 class="fw-bold mb-2"><i class="bi bi-list-ul me-1"></i>Laskurivit</h6>
+                    <h6 class="fw-bold mb-2"><i class="bi bi-list-ul me-1"></i>@L["Invoice.Create.Lines"]</h6>
                     <div class="table-responsive mb-2">
                         <table class="table table-sm table-bordered" id="lines-table">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Kuvaus</th>
-                                    <th style="width:100px">Määrä</th>
-                                    <th style="width:130px">À-hinta (€)</th>
-                                    <th style="width:130px" class="text-end">Rivisumma</th>
+                                    <th>@L["Invoice.Create.Col.Description"]</th>
+                                    <th style="width:100px">@L["Invoice.Create.Col.Quantity"]</th>
+                                    <th style="width:130px">@L["Invoice.Create.Col.UnitPrice"]</th>
+                                    <th style="width:130px" class="text-end">@L["Invoice.Create.Col.LineTotal"]</th>
                                     <th style="width:50px"></th>
                                 </tr>
                             </thead>
@@ -84,7 +83,7 @@
                                             <input name="Lines[@i].Description" type="text"
                                                    class="form-control form-control-sm line-desc"
                                                    value="@Model.Lines[i].Description"
-                                                   placeholder="Palvelun kuvaus" />
+                                                   placeholder="@L["Invoice.Create.LineDescPlaceholder"]" />
                                         </td>
                                         <td>
                                             <input name="Lines[@i].Quantity" type="number"
@@ -99,7 +98,7 @@
                                         <td class="text-end align-middle line-total fw-semibold">0,00 €</td>
                                         <td class="text-center align-middle">
                                             <button type="button" class="btn btn-sm btn-outline-danger btn-remove-line"
-                                                    title="Poista rivi">
+                                                    title="@L["Invoice.Create.RemoveLine"]">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </td>
@@ -110,22 +109,21 @@
                     </div>
 
                     <button type="button" id="btn-add-line" class="btn btn-sm btn-outline-secondary mb-4">
-                        <i class="bi bi-plus-lg me-1"></i>Lisää rivi
+                        <i class="bi bi-plus-lg me-1"></i>@L["Invoice.Create.AddLine"]
                     </button>
 
-                    <!-- Yhteissumma -->
                     <div class="d-flex justify-content-end mb-4">
                         <table class="table table-sm table-borderless" style="max-width:280px;">
                             <tr>
-                                <td class="text-muted">Veroton</td>
+                                <td class="text-muted">@L["Invoice.Create.Subtotal"]</td>
                                 <td class="text-end fw-semibold" id="summary-subtotal">0,00 €</td>
                             </tr>
                             <tr>
-                                <td class="text-muted">ALV</td>
+                                <td class="text-muted">@L["Invoice.Create.Vat"]</td>
                                 <td class="text-end fw-semibold" id="summary-vat">0,00 €</td>
                             </tr>
                             <tr class="fs-5 fw-bold">
-                                <td>Yhteensä</td>
+                                <td>@L["Common.Total"]</td>
                                 <td class="text-end text-primary" id="summary-total">0,00 €</td>
                             </tr>
                         </table>
@@ -133,9 +131,9 @@
 
                     <div class="d-flex gap-2">
                         <button type="submit" id="create-submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>Tallenna lasku
+                            <i class="bi bi-check-lg me-1"></i>@L["Invoice.Create.Submit"]
                         </button>
-                        <a asp-action="Index" class="btn btn-outline-secondary">Peruuta</a>
+                        <a asp-action="Index" class="btn btn-outline-secondary">@L["Common.Cancel"]</a>
                     </div>
                 </form>
 
@@ -148,17 +146,21 @@
 @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 <script>
 (function () {
-    // ── Dynaaminen rivitys ──────────────────────────────────────────
+    const culture = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(uiCulture.Name));
+    const T = {
+        lineDescPlaceholder: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Invoice.Create.LineDescPlaceholder"].Value)),
+        removeLine:          @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Invoice.Create.RemoveLine"].Value))
+    };
+
     let rowIndex = @Model.Lines.Count;
 
     function fmt(n) {
-        return n.toLocaleString('fi-FI', { style: 'currency', currency: 'EUR' });
+        return n.toLocaleString(culture, { style: 'currency', currency: 'EUR' });
     }
 
     function recalc() {
         let sub = 0;
         document.querySelectorAll('#lines-body .line-row').forEach((row, i) => {
-            // Päivitä input-nimet indeksillä
             row.querySelectorAll('[name]').forEach(el => {
                 el.name = el.name.replace(/Lines\[\d+\]/, `Lines[${i}]`);
             });
@@ -181,14 +183,14 @@
         tr.className = 'line-row';
         tr.innerHTML = `
             <td><input name="Lines[${idx}].Description" type="text"
-                 class="form-control form-control-sm line-desc" placeholder="Palvelun kuvaus" /></td>
+                 class="form-control form-control-sm line-desc" placeholder="${T.lineDescPlaceholder}" /></td>
             <td><input name="Lines[${idx}].Quantity" type="number"
                  class="form-control form-control-sm line-qty" value="1" step="0.01" min="0.01" /></td>
             <td><input name="Lines[${idx}].UnitPrice" type="number"
                  class="form-control form-control-sm line-price" value="0" step="0.01" min="0" /></td>
             <td class="text-end align-middle line-total fw-semibold">0,00 €</td>
             <td class="text-center align-middle">
-                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-line" title="Poista">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-line" title="${T.removeLine}">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>`;
@@ -209,7 +211,6 @@
         });
     }
 
-    // Alusta olemassa olevat rivit
     document.querySelectorAll('#lines-body .line-row').forEach(bindRow);
     document.getElementById('btn-add-line').addEventListener('click', addRow);
     document.getElementById('invoice-vat').addEventListener('input', recalc);

@@ -1,14 +1,17 @@
 @model HakaTech.Portal.Models.ViewModels.TicketCreateViewModel
 @using HakaTech.Portal.Models.Domain
 @{
-    ViewData["Title"] = "Uusi tiketti";
+    ViewData["Title"] = L["Ticket.Create.Title"].Value;
     bool isAdmin = User.IsInRole("Admin");
+
+    string CategoryLabel(TicketCategory c) => L[$"TicketCategory.{c}"].Value;
+    string PriorityLabel(TicketPriority p) => L[$"TicketPriority.{p}"].Value;
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index">Tiketit</a></li>
-        <li class="breadcrumb-item active">Uusi tiketti</li>
+        <li class="breadcrumb-item"><a asp-action="Index">@L["Ticket.Index.Title"]</a></li>
+        <li class="breadcrumb-item active">@L["Ticket.Create.Title"]</li>
     </ol>
 </nav>
 
@@ -16,7 +19,7 @@
     <div class="col-md-8">
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white py-3">
-                <h5 class="mb-0"><i class="bi bi-ticket-perforated me-2"></i>Luo uusi tiketti</h5>
+                <h5 class="mb-0"><i class="bi bi-ticket-perforated me-2"></i>@L["Ticket.Create.Heading"]</h5>
             </div>
             <div class="card-body p-4">
 
@@ -29,7 +32,7 @@
                             <label asp-for="CustomerId" class="form-label fw-semibold"></label>
                             <select asp-for="CustomerId" asp-items="Model.CustomerOptions"
                                     id="create-customer" class="form-select">
-                                <option value="">— Valitse asiakas —</option>
+                                <option value="">@L["Ticket.Create.SelectCustomer"]</option>
                             </select>
                             <span asp-validation-for="CustomerId" class="text-danger small"></span>
                         </div>
@@ -42,16 +45,15 @@
                     <div class="mb-3">
                         <label asp-for="Title" class="form-label fw-semibold"></label>
                         <input asp-for="Title" class="form-control" id="create-title"
-                               placeholder="Lyhyt ja kuvaava otsikko" autocomplete="off" />
+                               placeholder="@L["Ticket.Create.TitlePlaceholder"]" autocomplete="off" />
                         <span asp-validation-for="Title" class="text-danger small"></span>
 
-                        @* KB-ehdotukset *@
                         <div id="kb-suggestions" class="mt-2" style="display:none">
                             <div class="card border-warning-subtle shadow-sm">
                                 <div class="card-body py-2 px-3">
                                     <div class="d-flex align-items-center gap-2 mb-2">
                                         <i class="bi bi-lightbulb-fill text-warning"></i>
-                                        <span class="fw-semibold small">Löysimme aiheeseen liittyviä ohjeita tietopankista:</span>
+                                        <span class="fw-semibold small">@L["Ticket.Create.KbSuggestions"]</span>
                                     </div>
                                     <ul id="kb-suggestion-list" class="list-unstyled mb-0"></ul>
                                 </div>
@@ -63,7 +65,7 @@
                         <label asp-for="Description" class="form-label fw-semibold"></label>
                         <textarea asp-for="Description" class="form-control" id="create-description"
                                   rows="6"
-                                  placeholder="Kuvaile ongelma tarkasti: mitä tapahtui, milloin, miten se voidaan toistaa…"></textarea>
+                                  placeholder="@L["Ticket.Create.DescriptionPlaceholder"]"></textarea>
                         <span asp-validation-for="Description" class="text-danger small"></span>
                     </div>
 
@@ -73,7 +75,7 @@
                             <select asp-for="Category" id="create-category" class="form-select">
                                 @foreach (var c in Enum.GetValues<TicketCategory>())
                                 {
-                                    <option value="@c">@c</option>
+                                    <option value="@c">@CategoryLabel(c)</option>
                                 }
                             </select>
                         </div>
@@ -82,7 +84,7 @@
                             <select asp-for="Priority" id="create-priority" class="form-select">
                                 @foreach (var p in Enum.GetValues<TicketPriority>())
                                 {
-                                    <option value="@p">@p</option>
+                                    <option value="@p">@PriorityLabel(p)</option>
                                 }
                             </select>
                         </div>
@@ -90,9 +92,9 @@
 
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" id="create-submit" class="btn btn-primary">
-                            <i class="bi bi-send me-1"></i>Lähetä tiketti
+                            <i class="bi bi-send me-1"></i>@L["Ticket.Create.Submit"]
                         </button>
-                        <a asp-action="Index" class="btn btn-outline-secondary">Peruuta</a>
+                        <a asp-action="Index" class="btn btn-outline-secondary">@L["Common.Cancel"]</a>
                     </div>
                 </form>
 

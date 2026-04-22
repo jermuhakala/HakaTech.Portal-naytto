@@ -343,8 +343,8 @@ public class InvoiceController : Controller
         if (!isAdmin && attachment.Invoice?.CustomerId != currentUser?.CustomerId)
             return Forbid();
 
-        var fullPath = Path.Combine(_env.WebRootPath, attachment.FilePath.TrimStart('/'));
-        if (!System.IO.File.Exists(fullPath))
+        var fullPath = _fileStorage.ResolveSafePath(attachment.FilePath);
+        if (fullPath is null || !System.IO.File.Exists(fullPath))
             return NotFound();
 
         var provider = new FileExtensionContentTypeProvider();

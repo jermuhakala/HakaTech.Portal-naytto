@@ -1,6 +1,6 @@
 @model HakaTech.Portal.Models.ViewModels.RegisterViewModel
 @{
-    ViewData["Title"] = "Luo käyttäjätili";
+    ViewData["Title"] = L["Auth.Register.Title"].Value;
 }
 
 <div class="row justify-content-center">
@@ -9,7 +9,7 @@
             <div class="card-header text-center py-3">
                 <img src="~/img/logo.png" alt="HakaTech Logo"
                      style="height: 36px; width: 36px; border-radius: 8px; object-fit: cover;" class="mb-2" />
-                <h4 class="mb-0"><i class="bi bi-person-plus me-2"></i>Luo uusi käyttäjätili</h4>
+                <h4 class="mb-0"><i class="bi bi-person-plus me-2"></i>@L["Auth.Register.Heading"]</h4>
             </div>
             <div class="card-body p-4">
 
@@ -26,28 +26,28 @@
 
                     <div class="mb-3">
                         <label asp-for="FullName" class="form-label fw-semibold"></label>
-                        <input asp-for="FullName" class="form-control" placeholder="Etunimi Sukunimi"
+                        <input asp-for="FullName" class="form-control" placeholder="@L["Auth.Register.FullNamePlaceholder"]"
                                id="register-fullname" />
                         <span asp-validation-for="FullName" class="text-danger small"></span>
                     </div>
 
                     <div class="mb-3">
                         <label asp-for="Email" class="form-label fw-semibold"></label>
-                        <input asp-for="Email" class="form-control" placeholder="esimerkki@yritys.fi"
+                        <input asp-for="Email" class="form-control" placeholder="@L["Auth.Login.EmailPlaceholder"]"
                                id="register-email" autocomplete="username" />
                         <span asp-validation-for="Email" class="text-danger small"></span>
                     </div>
 
                     <div class="mb-3">
                         <label asp-for="Password" class="form-label fw-semibold"></label>
-                        <input asp-for="Password" class="form-control" placeholder="Vähintään 8 merkkiä"
+                        <input asp-for="Password" class="form-control" placeholder="@L["Auth.Register.PasswordPlaceholder"]"
                                id="register-password" autocomplete="new-password" />
                         <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>
 
                     <div class="mb-3">
                         <label asp-for="ConfirmPassword" class="form-label fw-semibold"></label>
-                        <input asp-for="ConfirmPassword" class="form-control" placeholder="Toista salasana"
+                        <input asp-for="ConfirmPassword" class="form-control" placeholder="@L["Auth.Register.ConfirmPlaceholder"]"
                                id="register-confirm" autocomplete="new-password" />
                         <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
                     </div>
@@ -56,8 +56,8 @@
                         <label asp-for="Role" class="form-label fw-semibold"></label>
                         <select asp-for="Role" id="register-role" class="form-select"
                                 onchange="toggleCustomerField(this.value)">
-                            <option value="Customer">Asiakaskäyttäjä</option>
-                            <option value="Admin">Järjestelmänhallinta (Admin)</option>
+                            <option value="Customer">@L["Auth.Register.RoleCustomer"]</option>
+                            <option value="Admin">@L["Auth.Register.RoleAdmin"]</option>
                         </select>
                     </div>
 
@@ -66,14 +66,14 @@
                         <label asp-for="CustomerId" class="form-label fw-semibold"></label>
                         <select asp-for="CustomerId" asp-items="Model.CustomerOptions"
                                 id="register-customer" class="form-select">
-                            <option value="">— Valitse yritys —</option>
+                            <option value="">@L["Auth.Register.SelectCompany"]</option>
                         </select>
                         <span asp-validation-for="CustomerId" class="text-danger small"></span>
                     </div>
 
                     <div class="d-grid">
                         <button type="submit" id="register-submit" class="btn btn-success btn-lg">
-                            <i class="bi bi-person-check me-1"></i>Luo tili
+                            <i class="bi bi-person-check me-1"></i>@L["Auth.Register.Submit"]
                         </button>
                     </div>
                 </form>

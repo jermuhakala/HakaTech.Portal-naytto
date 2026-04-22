@@ -2,7 +2,7 @@
 @using HakaTech.Portal.Models.Domain
 @{
     var slot = ViewBag.Slot as BookingSlot;
-    ViewData["Title"] = "Tee varaus";
+    ViewData["Title"] = L["Booking.BookTitle"].Value;
     var fi = new System.Globalization.CultureInfo("fi-FI");
 
     string TypeColor(BookingSlotType t) => t switch {

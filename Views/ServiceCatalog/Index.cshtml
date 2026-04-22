@@ -1,7 +1,7 @@
 @model IEnumerable<HakaTech.Portal.Models.Domain.ServiceCatalogItem>
 @using HakaTech.Portal.Models.ViewModels
 @{
-    ViewData["Title"] = "Palvelukatalogi";
+    ViewData["Title"] = L["Service.Index.Title"].Value;
     bool isAdmin = User.IsInRole("Admin");
     var grouped = Model.GroupBy(s => s.Category ?? "Muut").OrderBy(g => g.Key);
 

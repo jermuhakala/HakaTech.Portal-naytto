@@ -1,7 +1,7 @@
 @model HakaTech.Portal.Models.ViewModels.BookingMyViewModel
 @using HakaTech.Portal.Models.Domain
 @{
-    ViewData["Title"] = "Omat varaukset";
+    ViewData["Title"] = L["Booking.MyBookings"].Value;
     var fi = new System.Globalization.CultureInfo("fi-FI");
 
     string TypeColor(BookingSlotType t) => t switch {

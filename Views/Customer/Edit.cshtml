@@ -1,15 +1,15 @@
 @model HakaTech.Portal.Models.ViewModels.CustomerFormViewModel
 @{
-    ViewData["Title"] = "Muokkaa asiakasta";
+    ViewData["Title"] = L["Common.Edit"].Value + " – " + Model.CompanyName;
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index">Asiakkaat</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">@L["Customer.Index.Title"]</a></li>
         <li class="breadcrumb-item">
             <a asp-action="Details" asp-route-id="@Model.Id">@Model.CompanyName</a>
         </li>
-        <li class="breadcrumb-item active">Muokkaa</li>
+        <li class="breadcrumb-item active">@L["Common.Edit"]</li>
     </ol>
 </nav>
 
@@ -17,7 +17,7 @@
     <div class="col-md-7">
         <div class="card shadow-sm">
             <div class="card-header bg-secondary text-white py-3">
-                <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Muokkaa: @Model.CompanyName</h5>
+                <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>@L["Common.Edit"]: @Model.CompanyName</h5>
             </div>
             <div class="card-body p-4">
 
@@ -61,10 +61,10 @@
 
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" id="edit-submit" class="btn btn-secondary">
-                            <i class="bi bi-check-lg me-1"></i>Tallenna muutokset
+                            <i class="bi bi-check-lg me-1"></i>@L["Common.SaveChanges"]
                         </button>
                         <a asp-action="Details" asp-route-id="@Model.Id"
-                           class="btn btn-outline-secondary">Peruuta</a>
+                           class="btn btn-outline-secondary">@L["Common.Cancel"]</a>
                     </div>
                 </form>
 

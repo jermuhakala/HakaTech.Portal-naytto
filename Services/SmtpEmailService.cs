@@ -19,10 +19,21 @@ public class SmtpEmailService : IEmailService
         try
         {
             var host = _config["SmtpSettings:Host"] ?? "127.0.0.1";
-            var port = _config.GetValue<int?>("SmtpSettings:Port") ?? 25;
+            var port = _config.GetValue<int?>("SmtpSettings:Port") ?? 587;
             var fromEmail = _config["SmtpSettings:FromEmail"] ?? "noreply@hakatech.fi";
+            var username = _config["SmtpSettings:Username"];
+            var password = _config["SmtpSettings:Password"];
+            var enableSsl = _config.GetValue<bool?>("SmtpSettings:EnableSsl") ?? true;
 
-            using var client = new SmtpClient(host, port);
+            using var client = new SmtpClient(host, port)
+            {
+                EnableSsl = enableSsl,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false
+            };
+
+            if (!string.IsNullOrWhiteSpace(username))
+                client.Credentials = new NetworkCredential(username, password);
 
             var mailMessage = new MailMessage
             {
@@ -35,12 +46,11 @@ public class SmtpEmailService : IEmailService
             mailMessage.To.Add(toEmail);
 
             await client.SendMailAsync(mailMessage);
-            _logger.LogInformation("Sähköposti lähetetty osoitteeseen {To}. Aihe: {Subject}", toEmail, subject);
+            _logger.LogInformation("S\u00e4hk\u00f6posti l\u00e4hetetty. Aihe: {Subject}", subject);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Virhe sähköpostin lähetyksessä osoitteeseen {To}", toEmail);
-            // Ohitetaan virhe tuotannossa, jotta tiketin päivitys ei kaadu
+            _logger.LogError(ex, "Virhe s\u00e4hk\u00f6postin l\u00e4hetyksess\u00e4");
         }
     }
 }

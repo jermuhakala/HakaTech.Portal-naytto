@@ -2,7 +2,7 @@
 @{
     bool   isNew  = Model.Id == 0;
     string action = isNew ? "CreateCategory" : "EditCategory";
-    ViewData["Title"] = isNew ? "Uusi kategoria" : "Muokkaa kategoriaa";
+    ViewData["Title"] = (isNew ? L["KB.CategoryNew"] : L["KB.CategoryEdit"]).Value;
 }
 
 <div class="mb-3">

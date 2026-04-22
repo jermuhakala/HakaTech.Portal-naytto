@@ -2,7 +2,7 @@
 @{
     var customer  = ViewBag.Customer as HakaTech.Portal.Models.Domain.Customer;
     bool isAdmin  = ViewBag.IsAdmin == true;
-    ViewData["Title"] = $"Käyttäjät – {customer?.CompanyName}";
+    ViewData["Title"] = string.Format(L["CustomerUser.IndexTitle"].Value, customer?.CompanyName);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">

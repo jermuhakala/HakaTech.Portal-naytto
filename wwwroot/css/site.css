@@ -1379,9 +1379,14 @@ body.preset-focus .widget[data-secondary="1"] { display: none; }
 
 /* Collapsed-rail refinements */
 .sidebar.is-collapsed { width: var(--sidebar-rail-w); }
-.sidebar.is-collapsed .sidebar-head { padding: 14px 10px; justify-content: center; }
+.sidebar.is-collapsed .sidebar-head {
+    padding: 10px;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: center;
+}
 .sidebar.is-collapsed .sidebar-head .sidebar-brand { justify-content: center; }
-.sidebar.is-collapsed .sidebar-rail-toggle { display: none; }
+.sidebar.is-collapsed .sidebar-rail-toggle { margin: 0; }
 .sidebar.is-collapsed .sidebar-link {
     justify-content: center;
     padding: 10px;

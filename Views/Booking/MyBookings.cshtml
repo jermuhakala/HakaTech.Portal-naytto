@@ -39,21 +39,6 @@
     </a>
 </div>
 
-@if (TempData["SuccessMessage"] is string ok)
-{
-    <div class="alert alert-success alert-dismissible fade show">
-        <i class="bi bi-check-circle me-1"></i>@ok
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (TempData["ErrorMessage"] is string err)
-{
-    <div class="alert alert-danger alert-dismissible fade show">
-        <i class="bi bi-exclamation-triangle me-1"></i>@err
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
 @* ── Tulevat varaukset ───────────────────────────────────────────── *@
 <h5 class="mb-3">Tulevat varaukset <span class="badge bg-primary ms-1">@Model.Upcoming.Count</span></h5>
 

@@ -1,0 +1,19 @@
+@model HakaTech.Portal.Models.ViewModels.Ui.SegmentedModel
+@{
+    var cls = ("segmented " + (Model.Full ? "full " : "") + (Model.CssClass ?? "")).Trim();
+}
+<div class="@cls" role="radiogroup">
+    @foreach (var opt in Model.Options)
+    {
+        var id = Model.Name + "_" + opt.Value;
+        var isSel = Model.Selected == opt.Value;
+        <input type="radio" name="@Model.Name" id="@id" value="@opt.Value" @(isSel ? "checked" : null) />
+        <label for="@id">
+            @if (!string.IsNullOrEmpty(opt.Icon))
+            {
+                <i class="bi @opt.Icon"></i>
+            }
+            @opt.Label
+        </label>
+    }
+</div>

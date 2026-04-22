@@ -2,6 +2,11 @@
 @using HakaTech.Portal.Models.Domain
 @{
     ViewData["Title"] = Model.CompanyName;
+    ViewData["Breadcrumbs"] = new List<(string, string?)>
+    {
+        (L["Customer.Index.Title"].Value, Url.Action("Index", "Customer")),
+        (Model.CompanyName, null)
+    };
 
     string StatusLabel(InvoiceStatus s) => L[$"InvoiceStatus.{s}"].Value;
     string TStatusLabel(TicketStatus s) => L[$"TicketStatus.{s}"].Value;
@@ -14,21 +19,6 @@
         <li class="breadcrumb-item active">@Model.CompanyName</li>
     </ol>
 </nav>
-
-@if (TempData["SuccessMessage"] is string sMsg)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle me-1"></i>@sMsg
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (TempData["ErrorMessage"] is string eMsg)
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle me-1"></i>@eMsg
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
 
 <div class="d-flex justify-content-between align-items-start mb-3">
     <div>

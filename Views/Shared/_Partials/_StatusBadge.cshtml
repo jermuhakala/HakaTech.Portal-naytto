@@ -1,0 +1,13 @@
+@model HakaTech.Portal.Models.ViewModels.Ui.StatusBadgeModel
+@{
+    var tone = "tone-" + Model.Tone.ToString().ToLowerInvariant();
+    var dot  = Model.NoDot ? "no-dot" : "";
+    var cls  = ("badge-status-lnr " + tone + " " + dot).Trim();
+}
+<span class="@cls">
+    @if (!string.IsNullOrEmpty(Model.Icon))
+    {
+        <i class="bi @Model.Icon"></i>
+    }
+    @Model.Label
+</span>

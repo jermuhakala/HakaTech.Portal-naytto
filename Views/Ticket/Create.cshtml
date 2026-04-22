@@ -2,106 +2,112 @@
 @using HakaTech.Portal.Models.Domain
 @{
     ViewData["Title"] = L["Ticket.Create.Title"].Value;
+    ViewData["Breadcrumbs"] = new List<(string, string?)>
+    {
+        (L["Ticket.Index.Title"].Value, Url.Action("Index", "Ticket")),
+        (L["Ticket.Create.Title"].Value, null)
+    };
     bool isAdmin = User.IsInRole("Admin");
 
     string CategoryLabel(TicketCategory c) => L[$"TicketCategory.{c}"].Value;
     string PriorityLabel(TicketPriority p) => L[$"TicketPriority.{p}"].Value;
 }
 
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index">@L["Ticket.Index.Title"]</a></li>
-        <li class="breadcrumb-item active">@L["Ticket.Create.Title"]</li>
-    </ol>
-</nav>
+<header class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-header-title"><i class="bi bi-ticket-perforated"></i> @L["Ticket.Create.Heading"]</h1>
+        <p class="page-header-sub">@L["Ticket.Create.Title"]</p>
+    </div>
+    <div class="page-header-actions">
+        <a asp-action="Index" class="btn-lnr variant-ghost size-sm">
+            <i class="bi bi-arrow-left"></i> @L["UI.Button.Back"]
+        </a>
+        <button type="submit" form="ticketCreateForm" class="btn-lnr variant-primary size-sm">
+            <i class="bi bi-send"></i> @L["Ticket.Create.Submit"]
+        </button>
+    </div>
+</header>
 
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white py-3">
-                <h5 class="mb-0"><i class="bi bi-ticket-perforated me-2"></i>@L["Ticket.Create.Heading"]</h5>
-            </div>
-            <div class="card-body p-4">
+<form asp-action="Create" method="post" id="ticketCreateForm">
+    <div asp-validation-summary="ModelOnly" class="card-lnr tone-danger" style="padding: 12px 16px; margin-bottom: 16px; color: var(--danger-fg);"></div>
 
-                <form asp-action="Create" method="post">
-                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <div class="form-grid">
+        <div class="form-grid-main">
+            <fieldset class="form-section">
+                <legend>@L["UI.Form.Section.Main"]</legend>
 
-                    @if (isAdmin)
-                    {
-                        <div class="mb-3">
-                            <label asp-for="CustomerId" class="form-label fw-semibold"></label>
-                            <select asp-for="CustomerId" asp-items="Model.CustomerOptions"
-                                    id="create-customer" class="form-select">
-                                <option value="">@L["Ticket.Create.SelectCustomer"]</option>
-                            </select>
-                            <span asp-validation-for="CustomerId" class="text-danger small"></span>
-                        </div>
-                    }
-                    else
-                    {
-                        <input type="hidden" asp-for="CustomerId" />
-                    }
-
-                    <div class="mb-3">
-                        <label asp-for="Title" class="form-label fw-semibold"></label>
+                <div class="form-field">
+                    <label asp-for="Title" class="form-field-label"></label>
+                    <div class="form-field-input-wrap">
                         <input asp-for="Title" class="form-control" id="create-title"
                                placeholder="@L["Ticket.Create.TitlePlaceholder"]" autocomplete="off" />
-                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+                    <span asp-validation-for="Title" class="form-field-error"></span>
 
-                        <div id="kb-suggestions" class="mt-2" style="display:none">
-                            <div class="card border-warning-subtle shadow-sm">
-                                <div class="card-body py-2 px-3">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <i class="bi bi-lightbulb-fill text-warning"></i>
-                                        <span class="fw-semibold small">@L["Ticket.Create.KbSuggestions"]</span>
-                                    </div>
-                                    <ul id="kb-suggestion-list" class="list-unstyled mb-0"></ul>
-                                </div>
+                    <div id="kb-suggestions" class="mt-2" style="display:none">
+                        <div class="card-lnr" style="padding: 10px 14px;">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="bi bi-lightbulb-fill" style="color: var(--warning-fg);"></i>
+                                <span class="fw-semibold small">@L["Ticket.Create.KbSuggestions"]</span>
                             </div>
+                            <ul id="kb-suggestion-list" class="list-unstyled mb-0"></ul>
                         </div>
                     </div>
+                </div>
 
-                    <div class="mb-3">
-                        <label asp-for="Description" class="form-label fw-semibold"></label>
-                        <textarea asp-for="Description" class="form-control" id="create-description"
-                                  rows="6"
-                                  placeholder="@L["Ticket.Create.DescriptionPlaceholder"]"></textarea>
-                        <span asp-validation-for="Description" class="text-danger small"></span>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label asp-for="Category" class="form-label fw-semibold"></label>
-                            <select asp-for="Category" id="create-category" class="form-select">
-                                @foreach (var c in Enum.GetValues<TicketCategory>())
-                                {
-                                    <option value="@c">@CategoryLabel(c)</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="Priority" class="form-label fw-semibold"></label>
-                            <select asp-for="Priority" id="create-priority" class="form-select">
-                                @foreach (var p in Enum.GetValues<TicketPriority>())
-                                {
-                                    <option value="@p">@PriorityLabel(p)</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" id="create-submit" class="btn btn-primary">
-                            <i class="bi bi-send me-1"></i>@L["Ticket.Create.Submit"]
-                        </button>
-                        <a asp-action="Index" class="btn btn-outline-secondary">@L["Common.Cancel"]</a>
-                    </div>
-                </form>
-
-            </div>
+                <div class="form-field">
+                    <label asp-for="Description" class="form-field-label"></label>
+                    <textarea asp-for="Description" class="form-control" id="create-description"
+                              rows="8"
+                              placeholder="@L["Ticket.Create.DescriptionPlaceholder"]"></textarea>
+                    <span asp-validation-for="Description" class="form-field-error"></span>
+                </div>
+            </fieldset>
         </div>
+
+        <aside class="form-grid-aside">
+            <fieldset class="form-section">
+                <legend>@L["UI.Form.Section.Meta"]</legend>
+
+                @if (isAdmin)
+                {
+                    <div class="form-field">
+                        <label asp-for="CustomerId" class="form-field-label"></label>
+                        <select asp-for="CustomerId" asp-items="Model.CustomerOptions"
+                                id="create-customer" class="form-select">
+                            <option value="">@L["Ticket.Create.SelectCustomer"]</option>
+                        </select>
+                        <span asp-validation-for="CustomerId" class="form-field-error"></span>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" asp-for="CustomerId" />
+                }
+
+                <div class="form-field">
+                    <label asp-for="Category" class="form-field-label"></label>
+                    <select asp-for="Category" id="create-category" class="form-select">
+                        @foreach (var c in Enum.GetValues<TicketCategory>())
+                        {
+                            <option value="@c">@CategoryLabel(c)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="Priority" class="form-field-label"></label>
+                    <select asp-for="Priority" id="create-priority" class="form-select">
+                        @foreach (var p in Enum.GetValues<TicketPriority>())
+                        {
+                            <option value="@p">@PriorityLabel(p)</option>
+                        }
+                    </select>
+                </div>
+            </fieldset>
+        </aside>
     </div>
-</div>
+</form>
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
@@ -111,6 +117,7 @@
             const panel       = document.getElementById('kb-suggestions');
             const list        = document.getElementById('kb-suggestion-list');
             let   debounce;
+            if (!titleInput) return;
 
             titleInput.addEventListener('input', function () {
                 clearTimeout(debounce);
@@ -121,22 +128,20 @@
                     try {
                         const res  = await fetch(`/KnowledgeBase/Search?q=${encodeURIComponent(q)}`);
                         const data = await res.json();
-
                         if (!data || data.length === 0) { panel.style.display = 'none'; return; }
 
                         list.innerHTML = data.map(a => `
                             <li class="mb-1">
                                 <a href="/KnowledgeBase/Article/${a.id}" target="_blank"
                                    class="d-flex align-items-start gap-2 text-decoration-none text-body">
-                                    <i class="bi bi-file-earmark-text text-primary mt-1 flex-shrink-0"></i>
+                                    <i class="bi bi-file-earmark-text mt-1 flex-shrink-0" style="color: var(--accent-600);"></i>
                                     <div>
                                         <span class="fw-medium small">${a.title}</span>
-                                        <span class="badge bg-light text-secondary border ms-1" style="font-size:.7rem">${a.category}</span>
+                                        <span class="badge-status-lnr tone-neutral ms-1" style="font-size:.7rem">${a.category}</span>
                                         <div class="text-muted" style="font-size:.78rem">${a.excerpt}</div>
                                     </div>
                                 </a>
                             </li>`).join('');
-
                         panel.style.display = 'block';
                     } catch { panel.style.display = 'none'; }
                 }, 350);

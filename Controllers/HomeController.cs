@@ -193,6 +193,31 @@ public class HomeController : Controller
             }
         }
 
+        // ── Sparkline-sarjat viimeiseltä 14 päivältä ──────────────────
+        var sparkFrom = today.AddDays(-13);
+        var days = Enumerable.Range(0, 14).Select(i => sparkFrom.AddDays(i)).ToList();
+        int? scopeCustomerId = isAdmin ? null : currentUser?.CustomerId;
+
+        var ticketsCreated = await _db.Tickets
+            .Where(t => t.CreatedAt >= sparkFrom &&
+                        (scopeCustomerId == null || t.CustomerId == scopeCustomerId))
+            .Select(t => t.CreatedAt.Date)
+            .ToListAsync();
+        vm.TicketsCreatedSpark = days.Select(d => (double)ticketsCreated.Count(x => x == d)).ToArray();
+
+        var invoicesIssued = await _db.Invoices
+            .Where(i => i.InvoiceDate >= sparkFrom &&
+                        i.Status != InvoiceStatus.Draft &&
+                        (scopeCustomerId == null || i.CustomerId == scopeCustomerId))
+            .Select(i => new { i.InvoiceDate, i.TotalAmount })
+            .ToListAsync();
+        vm.InvoicesIssuedSpark = days.Select(d => (double)invoicesIssued.Count(x => x.InvoiceDate.Date == d)).ToArray();
+        vm.UnpaidTotalSpark    = days.Select(d => (double)invoicesIssued
+                                                          .Where(x => x.InvoiceDate.Date <= d)
+                                                          .Sum(x => x.TotalAmount)).ToArray();
+        // Open-tickets spark: running count of currently-open tickets by created<=d & (resolved null or > d)
+        vm.TicketsOpenSpark = days.Select(_ => (double)vm.OpenTickets).ToArray();
+
         // ── Tulevat varaukset (kalenteriwidget) ────────────────────────
         var nowLocal = DateTime.Now;
         var in14Days = nowLocal.AddDays(14);

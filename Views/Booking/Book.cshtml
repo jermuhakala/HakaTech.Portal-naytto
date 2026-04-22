@@ -3,6 +3,11 @@
 @{
     var slot = ViewBag.Slot as BookingSlot;
     ViewData["Title"] = L["Booking.BookTitle"].Value;
+    ViewData["Breadcrumbs"] = new List<(string, string?)>
+    {
+        (L["Nav.Calendar"].Value, Url.Action("Index", "Booking")),
+        (L["Booking.BookTitle"].Value, null)
+    };
     var fi = new System.Globalization.CultureInfo("fi-FI");
 
     string TypeColor(BookingSlotType t) => t switch {

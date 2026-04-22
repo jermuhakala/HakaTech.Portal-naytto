@@ -1,0 +1,53 @@
+@model HakaTech.Portal.Models.ViewModels.Ui.FormFieldModel
+@{
+    var id   = Model.For.Replace(".", "_");
+    var err  = ViewData.ModelState.GetFieldValidationState(Model.For) == Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Invalid;
+    var inputCls = "form-control" + (err ? " is-invalid" : "");
+    var errMsg = err && ViewData.ModelState.TryGetValue(Model.For, out var entry) && entry.Errors.Count > 0
+        ? entry.Errors[0].ErrorMessage
+        : null;
+    var cls = ("form-field " + (Model.CssClass ?? "")).Trim();
+}
+<div class="@cls">
+    @if (!string.IsNullOrEmpty(Model.Label))
+    {
+        <label class="form-field-label" for="@id">
+            @Model.Label@(Model.Required ? Html.Raw("<span class=\"req\">*</span>") : null)
+        </label>
+    }
+    <div class="form-field-input-wrap">
+        @if (!string.IsNullOrEmpty(Model.Icon))
+        {
+            <i class="bi @Model.Icon form-field-icon"></i>
+        }
+        @if (Model.Textarea)
+        {
+            <textarea id="@id" name="@Model.For"
+                      class="@inputCls"
+                      rows="@(Model.Rows ?? 4)"
+                      placeholder="@Model.Placeholder"
+                      @(Model.Required ? "required" : null)
+                      @(Model.Disabled ? "disabled" : null)
+                      @(Model.MaxLength.HasValue ? $"maxlength={Model.MaxLength.Value}" : null)>@Model.Value</textarea>
+        }
+        else
+        {
+            <input id="@id" name="@Model.For"
+                   type="@Model.InputType"
+                   value="@Model.Value"
+                   class="@inputCls"
+                   placeholder="@Model.Placeholder"
+                   @(Model.Required ? "required" : null)
+                   @(Model.Disabled ? "disabled" : null)
+                   @(Model.MaxLength.HasValue ? $"maxlength={Model.MaxLength.Value}" : null) />
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(Model.Hint) && !err)
+    {
+        <span class="form-field-hint">@Model.Hint</span>
+    }
+    @if (err)
+    {
+        <span class="form-field-error">@errMsg</span>
+    }
+</div>

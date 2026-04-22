@@ -1,146 +1,157 @@
 @model HakaTech.Portal.Models.ViewModels.InvoiceCreateViewModel
 @{
     ViewData["Title"] = L["Invoice.Create.Title"].Value;
+    ViewData["Breadcrumbs"] = new List<(string, string?)>
+    {
+        (L["Invoice.Index.Title"].Value, Url.Action("Index", "Invoice")),
+        (L["Invoice.Create.Title"].Value, null)
+    };
     var uiCulture = System.Globalization.CultureInfo.CurrentUICulture;
 }
 
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index">@L["Invoice.Index.Title"]</a></li>
-        <li class="breadcrumb-item active">@L["Invoice.Create.Title"]</li>
-    </ol>
-</nav>
-
-<div class="row justify-content-center">
-    <div class="col-lg-9">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white py-3">
-                <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>@L["Invoice.Create.Heading"]</h5>
-            </div>
-            <div class="card-body p-4">
-
-                <form asp-action="Create" method="post" id="invoice-form">
-                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label asp-for="CustomerId" class="form-label fw-semibold"></label>
-                            <select asp-for="CustomerId" asp-items="Model.CustomerOptions"
-                                    id="invoice-customer" class="form-select">
-                                <option value="0">@L["Invoice.Create.SelectCustomer"]</option>
-                            </select>
-                            <span asp-validation-for="CustomerId" class="text-danger small"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="InvoiceNumber" class="form-label fw-semibold"></label>
-                            <input asp-for="InvoiceNumber" class="form-control" id="invoice-number" />
-                            <span asp-validation-for="InvoiceNumber" class="text-danger small"></span>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="InvoiceDate" class="form-label fw-semibold"></label>
-                            <input asp-for="InvoiceDate" type="date" class="form-control" id="invoice-date"
-                                   value="@Model.InvoiceDate.ToString("yyyy-MM-dd")" />
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="DueDate" class="form-label fw-semibold"></label>
-                            <input asp-for="DueDate" type="date" class="form-control" id="invoice-due"
-                                   value="@Model.DueDate.ToString("yyyy-MM-dd")" />
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="VatRate" class="form-label fw-semibold"></label>
-                            <div class="input-group">
-                                <input asp-for="VatRate" type="number" step="0.001" min="0" max="1"
-                                       class="form-control" id="invoice-vat"
-                                       value="@Model.VatRate.ToString("0.000")" />
-                                <span class="input-group-text">%×100</span>
-                            </div>
-                            <div class="form-text">@L["Invoice.Create.VatHint"]</div>
-                        </div>
-                        <div class="col-12">
-                            <label asp-for="Notes" class="form-label fw-semibold"></label>
-                            <textarea asp-for="Notes" class="form-control" id="invoice-notes"
-                                      rows="2" placeholder="@L["Invoice.Create.NotesPlaceholder"]"></textarea>
-                        </div>
-                    </div>
-
-                    <h6 class="fw-bold mb-2"><i class="bi bi-list-ul me-1"></i>@L["Invoice.Create.Lines"]</h6>
-                    <div class="table-responsive mb-2">
-                        <table class="table table-sm table-bordered" id="lines-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>@L["Invoice.Create.Col.Description"]</th>
-                                    <th style="width:100px">@L["Invoice.Create.Col.Quantity"]</th>
-                                    <th style="width:130px">@L["Invoice.Create.Col.UnitPrice"]</th>
-                                    <th style="width:130px" class="text-end">@L["Invoice.Create.Col.LineTotal"]</th>
-                                    <th style="width:50px"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="lines-body">
-                                @for (int i = 0; i < Model.Lines.Count; i++)
-                                {
-                                    <tr class="line-row">
-                                        <td>
-                                            <input name="Lines[@i].Description" type="text"
-                                                   class="form-control form-control-sm line-desc"
-                                                   value="@Model.Lines[i].Description"
-                                                   placeholder="@L["Invoice.Create.LineDescPlaceholder"]" />
-                                        </td>
-                                        <td>
-                                            <input name="Lines[@i].Quantity" type="number"
-                                                   class="form-control form-control-sm line-qty"
-                                                   value="@Model.Lines[i].Quantity" step="0.01" min="0.01" />
-                                        </td>
-                                        <td>
-                                            <input name="Lines[@i].UnitPrice" type="number"
-                                                   class="form-control form-control-sm line-price"
-                                                   value="@Model.Lines[i].UnitPrice" step="0.01" min="0" />
-                                        </td>
-                                        <td class="text-end align-middle line-total fw-semibold">0,00 €</td>
-                                        <td class="text-center align-middle">
-                                            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-line"
-                                                    title="@L["Invoice.Create.RemoveLine"]">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <button type="button" id="btn-add-line" class="btn btn-sm btn-outline-secondary mb-4">
-                        <i class="bi bi-plus-lg me-1"></i>@L["Invoice.Create.AddLine"]
-                    </button>
-
-                    <div class="d-flex justify-content-end mb-4">
-                        <table class="table table-sm table-borderless" style="max-width:280px;">
-                            <tr>
-                                <td class="text-muted">@L["Invoice.Create.Subtotal"]</td>
-                                <td class="text-end fw-semibold" id="summary-subtotal">0,00 €</td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted">@L["Invoice.Create.Vat"]</td>
-                                <td class="text-end fw-semibold" id="summary-vat">0,00 €</td>
-                            </tr>
-                            <tr class="fs-5 fw-bold">
-                                <td>@L["Common.Total"]</td>
-                                <td class="text-end text-primary" id="summary-total">0,00 €</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <button type="submit" id="create-submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i>@L["Invoice.Create.Submit"]
-                        </button>
-                        <a asp-action="Index" class="btn btn-outline-secondary">@L["Common.Cancel"]</a>
-                    </div>
-                </form>
-
-            </div>
-        </div>
+<header class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-header-title"><i class="bi bi-receipt"></i> @L["Invoice.Create.Heading"]</h1>
+        <p class="page-header-sub">@L["Invoice.Create.Title"]</p>
     </div>
-</div>
+    <div class="page-header-actions">
+        <a asp-action="Index" class="btn-lnr variant-ghost size-sm">
+            <i class="bi bi-arrow-left"></i> @L["UI.Button.Back"]
+        </a>
+        <button type="submit" form="invoice-form" class="btn-lnr variant-primary size-sm">
+            <i class="bi bi-check-lg"></i> @L["Invoice.Create.Submit"]
+        </button>
+    </div>
+</header>
+
+<form asp-action="Create" method="post" id="invoice-form">
+    <div asp-validation-summary="ModelOnly" class="card-lnr tone-danger" style="padding: 12px 16px; margin-bottom: 16px; color: var(--danger-fg);"></div>
+
+    <div class="form-grid">
+        <div class="form-grid-main">
+            <fieldset class="form-section">
+                <legend>@L["UI.Form.Section.Main"]</legend>
+
+                <h6 class="fw-bold mb-2" style="font-size:.85rem; color: var(--text-secondary);">
+                    <i class="bi bi-list-ul me-1"></i>@L["Invoice.Create.Lines"]
+                </h6>
+                <div class="table-responsive mb-2">
+                    <table class="table table-sm table-lnr" id="lines-table">
+                        <thead>
+                            <tr>
+                                <th>@L["Invoice.Create.Col.Description"]</th>
+                                <th style="width:100px">@L["Invoice.Create.Col.Quantity"]</th>
+                                <th style="width:130px">@L["Invoice.Create.Col.UnitPrice"]</th>
+                                <th style="width:130px" class="text-end">@L["Invoice.Create.Col.LineTotal"]</th>
+                                <th style="width:50px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="lines-body">
+                            @for (int i = 0; i < Model.Lines.Count; i++)
+                            {
+                                <tr class="line-row">
+                                    <td>
+                                        <input name="Lines[@i].Description" type="text"
+                                               class="form-control form-control-sm line-desc"
+                                               value="@Model.Lines[i].Description"
+                                               placeholder="@L["Invoice.Create.LineDescPlaceholder"]" />
+                                    </td>
+                                    <td>
+                                        <input name="Lines[@i].Quantity" type="number"
+                                               class="form-control form-control-sm line-qty"
+                                               value="@Model.Lines[i].Quantity" step="0.01" min="0.01" />
+                                    </td>
+                                    <td>
+                                        <input name="Lines[@i].UnitPrice" type="number"
+                                               class="form-control form-control-sm line-price"
+                                               value="@Model.Lines[i].UnitPrice" step="0.01" min="0" />
+                                    </td>
+                                    <td class="text-end align-middle line-total fw-semibold" style="font-variant-numeric: tabular-nums;">0,00 €</td>
+                                    <td class="text-center align-middle">
+                                        <button type="button" class="btn-lnr variant-ghost size-sm btn-remove-line"
+                                                title="@L["Invoice.Create.RemoveLine"]">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <button type="button" id="btn-add-line" class="btn-lnr variant-subtle size-sm mb-3">
+                    <i class="bi bi-plus-lg"></i> @L["Invoice.Create.AddLine"]
+                </button>
+
+                <div class="d-flex justify-content-end mt-3">
+                    <div class="meta-list" style="min-width: 260px;">
+                        <div class="meta-list-row">
+                            <span class="meta-list-key">@L["Invoice.Create.Subtotal"]</span>
+                            <span class="meta-list-val mono" id="summary-subtotal">0,00 €</span>
+                        </div>
+                        <div class="meta-list-row">
+                            <span class="meta-list-key">@L["Invoice.Create.Vat"]</span>
+                            <span class="meta-list-val mono" id="summary-vat">0,00 €</span>
+                        </div>
+                        <div class="meta-list-row" style="font-weight: 700;">
+                            <span class="meta-list-key">@L["Common.Total"]</span>
+                            <span class="meta-list-val mono" id="summary-total" style="color: var(--accent-600);">0,00 €</span>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>@L["Invoice.Create.NotesPlaceholder"]</legend>
+                <div class="form-field">
+                    <label asp-for="Notes" class="form-field-label"></label>
+                    <textarea asp-for="Notes" class="form-control" id="invoice-notes"
+                              rows="3" placeholder="@L["Invoice.Create.NotesPlaceholder"]"></textarea>
+                </div>
+            </fieldset>
+        </div>
+
+        <aside class="form-grid-aside">
+            <fieldset class="form-section">
+                <legend>@L["UI.Form.Section.Meta"]</legend>
+                <div class="form-field">
+                    <label asp-for="CustomerId" class="form-field-label"></label>
+                    <select asp-for="CustomerId" asp-items="Model.CustomerOptions"
+                            id="invoice-customer" class="form-select">
+                        <option value="0">@L["Invoice.Create.SelectCustomer"]</option>
+                    </select>
+                    <span asp-validation-for="CustomerId" class="form-field-error"></span>
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="InvoiceNumber" class="form-field-label"></label>
+                    <input asp-for="InvoiceNumber" class="form-control" id="invoice-number" />
+                    <span asp-validation-for="InvoiceNumber" class="form-field-error"></span>
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="InvoiceDate" class="form-field-label"></label>
+                    <input asp-for="InvoiceDate" type="date" class="form-control" id="invoice-date"
+                           value="@Model.InvoiceDate.ToString("yyyy-MM-dd")" />
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="DueDate" class="form-field-label"></label>
+                    <input asp-for="DueDate" type="date" class="form-control" id="invoice-due"
+                           value="@Model.DueDate.ToString("yyyy-MM-dd")" />
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="VatRate" class="form-field-label"></label>
+                    <input asp-for="VatRate" type="number" step="0.001" min="0" max="1"
+                           class="form-control" id="invoice-vat"
+                           value="@Model.VatRate.ToString("0.000")" />
+                    <span class="form-field-hint">@L["Invoice.Create.VatHint"]</span>
+                </div>
+            </fieldset>
+        </aside>
+    </div>
+</form>
 
 @section Scripts {
 @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
@@ -188,9 +199,9 @@
                  class="form-control form-control-sm line-qty" value="1" step="0.01" min="0.01" /></td>
             <td><input name="Lines[${idx}].UnitPrice" type="number"
                  class="form-control form-control-sm line-price" value="0" step="0.01" min="0" /></td>
-            <td class="text-end align-middle line-total fw-semibold">0,00 €</td>
+            <td class="text-end align-middle line-total fw-semibold" style="font-variant-numeric: tabular-nums;">0,00 €</td>
             <td class="text-center align-middle">
-                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-line" title="${T.removeLine}">
+                <button type="button" class="btn-lnr variant-ghost size-sm btn-remove-line" title="${T.removeLine}">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>`;

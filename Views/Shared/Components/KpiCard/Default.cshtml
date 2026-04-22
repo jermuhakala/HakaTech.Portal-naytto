@@ -1,0 +1,67 @@
+@model HakaTech.Portal.ViewComponents.KpiCardViewComponent.KpiCardVm
+@{
+    var toneClass = "tone-" + (string.IsNullOrEmpty(Model.Tone) ? "neutral" : Model.Tone);
+    var trendJson = System.Text.Json.JsonSerializer.Serialize(Model.Trend ?? Array.Empty<double>());
+}
+@if (!string.IsNullOrEmpty(Model.Href))
+{
+    <a class="kpi-lnr @toneClass" href="@Model.Href">
+        <div class="kpi-lnr-head">
+            @if (!string.IsNullOrEmpty(Model.Icon))
+            {
+                <span class="kpi-lnr-icon"><i class="bi @Model.Icon"></i></span>
+            }
+            <span class="kpi-lnr-label">@Model.Label</span>
+            @if (Model.DeltaPct is { } d1)
+            {
+                var up = d1 >= 0;
+                <span class="kpi-lnr-delta @(up ? "up" : "down")">
+                    <i class="bi @(up ? "bi-arrow-up-short" : "bi-arrow-down-short")"></i>
+                    @Math.Abs(d1).ToString("0.0")%
+                </span>
+            }
+        </div>
+        <div class="kpi-lnr-value">@Model.Value</div>
+        @if (!string.IsNullOrEmpty(Model.Sub))
+        {
+            <div class="kpi-lnr-sub">@Model.Sub</div>
+        }
+        @if (Model.Trend is { Length: > 1 })
+        {
+            <div class="kpi-lnr-spark">
+                <canvas data-sparkline='@Html.Raw(trendJson)' data-tone="@Model.Tone" height="36"></canvas>
+            </div>
+        }
+    </a>
+}
+else
+{
+    <div class="kpi-lnr @toneClass">
+        <div class="kpi-lnr-head">
+            @if (!string.IsNullOrEmpty(Model.Icon))
+            {
+                <span class="kpi-lnr-icon"><i class="bi @Model.Icon"></i></span>
+            }
+            <span class="kpi-lnr-label">@Model.Label</span>
+            @if (Model.DeltaPct is { } d2)
+            {
+                var up = d2 >= 0;
+                <span class="kpi-lnr-delta @(up ? "up" : "down")">
+                    <i class="bi @(up ? "bi-arrow-up-short" : "bi-arrow-down-short")"></i>
+                    @Math.Abs(d2).ToString("0.0")%
+                </span>
+            }
+        </div>
+        <div class="kpi-lnr-value">@Model.Value</div>
+        @if (!string.IsNullOrEmpty(Model.Sub))
+        {
+            <div class="kpi-lnr-sub">@Model.Sub</div>
+        }
+        @if (Model.Trend is { Length: > 1 })
+        {
+            <div class="kpi-lnr-spark">
+                <canvas data-sparkline='@Html.Raw(trendJson)' data-tone="@Model.Tone" height="36"></canvas>
+            </div>
+        }
+    </div>
+}

@@ -98,7 +98,7 @@ if (!string.IsNullOrWhiteSpace(dpKeyPath))
 builder.Services.AddHttpClient<IGuacamoleService, GuacamoleService>();
 
 builder.Services.AddSignalR();
-builder.Services.AddLocalization(opts => opts.ResourcesPath = "Resources");
+builder.Services.AddLocalization();
 builder.Services.AddControllersWithViews()
     .AddViewLocalization();
 

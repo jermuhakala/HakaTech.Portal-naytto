@@ -1,0 +1,13 @@
+@model HakaTech.Portal.Models.ViewModels.Ui.EmptyStateModel
+<div class="empty-state">
+    <div class="empty-state-icon"><i class="bi @Model.Icon"></i></div>
+    <h3 class="empty-state-title">@Model.Title</h3>
+    @if (!string.IsNullOrEmpty(Model.Body))
+    {
+        <p class="empty-state-body">@Model.Body</p>
+    }
+    @if (Model.Action != null)
+    {
+        <div>@Model.Action</div>
+    }
+</div>

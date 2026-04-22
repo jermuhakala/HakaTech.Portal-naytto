@@ -1,0 +1,30 @@
+@using System.Text.Json
+@{
+    var seed = new List<object>();
+    // Supports both short keys (Success/Error/...) and the legacy
+    // controller convention *Message (SuccessMessage/ErrorMessage/...).
+    var keyMap = new (string key, string tone)[]
+    {
+        ("Success",        "success"),
+        ("SuccessMessage", "success"),
+        ("Error",          "danger"),
+        ("ErrorMessage",   "danger"),
+        ("Warning",        "warning"),
+        ("WarningMessage", "warning"),
+        ("Info",           "info"),
+        ("InfoMessage",    "info")
+    };
+    foreach (var (key, tone) in keyMap)
+    {
+        if (TempData[key] is string msg && !string.IsNullOrWhiteSpace(msg))
+        {
+            seed.Add(new { tone, msg });
+            TempData.Remove(key);
+        }
+    }
+    var json = JsonSerializer.Serialize(seed);
+}
+<div id="toastHost" aria-live="polite" aria-atomic="true"></div>
+<script>
+    window.__toasts = @Html.Raw(json);
+</script>

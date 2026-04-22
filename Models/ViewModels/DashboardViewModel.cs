@@ -47,4 +47,10 @@ public class DashboardViewModel
     // ── Rooli ────────────────────────────────────────────────────────
     public bool IsAdmin { get; set; }
     public string WelcomeName { get; set; } = string.Empty;
+
+    // ── Sparkline-sarjat (14 pv, newest last) — Linear re-skin ──────
+    public double[] TicketsCreatedSpark { get; set; } = [];
+    public double[] TicketsOpenSpark    { get; set; } = [];
+    public double[] InvoicesIssuedSpark { get; set; } = [];
+    public double[] UnpaidTotalSpark    { get; set; } = [];
 }

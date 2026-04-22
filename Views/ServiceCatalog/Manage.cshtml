@@ -15,14 +15,6 @@
     </div>
 </div>
 
-@if (TempData["SuccessMessage"] is string sMsg)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle me-1"></i>@sMsg
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
 @if (!Model.Any())
 {
     <div class="alert alert-info">

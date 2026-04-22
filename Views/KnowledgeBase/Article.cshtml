@@ -1,6 +1,12 @@
 @model HakaTech.Portal.Models.ViewModels.KbArticleDetailViewModel
 @{
     ViewData["Title"] = Model.Title;
+    ViewData["Breadcrumbs"] = new List<(string, string?)>
+    {
+        (L["Nav.KnowledgeBase"].Value, Url.Action("Index", "KnowledgeBase")),
+        (Model.CategoryName, Url.Action("Index", "KnowledgeBase", new { categoryId = Model.CategoryId })),
+        (Model.Title, null)
+    };
 }
 
 <nav aria-label="breadcrumb" class="mb-3">

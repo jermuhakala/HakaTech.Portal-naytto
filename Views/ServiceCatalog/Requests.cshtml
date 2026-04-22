@@ -12,14 +12,6 @@
     </a>
 </div>
 
-@if (TempData["SuccessMessage"] is string sMsg)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle me-1"></i>@sMsg
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
 @* Suodattimet *@
 <div class="d-flex flex-wrap gap-2 mb-3">
     <a asp-action="Requests" class="btn btn-sm @(statusFilter == null ? "btn-dark" : "btn-outline-secondary")">Kaikki</a>

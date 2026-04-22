@@ -1,0 +1,153 @@
+@model HakaTech.Portal.ViewComponents.SidebarViewComponent.SidebarVm
+@{
+    string ActiveIf(string controller, string? action = null)
+    {
+        var ok = string.Equals(Model.Controller, controller, StringComparison.OrdinalIgnoreCase);
+        if (ok && action != null)
+            ok = string.Equals(Model.Action, action, StringComparison.OrdinalIgnoreCase);
+        return ok ? "active" : "";
+    }
+}
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+        <a asp-controller="Home" asp-action="Index" class="sidebar-brand text-decoration-none">
+            <img src="~/img/logo.png" alt="HakaTech Logo" class="brand-img" />
+            <span class="brand-text">HakaTech</span>
+        </a>
+        <button type="button" class="sidebar-rail-toggle" id="sidebarRailToggle"
+                title="@L["UI.Nav.Collapse"]" aria-label="@L["UI.Nav.Collapse"]">
+            <i class="bi bi-layout-sidebar-inset"></i>
+        </button>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a class="sidebar-link @ActiveIf("Home")" asp-controller="Home" asp-action="Index"
+           data-tooltip="@L["Nav.Overview"]">
+            <i class="bi bi-speedometer2"></i><span>@L["Nav.Overview"]</span>
+        </a>
+
+        @if (Model.IsAuthenticated)
+        {
+            <a class="sidebar-link @ActiveIf("Ticket")" asp-controller="Ticket" asp-action="Index"
+               data-tooltip="@L["Nav.Tickets"]">
+                <i class="bi bi-ticket-detailed"></i><span>@L["Nav.Tickets"]</span>
+            </a>
+            <a class="sidebar-link @ActiveIf("Invoice")" asp-controller="Invoice" asp-action="Index"
+               data-tooltip="@L["Nav.Invoices"]">
+                <i class="bi bi-receipt"></i><span>@L["Nav.Invoices"]</span>
+            </a>
+            <a class="sidebar-link @ActiveIf("ServiceCatalog")" asp-controller="ServiceCatalog" asp-action="Index"
+               data-tooltip="@L["Nav.Services"]">
+                <i class="bi bi-grid"></i><span>@L["Nav.Services"]</span>
+            </a>
+            <a class="sidebar-link @ActiveIf("RemoteDesktop")" asp-controller="RemoteDesktop" asp-action="Index"
+               data-tooltip="@L["Nav.RemoteDesktop"]">
+                <i class="bi bi-display"></i><span>@L["Nav.RemoteDesktop"]</span>
+            </a>
+            <a class="sidebar-link @ActiveIf("KnowledgeBase")" asp-controller="KnowledgeBase" asp-action="Index"
+               data-tooltip="@L["Nav.KnowledgeBase"]">
+                <i class="bi bi-book"></i><span>@L["Nav.KnowledgeBase"]</span>
+            </a>
+            <a class="sidebar-link @ActiveIf("Booking")" asp-controller="Booking" asp-action="Index"
+               data-tooltip="@L["Nav.Calendar"]">
+                <i class="bi bi-calendar3"></i><span>@L["Nav.Calendar"]</span>
+            </a>
+
+            @if (Model.IsAdmin)
+            {
+                <span class="nav-section-label mt-3">@L["Nav.Management"]</span>
+                <a class="sidebar-link @ActiveIf("Customer")" asp-controller="Customer" asp-action="Index"
+                   data-tooltip="@L["Nav.Customers"]">
+                    <i class="bi bi-building"></i><span>@L["Nav.Customers"]</span>
+                </a>
+                <a class="sidebar-link @ActiveIf("Account", "Register")" asp-controller="Account" asp-action="Register"
+                   data-tooltip="@L["Nav.CreateUser"]">
+                    <i class="bi bi-person-plus"></i><span>@L["Nav.CreateUser"]</span>
+                </a>
+                <a class="sidebar-link @ActiveIf("Report")" asp-controller="Report" asp-action="Index"
+                   data-tooltip="@L["Nav.Reports"]">
+                    <i class="bi bi-bar-chart-line"></i><span>@L["Nav.Reports"]</span>
+                </a>
+                <a class="sidebar-link @ActiveIf("Announcement")" asp-controller="Announcement" asp-action="Index"
+                   data-tooltip="@L["Nav.Announcements"]">
+                    <i class="bi bi-megaphone"></i><span>@L["Nav.Announcements"]</span>
+                </a>
+                <a class="sidebar-link @ActiveIf("KnowledgeBase", "Manage")" asp-controller="KnowledgeBase" asp-action="Manage"
+                   data-tooltip="@L["Nav.KBManage"]">
+                    <i class="bi bi-book-half"></i><span>@L["Nav.KBManage"]</span>
+                </a>
+                <a class="sidebar-link @ActiveIf("AuditLog")" asp-controller="AuditLog" asp-action="Index"
+                   data-tooltip="@L["Nav.AuditLog"]">
+                    <i class="bi bi-journal-text"></i><span>@L["Nav.AuditLog"]</span>
+                </a>
+            }
+            else if (Model.IsCustomerAdmin)
+            {
+                <span class="nav-section-label mt-3">@L["Nav.Management"]</span>
+                <a class="sidebar-link @ActiveIf("CustomerUser")" asp-controller="CustomerUser" asp-action="Index"
+                   data-tooltip="@L["Nav.Users"]">
+                    <i class="bi bi-people"></i><span>@L["Nav.Users"]</span>
+                </a>
+            }
+        }
+    </nav>
+
+    <div class="sidebar-footer">
+        @if (Model.IsAuthenticated)
+        {
+            <div class="user-info">
+                <div class="user-avatar">
+                    @(Model.UserName?.Substring(0, 1).ToUpper() ?? "?")
+                </div>
+                <div class="user-details">
+                    <span class="user-name">@Model.UserName</span>
+                    <span class="user-role">@(Model.IsAdmin ? L["Role.Admin"] : L["Role.Customer"])</span>
+                </div>
+            </div>
+            <div class="sidebar-actions">
+                <button id="themeToggle" class="sidebar-action-link" title="@L["Nav.ToggleTheme"]" onclick="toggleTheme()">
+                    <i class="bi bi-moon-stars" id="themeIcon"></i>
+                </button>
+                <a asp-controller="Account" asp-action="ChangePassword" class="sidebar-action-link" title="@L["Nav.ChangePassword"]">
+                    <i class="bi bi-key"></i>
+                </a>
+                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                    <button type="submit" class="sidebar-action-link" title="@L["Nav.SignOut"]">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="lang-switcher mt-2">
+                <form asp-controller="Account" asp-action="SetLanguage" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="culture" value="fi-FI" />
+                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                    <button type="submit" class="lang-btn @(Model.CurrentCulture?.StartsWith("fi") == true ? "active" : "")">FI</button>
+                </form>
+                <form asp-controller="Account" asp-action="SetLanguage" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="culture" value="sv-SE" />
+                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                    <button type="submit" class="lang-btn @(Model.CurrentCulture?.StartsWith("sv") == true ? "active" : "")">SV</button>
+                </form>
+                <form asp-controller="Account" asp-action="SetLanguage" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="culture" value="en-US" />
+                    <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                    <button type="submit" class="lang-btn @(Model.CurrentCulture?.StartsWith("en") == true ? "active" : "")">EN</button>
+                </form>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <button id="themeToggle" class="sidebar-action-link" title="@L["Nav.ToggleTheme"]" onclick="toggleTheme()">
+                    <i class="bi bi-moon-stars" id="themeIcon"></i>
+                </button>
+            </div>
+            <a asp-controller="Account" asp-action="Login" class="btn-sidebar-login">
+                <i class="bi bi-box-arrow-in-right"></i> @L["Nav.SignIn"]
+            </a>
+        }
+    </div>
+</aside>

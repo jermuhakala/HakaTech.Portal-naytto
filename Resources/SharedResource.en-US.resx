@@ -85,6 +85,7 @@
   <data name="Auth.AccessDenied.Message" xml:space="preserve"><value>You do not have permission to access this page. Please contact your administrator if you believe this is an error.</value></data>
 
   <data name="Dash.Welcome" xml:space="preserve"><value>Welcome, {0}</value></data>
+  <data name="Dash.Welcome.Sub" xml:space="preserve"><value>Here's today's snapshot of tickets, invoices and bookings.</value></data>
   <data name="Dash.EditLayout" xml:space="preserve"><value>Customize dashboard</value></data>
   <data name="Dash.StopEditing" xml:space="preserve"><value>Finish editing</value></data>
   <data name="Dash.Kpi.TotalCustomers" xml:space="preserve"><value>Total customers</value></data>
@@ -342,4 +343,48 @@
   <data name="Error.Title" xml:space="preserve"><value>Error</value></data>
   <data name="Error.Heading" xml:space="preserve"><value>An error occurred.</value></data>
   <data name="Error.Message" xml:space="preserve"><value>An error occurred while processing your request.</value></data>
+
+  <!-- ═══ Linear re-skin: UI.* ═══ -->
+  <data name="UI.Button.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="UI.Button.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="UI.Button.Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="UI.Button.Create" xml:space="preserve"><value>Create</value></data>
+  <data name="UI.Button.Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="UI.Button.Back" xml:space="preserve"><value>Back</value></data>
+  <data name="UI.Button.Close" xml:space="preserve"><value>Close</value></data>
+  <data name="UI.Button.Submit" xml:space="preserve"><value>Submit</value></data>
+
+  <data name="UI.Search.Placeholder" xml:space="preserve"><value>Search anything…</value></data>
+  <data name="UI.Search.Empty" xml:space="preserve"><value>No results.</value></data>
+  <data name="UI.Search.Group.Nav" xml:space="preserve"><value>Navigation</value></data>
+  <data name="UI.Search.Group.Tickets" xml:space="preserve"><value>Tickets</value></data>
+  <data name="UI.Search.Group.Invoices" xml:space="preserve"><value>Invoices</value></data>
+  <data name="UI.Search.Group.Customers" xml:space="preserve"><value>Customers</value></data>
+  <data name="UI.Search.Group.KB" xml:space="preserve"><value>Knowledge base</value></data>
+  <data name="UI.Search.Group.Actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="UI.Search.Hint.KeyboardNav" xml:space="preserve"><value>↑↓ to navigate · Enter to select · Esc to close</value></data>
+  <data name="UI.Search.OpenHint" xml:space="preserve"><value>Search</value></data>
+
+  <data name="UI.Toast.Dismiss" xml:space="preserve"><value>Dismiss notification</value></data>
+  <data name="UI.Toast.Saved" xml:space="preserve"><value>Saved</value></data>
+  <data name="UI.Toast.Error.Generic" xml:space="preserve"><value>Something went wrong.</value></data>
+  <data name="UI.Toast.Copied" xml:space="preserve"><value>Copied to clipboard</value></data>
+
+  <data name="UI.Nav.Collapse" xml:space="preserve"><value>Collapse sidebar</value></data>
+  <data name="UI.Nav.Expand" xml:space="preserve"><value>Expand sidebar</value></data>
+
+  <data name="UI.Form.AutosaveIdle" xml:space="preserve"><value>All changes saved</value></data>
+  <data name="UI.Form.AutosaveSaving" xml:space="preserve"><value>Saving…</value></data>
+  <data name="UI.Form.ValidationSummary" xml:space="preserve"><value>Please review the form fields.</value></data>
+  <data name="UI.Form.Section.Main" xml:space="preserve"><value>Details</value></data>
+  <data name="UI.Form.Section.Meta" xml:space="preserve"><value>Metadata</value></data>
+
+  <data name="UI.Dash.Preset.Default" xml:space="preserve"><value>Default</value></data>
+  <data name="UI.Dash.Preset.Compact" xml:space="preserve"><value>Compact</value></data>
+  <data name="UI.Dash.Preset.Focus" xml:space="preserve"><value>Focus</value></data>
+  <data name="UI.Dash.Hero.Greeting.Morning" xml:space="preserve"><value>Good morning</value></data>
+  <data name="UI.Dash.Hero.Greeting.Afternoon" xml:space="preserve"><value>Good afternoon</value></data>
+  <data name="UI.Dash.Hero.Greeting.Evening" xml:space="preserve"><value>Good evening</value></data>
+  <data name="UI.Dash.Delta.Up" xml:space="preserve"><value>up</value></data>
+  <data name="UI.Dash.Delta.Down" xml:space="preserve"><value>down</value></data>
 </root>

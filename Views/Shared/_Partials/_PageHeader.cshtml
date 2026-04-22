@@ -1,0 +1,45 @@
+@model HakaTech.Portal.Models.ViewModels.Ui.PageHeaderModel
+<div class="page-header">
+    <div class="page-header-main">
+        @if (Model.Breadcrumbs.Count > 0)
+        {
+            <div class="page-header-crumbs">
+                @for (var i = 0; i < Model.Breadcrumbs.Count; i++)
+                {
+                    var c = Model.Breadcrumbs[i];
+                    if (i > 0)
+                    {
+                        <span class="sep">/</span>
+                    }
+                    if (!string.IsNullOrEmpty(c.Href))
+                    {
+                        <a href="@c.Href">@c.Label</a>
+                    }
+                    else
+                    {
+                        <span>@c.Label</span>
+                    }
+                }
+            </div>
+        }
+        <h1 class="page-header-title">
+            @if (!string.IsNullOrEmpty(Model.Icon))
+            {
+                <i class="bi @Model.Icon text-muted" style="font-size:1.2rem;"></i>
+            }
+            <span>@Model.Title</span>
+            @if (Model.TitleBadge != null)
+            {
+                @Model.TitleBadge
+            }
+        </h1>
+        @if (!string.IsNullOrEmpty(Model.Subtitle))
+        {
+            <p class="page-header-sub">@Model.Subtitle</p>
+        }
+    </div>
+    @if (Model.Actions != null)
+    {
+        <div class="page-header-actions">@Model.Actions</div>
+    }
+</div>

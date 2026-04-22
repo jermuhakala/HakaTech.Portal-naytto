@@ -1,0 +1,38 @@
+@model HakaTech.Portal.Models.ViewModels.Ui.CardModel
+@{
+    var cls = ("card-lnr " + (Model.CssClass ?? "")).Trim();
+    var bodyCls = Model.Dense ? "card-lnr-body dense" : "card-lnr-body";
+    var hasHeader = !string.IsNullOrEmpty(Model.Title) || !string.IsNullOrEmpty(Model.Subtitle) || Model.HeaderActions != null;
+}
+<div class="@cls">
+    @if (hasHeader)
+    {
+        <div class="card-lnr-header">
+            <div>
+                @if (!string.IsNullOrEmpty(Model.Title))
+                {
+                    <h3 class="card-lnr-title">
+                        @if (!string.IsNullOrEmpty(Model.Icon))
+                        {
+                            <i class="bi @Model.Icon me-1"></i>
+                        }
+                        @Model.Title
+                    </h3>
+                }
+                @if (!string.IsNullOrEmpty(Model.Subtitle))
+                {
+                    <p class="card-lnr-subtitle">@Model.Subtitle</p>
+                }
+            </div>
+            @if (Model.HeaderActions != null)
+            {
+                <div class="card-lnr-actions">@Model.HeaderActions</div>
+            }
+        </div>
+    }
+    <div class="@bodyCls">@Model.Body</div>
+    @if (Model.Footer != null)
+    {
+        <div class="card-lnr-footer">@Model.Footer</div>
+    }
+</div>

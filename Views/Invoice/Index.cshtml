@@ -19,14 +19,6 @@
     }
 </div>
 
-@if (TempData["SuccessMessage"] is string sMsg)
-{
-    <div class="alert alert-success alert-dismissible fade show">
-        <i class="bi bi-check-circle me-1"></i>@sMsg
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
 <form asp-action="Index" method="get" class="row g-2 mb-3 align-items-end">
     @if (customerFilter.HasValue)
     {

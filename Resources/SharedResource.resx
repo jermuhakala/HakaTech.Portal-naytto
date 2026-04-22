@@ -89,6 +89,7 @@
 
   <!-- Dashboard -->
   <data name="Dash.Welcome" xml:space="preserve"><value>Tervetuloa, {0}</value></data>
+  <data name="Dash.Welcome.Sub" xml:space="preserve"><value>Tässä näet päivän yhteenvedon tiketeistä, laskuista ja varauksista.</value></data>
   <data name="Dash.EditLayout" xml:space="preserve"><value>Muokkaa koontinäyttöä</value></data>
   <data name="Dash.StopEditing" xml:space="preserve"><value>Lopeta muokkaus</value></data>
   <data name="Dash.Kpi.TotalCustomers" xml:space="preserve"><value>Asiakasta yht.</value></data>
@@ -361,4 +362,48 @@
   <data name="Error.Title" xml:space="preserve"><value>Virhe</value></data>
   <data name="Error.Heading" xml:space="preserve"><value>Tapahtui virhe.</value></data>
   <data name="Error.Message" xml:space="preserve"><value>Pyyntöä käsiteltäessä tapahtui virhe.</value></data>
+
+  <!-- ═══ Linear re-skin: UI.* ═══ -->
+  <data name="UI.Button.Save" xml:space="preserve"><value>Tallenna</value></data>
+  <data name="UI.Button.Cancel" xml:space="preserve"><value>Peruuta</value></data>
+  <data name="UI.Button.Delete" xml:space="preserve"><value>Poista</value></data>
+  <data name="UI.Button.Create" xml:space="preserve"><value>Luo</value></data>
+  <data name="UI.Button.Edit" xml:space="preserve"><value>Muokkaa</value></data>
+  <data name="UI.Button.Back" xml:space="preserve"><value>Takaisin</value></data>
+  <data name="UI.Button.Close" xml:space="preserve"><value>Sulje</value></data>
+  <data name="UI.Button.Submit" xml:space="preserve"><value>Lähetä</value></data>
+
+  <data name="UI.Search.Placeholder" xml:space="preserve"><value>Etsi kaikkialta…</value></data>
+  <data name="UI.Search.Empty" xml:space="preserve"><value>Ei tuloksia.</value></data>
+  <data name="UI.Search.Group.Nav" xml:space="preserve"><value>Navigointi</value></data>
+  <data name="UI.Search.Group.Tickets" xml:space="preserve"><value>Tiketit</value></data>
+  <data name="UI.Search.Group.Invoices" xml:space="preserve"><value>Laskut</value></data>
+  <data name="UI.Search.Group.Customers" xml:space="preserve"><value>Asiakkaat</value></data>
+  <data name="UI.Search.Group.KB" xml:space="preserve"><value>Tietopankki</value></data>
+  <data name="UI.Search.Group.Actions" xml:space="preserve"><value>Toiminnot</value></data>
+  <data name="UI.Search.Hint.KeyboardNav" xml:space="preserve"><value>↑↓ valitse · Enter avaa · Esc sulje</value></data>
+  <data name="UI.Search.OpenHint" xml:space="preserve"><value>Etsi</value></data>
+
+  <data name="UI.Toast.Dismiss" xml:space="preserve"><value>Sulje ilmoitus</value></data>
+  <data name="UI.Toast.Saved" xml:space="preserve"><value>Tallennettu</value></data>
+  <data name="UI.Toast.Error.Generic" xml:space="preserve"><value>Jotain meni pieleen.</value></data>
+  <data name="UI.Toast.Copied" xml:space="preserve"><value>Kopioitu leikepöydälle</value></data>
+
+  <data name="UI.Nav.Collapse" xml:space="preserve"><value>Kutista valikko</value></data>
+  <data name="UI.Nav.Expand" xml:space="preserve"><value>Laajenna valikko</value></data>
+
+  <data name="UI.Form.AutosaveIdle" xml:space="preserve"><value>Kaikki muutokset tallennettu</value></data>
+  <data name="UI.Form.AutosaveSaving" xml:space="preserve"><value>Tallennetaan…</value></data>
+  <data name="UI.Form.ValidationSummary" xml:space="preserve"><value>Tarkista lomakkeen kentät.</value></data>
+  <data name="UI.Form.Section.Main" xml:space="preserve"><value>Tiedot</value></data>
+  <data name="UI.Form.Section.Meta" xml:space="preserve"><value>Metatiedot</value></data>
+
+  <data name="UI.Dash.Preset.Default" xml:space="preserve"><value>Oletus</value></data>
+  <data name="UI.Dash.Preset.Compact" xml:space="preserve"><value>Tiivis</value></data>
+  <data name="UI.Dash.Preset.Focus" xml:space="preserve"><value>Fokus</value></data>
+  <data name="UI.Dash.Hero.Greeting.Morning" xml:space="preserve"><value>Hyvää huomenta</value></data>
+  <data name="UI.Dash.Hero.Greeting.Afternoon" xml:space="preserve"><value>Hyvää iltapäivää</value></data>
+  <data name="UI.Dash.Hero.Greeting.Evening" xml:space="preserve"><value>Hyvää iltaa</value></data>
+  <data name="UI.Dash.Delta.Up" xml:space="preserve"><value>kasvua</value></data>
+  <data name="UI.Dash.Delta.Down" xml:space="preserve"><value>laskua</value></data>
 </root>

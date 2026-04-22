@@ -1,0 +1,35 @@
+@model HakaTech.Portal.Models.ViewModels.Ui.ButtonModel
+@using HakaTech.Portal.Models.ViewModels.Ui
+@{
+    var variantClass = "variant-" + Model.Variant.ToString().ToLowerInvariant();
+    var sizeClass    = Model.Size == ButtonSize.Sm ? "size-sm" : "";
+    var cls          = ("btn-lnr " + variantClass + " " + sizeClass + " " + (Model.CssClass ?? "")).Trim();
+    var isLink       = !string.IsNullOrEmpty(Model.Href);
+}
+@if (isLink)
+{
+    <a href="@Model.Href"
+       class="@cls"
+       @(Model.Id != null ? "id=" + Model.Id : "")
+       title="@Model.Title">
+        @if (!string.IsNullOrEmpty(Model.Icon))
+        {
+            <i class="bi @Model.Icon"></i>
+        }
+        <span>@Model.Text</span>
+    </a>
+}
+else
+{
+    <button type="@(Model.Type ?? "button")"
+            class="@cls"
+            @(Model.Id != null ? "id=" + Model.Id : "")
+            @(Model.Form != null ? "form=" + Model.Form : "")
+            title="@Model.Title">
+        @if (!string.IsNullOrEmpty(Model.Icon))
+        {
+            <i class="bi @Model.Icon"></i>
+        }
+        <span>@Model.Text</span>
+    </button>
+}

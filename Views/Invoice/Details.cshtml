@@ -3,6 +3,11 @@
 @using HakaTech.Portal.Models.ViewModels
 @{
     ViewData["Title"] = Model.InvoiceNumber;
+    ViewData["Breadcrumbs"] = new List<(string, string?)>
+    {
+        (L["Invoice.Index.Title"].Value, Url.Action("Index", "Invoice")),
+        (Model.InvoiceNumber, null)
+    };
     bool isAdmin       = (bool)(ViewBag.IsAdmin ?? false);
     var statusModel    = ViewBag.StatusModel as InvoiceStatusViewModel;
     var history        = ViewBag.CustomerHistory as List<Invoice> ?? new List<Invoice>();
@@ -38,14 +43,6 @@
         <li class="breadcrumb-item active">@Model.InvoiceNumber</li>
     </ol>
 </nav>
-
-@if (TempData["SuccessMessage"] is string sMsg)
-{
-    <div class="alert alert-success alert-dismissible fade show">
-        <i class="bi bi-check-circle me-1"></i>@sMsg
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
 
 <div class="row g-3">
     <div class="col-md-8">

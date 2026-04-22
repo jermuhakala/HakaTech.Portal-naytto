@@ -1,0 +1,27 @@
+@model IReadOnlyList<(string Label, string? Href)>
+@if (Model is { Count: > 0 })
+{
+    <nav class="breadcrumbs-lnr" aria-label="Breadcrumb">
+        <ol>
+            @for (var i = 0; i < Model.Count; i++)
+            {
+                var c = Model[i];
+                var isLast = i == Model.Count - 1;
+                <li class="@(isLast ? "is-current" : null)">
+                    @if (!isLast && !string.IsNullOrEmpty(c.Href))
+                    {
+                        <a href="@c.Href">@c.Label</a>
+                    }
+                    else
+                    {
+                        <span>@c.Label</span>
+                    }
+                    @if (!isLast)
+                    {
+                        <i class="bi bi-chevron-right sep" aria-hidden="true"></i>
+                    }
+                </li>
+            }
+        </ol>
+    </nav>
+}

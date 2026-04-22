@@ -89,6 +89,7 @@
 
   <!-- Dashboard -->
   <data name="Dash.Welcome" xml:space="preserve"><value>Välkommen, {0}</value></data>
+  <data name="Dash.Welcome.Sub" xml:space="preserve"><value>Här är dagens sammanfattning av ärenden, fakturor och bokningar.</value></data>
   <data name="Dash.EditLayout" xml:space="preserve"><value>Anpassa översikten</value></data>
   <data name="Dash.StopEditing" xml:space="preserve"><value>Avsluta redigering</value></data>
   <data name="Dash.Kpi.TotalCustomers" xml:space="preserve"><value>Kunder totalt</value></data>
@@ -361,4 +362,48 @@
   <data name="Error.Title" xml:space="preserve"><value>Fel</value></data>
   <data name="Error.Heading" xml:space="preserve"><value>Ett fel uppstod.</value></data>
   <data name="Error.Message" xml:space="preserve"><value>Ett fel uppstod vid behandling av begäran.</value></data>
+
+  <!-- ═══ Linear re-skin: UI.* ═══ -->
+  <data name="UI.Button.Save" xml:space="preserve"><value>Spara</value></data>
+  <data name="UI.Button.Cancel" xml:space="preserve"><value>Avbryt</value></data>
+  <data name="UI.Button.Delete" xml:space="preserve"><value>Ta bort</value></data>
+  <data name="UI.Button.Create" xml:space="preserve"><value>Skapa</value></data>
+  <data name="UI.Button.Edit" xml:space="preserve"><value>Redigera</value></data>
+  <data name="UI.Button.Back" xml:space="preserve"><value>Tillbaka</value></data>
+  <data name="UI.Button.Close" xml:space="preserve"><value>Stäng</value></data>
+  <data name="UI.Button.Submit" xml:space="preserve"><value>Skicka</value></data>
+
+  <data name="UI.Search.Placeholder" xml:space="preserve"><value>Sök överallt…</value></data>
+  <data name="UI.Search.Empty" xml:space="preserve"><value>Inga resultat.</value></data>
+  <data name="UI.Search.Group.Nav" xml:space="preserve"><value>Navigering</value></data>
+  <data name="UI.Search.Group.Tickets" xml:space="preserve"><value>Ärenden</value></data>
+  <data name="UI.Search.Group.Invoices" xml:space="preserve"><value>Fakturor</value></data>
+  <data name="UI.Search.Group.Customers" xml:space="preserve"><value>Kunder</value></data>
+  <data name="UI.Search.Group.KB" xml:space="preserve"><value>Kunskapsbas</value></data>
+  <data name="UI.Search.Group.Actions" xml:space="preserve"><value>Åtgärder</value></data>
+  <data name="UI.Search.Hint.KeyboardNav" xml:space="preserve"><value>↑↓ välj · Enter öppna · Esc stäng</value></data>
+  <data name="UI.Search.OpenHint" xml:space="preserve"><value>Sök</value></data>
+
+  <data name="UI.Toast.Dismiss" xml:space="preserve"><value>Stäng meddelande</value></data>
+  <data name="UI.Toast.Saved" xml:space="preserve"><value>Sparat</value></data>
+  <data name="UI.Toast.Error.Generic" xml:space="preserve"><value>Något gick fel.</value></data>
+  <data name="UI.Toast.Copied" xml:space="preserve"><value>Kopierat till urklipp</value></data>
+
+  <data name="UI.Nav.Collapse" xml:space="preserve"><value>Fäll ihop sidofält</value></data>
+  <data name="UI.Nav.Expand" xml:space="preserve"><value>Expandera sidofält</value></data>
+
+  <data name="UI.Form.AutosaveIdle" xml:space="preserve"><value>Alla ändringar sparade</value></data>
+  <data name="UI.Form.AutosaveSaving" xml:space="preserve"><value>Sparar…</value></data>
+  <data name="UI.Form.ValidationSummary" xml:space="preserve"><value>Kontrollera formulärfälten.</value></data>
+  <data name="UI.Form.Section.Main" xml:space="preserve"><value>Detaljer</value></data>
+  <data name="UI.Form.Section.Meta" xml:space="preserve"><value>Metadata</value></data>
+
+  <data name="UI.Dash.Preset.Default" xml:space="preserve"><value>Standard</value></data>
+  <data name="UI.Dash.Preset.Compact" xml:space="preserve"><value>Kompakt</value></data>
+  <data name="UI.Dash.Preset.Focus" xml:space="preserve"><value>Fokus</value></data>
+  <data name="UI.Dash.Hero.Greeting.Morning" xml:space="preserve"><value>God morgon</value></data>
+  <data name="UI.Dash.Hero.Greeting.Afternoon" xml:space="preserve"><value>God eftermiddag</value></data>
+  <data name="UI.Dash.Hero.Greeting.Evening" xml:space="preserve"><value>God kväll</value></data>
+  <data name="UI.Dash.Delta.Up" xml:space="preserve"><value>upp</value></data>
+  <data name="UI.Dash.Delta.Down" xml:space="preserve"><value>ned</value></data>
 </root>

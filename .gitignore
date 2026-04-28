@@ -67,3 +67,6 @@ secrets.json
 
 # Local dev settings with credentials
 appsettings.Development.json
+
+# Editor / agent workspace
+.claude/

@@ -78,7 +78,7 @@ public class AccountController : Controller
             _logger.LogWarning("Käyttäjätili on lukittu (email-hash: {Hash}).", model.Email?.GetHashCode());
             await _audit.LogAsync("LoginLockedOut", details: model.Email);
             ModelState.AddModelError(string.Empty,
-                "Tili on lukittu liian monien epäonnistuneiden kirjautumisyritysten vuoksi. Yritä myöhemmin uudelleen.");
+                "Tili on lukittu liian monen epäonnistuneen kirjautumisyrityksen vuoksi Yritä myöhemmin uudelleen.");
         }
         else
         {

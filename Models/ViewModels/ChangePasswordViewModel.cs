@@ -2,6 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HakaTech.Portal.Models.ViewModels;
 
+/// <summary>
+/// Salasanan vaihtolomake. Käyttäjä syöttää nykyisen salasanansa
+/// ja uuden salasanan kahdesti (toinen on vahvistus).
+/// </summary>
 public class ChangePasswordViewModel
 {
     [Required(ErrorMessage = "Nykyinen salasana on pakollinen.")]
@@ -16,6 +20,7 @@ public class ChangePasswordViewModel
     [Display(Name = "Uusi salasana")]
     public string NewPassword { get; set; } = string.Empty;
 
+    /// <summary>Vahvistus uudelle salasanalle — täytyy täsmätä NewPasswordin kanssa.</summary>
     [Required(ErrorMessage = "Salasanan vahvistus on pakollinen.")]
     [DataType(DataType.Password)]
     [Compare("NewPassword", ErrorMessage = "Salasanat eivät täsmää.")]

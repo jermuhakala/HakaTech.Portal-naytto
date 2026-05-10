@@ -11,6 +11,11 @@ using System.Text.RegularExpressions;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Tietopankin controller. Asiakaskäyttäjille se on self-service-ohjepankki
+/// (Index, Article), adminille kategorioiden ja artikkelien hallintapaneeli.
+/// HTML-sisältö sanitoidaan ennen tallennusta XSS-suojan vuoksi.
+/// </summary>
 [Authorize]
 public class KnowledgeBaseController : Controller
 {

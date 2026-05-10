@@ -2,14 +2,23 @@ using HakaTech.Portal.Models.Domain;
 
 namespace HakaTech.Portal.Models.ViewModels;
 
+/// <summary>
+/// Dashboardin (etusivun) malli. Sisältää kaikki tilastot, listaukset
+/// ja widget-data, joita käyttäjälle näytetään. Sisältö riippuu roolista:
+///   - Admin: kaikki asiakkaat ja kokonaisluvut
+///   - Asiakas: vain oman yrityksen luvut
+/// </summary>
 public class DashboardViewModel
 {
-    // ── Mukautettu koontinäyttö ──────────────────────────────────────
+    /// <summary>Käyttäjän mukautettu widgettien järjestys (avain-listan järjestys).</summary>
     public List<string> WidgetOrder { get; set; } = [];
 
-    // ── Tulevat varaukset (kalenteriwidget) ──────────────────────────
+    /// <summary>Lähestyvät kalenterivaraukset (huoltokalenteri).</summary>
     public IList<BookingSlot> UpcomingBookingSlots { get; set; } = [];
-    // ── Yleiset tilastot (Admin: kaikki, Asiakas: oma) ───────────────
+
+    // ── Yleiset tilastot ─────────────────────────────────────────
+    // Adminille koko järjestelmä, asiakkaalle vain oma yritys.
+
     public int TotalCustomers     { get; set; }
     public int ActiveCustomers    { get; set; }
 
@@ -19,38 +28,58 @@ public class DashboardViewModel
     public int ResolvedTickets    { get; set; }
 
     public int TotalInvoices      { get; set; }
-    public decimal UnpaidTotal    { get; set; }  // Maksamatta yhteensä €
-    public int OverdueCount       { get; set; }  // Erääntyneet laskut
 
-    public int CriticalTickets    { get; set; }  // Kriittiset avoimet tiketit
+    /// <summary>Maksamatta yhteensä euroissa.</summary>
+    public decimal UnpaidTotal    { get; set; }
+
+    /// <summary>Erääntyneiden laskujen määrä (eräpäivä mennyt, ei maksettu).</summary>
+    public int OverdueCount       { get; set; }
+
+    /// <summary>Kriittisten avoimien tikettien määrä — vaatii välitöntä reagointia.</summary>
+    public int CriticalTickets    { get; set; }
+
+    /// <summary>Korkean prioriteetin avoimien tikettien määrä.</summary>
     public int HighTickets        { get; set; }
 
-    // ── Viimeisimmät avoimet tiketit ────────────────────────────────
+    /// <summary>5 viimeisintä avointa tikettiä taulukkoa varten.</summary>
     public IList<Ticket> RecentOpenTickets { get; set; } = [];
 
-    // ── Lähestyvät eräpäivät (7 pv) ─────────────────────────────────
+    /// <summary>Lähestyvät eräpäivät — laskut, joiden eräpäivä 7 päivän sisällä.</summary>
     public IList<Invoice> UpcomingDueInvoices { get; set; } = [];
 
-    // ── Erääntyneet laskut ───────────────────────────────────────────
+    /// <summary>Jo erääntyneet laskut.</summary>
     public IList<Invoice> OverdueInvoices { get; set; } = [];
 
-    // ── Tikettien tilajakauma (piirakkaa varten) ─────────────────────
+    /// <summary>Tikettien tilajakauma piirakkadiagrammia varten (Status → kpl).</summary>
     public Dictionary<TicketStatus, int> TicketsByStatus { get; set; } = new();
 
-    // ── Tiedotteet & huoltoikkunat ───────────────────────────────────
+    /// <summary>Aktiiviset tiedotteet (esim. huoltokatkot), näytetään etusivulla.</summary>
     public IList<Announcement> ActiveAnnouncements { get; set; } = [];
 
-    // ── Ilmoitukset (admin: odottavat tarjouspyynnöt, asiakas: uudet laskut) ──
+    /// <summary>Adminille: käsittelyä odottavien tarjouspyyntöjen määrä.</summary>
     public int PendingQuoteRequests { get; set; }
+
+    /// <summary>Asiakkaalle: uudet (ei vielä avatut) lähetetyt laskut.</summary>
     public IList<Invoice> NewSentInvoices { get; set; } = [];
 
-    // ── Rooli ────────────────────────────────────────────────────────
+    /// <summary>Onko käyttäjä admin (ohjaa näytettäviä widgeteitä).</summary>
     public bool IsAdmin { get; set; }
+
+    /// <summary>Tervehdysteksti kortin yläosassa, esim. "Tervetuloa, Matti!".</summary>
     public string WelcomeName { get; set; } = string.Empty;
 
-    // ── Sparkline-sarjat (14 pv, newest last) — Linear re-skin ──────
+    // ── Sparkline-trendit (14 päivää, uusin viimeisenä) ──────────
+    // Pieni minimaalinen viivakaavio kortin nurkassa Linear-tyyliin.
+
+    /// <summary>Päivittäin luotujen tikettien määrä viimeiseltä 14 päivältä.</summary>
     public double[] TicketsCreatedSpark { get; set; } = [];
+
+    /// <summary>Avoimien tikettien määrä päivittäin viimeiseltä 14 päivältä.</summary>
     public double[] TicketsOpenSpark    { get; set; } = [];
+
+    /// <summary>Päivittäin luotujen laskujen määrä.</summary>
     public double[] InvoicesIssuedSpark { get; set; } = [];
+
+    /// <summary>Maksamattomien laskujen kokonaissumman trendi.</summary>
     public double[] UnpaidTotalSpark    { get; set; } = [];
 }

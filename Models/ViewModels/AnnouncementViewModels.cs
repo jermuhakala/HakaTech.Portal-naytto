@@ -3,6 +3,10 @@ using HakaTech.Portal.Models.Domain;
 
 namespace HakaTech.Portal.Models.ViewModels;
 
+/// <summary>
+/// Tiedotteen luonti- ja muokkauslomake. Käytetään sekä uuden tiedotteen
+/// luomiseen että olemassaolevan muokkaamiseen.
+/// </summary>
 public class AnnouncementFormViewModel
 {
     [Required(ErrorMessage = "Otsikko on pakollinen.")]

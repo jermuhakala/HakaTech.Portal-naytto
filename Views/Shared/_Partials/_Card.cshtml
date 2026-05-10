@@ -1,3 +1,8 @@
+@*
+    _Card.cshtml — Yhtenäinen korttilaatikko. Sisältää otsikon, kuvakkeen,
+    body-sisällön ja vapaaehtoisen alaosan. Käytä Linear/Vercel-tyylisten
+    sisältölaatikoiden renderöintiin.
+*@
 @model HakaTech.Portal.Models.ViewModels.Ui.CardModel
 @{
     var cls = ("card-lnr " + (Model.CssClass ?? "")).Trim();

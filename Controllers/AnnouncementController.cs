@@ -8,6 +8,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Tiedotteiden hallinta. Vain admin-rooli pääsee — asiakaskäyttäjä
+/// näkee tiedotteet etusivulla mutta ei voi muokata.
+/// </summary>
 [Authorize(Roles = "Admin")]
 public class AnnouncementController : Controller
 {

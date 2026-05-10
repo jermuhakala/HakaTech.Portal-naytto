@@ -4,6 +4,10 @@ using HakaTech.Portal.Models.Domain;
 
 namespace HakaTech.Portal.Models.ViewModels;
 
+/// <summary>
+/// Kalenterinäkymän malli. Sisältää valitun kuukauden, näytettävät
+/// aikaikkunat ja apufunktiot kalenteriruudukon piirtämiseen.
+/// </summary>
 public class BookingCalendarViewModel
 {
     public int  Year        { get; set; }
@@ -42,6 +46,7 @@ public class BookingCalendarViewModel
             : AllSlots;
 }
 
+/// <summary>Adminin lomake aikaikkunan luomiseen ja muokkaamiseen.</summary>
 public class BookingSlotFormViewModel
 {
     public int Id { get; set; }
@@ -74,6 +79,7 @@ public class BookingSlotFormViewModel
     public bool IsActive { get; set; } = true;
 }
 
+/// <summary>Asiakkaan lomake aikaikkunan varaamiseen.</summary>
 public class BookingFormViewModel
 {
     [Required]
@@ -84,8 +90,12 @@ public class BookingFormViewModel
     public string? Notes { get; set; }
 }
 
+/// <summary>"Omat varaukset" -näkymän malli. Jaetaan tuleviin ja menneisiin.</summary>
 public class BookingMyViewModel
 {
+    /// <summary>Tulevat varaukset, jotka eivät ole vielä alkaneet.</summary>
     public List<Booking> Upcoming { get; set; } = [];
+
+    /// <summary>Menneet varaukset (historia).</summary>
     public List<Booking> Past     { get; set; } = [];
 }

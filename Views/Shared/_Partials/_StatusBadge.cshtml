@@ -1,3 +1,7 @@
+@*
+    _StatusBadge.cshtml — Pieni värillinen merkki tilan näyttöön.
+    Esim. tiketin tila ("Avoin"), laskun tila ("Maksettu"), prioriteetti.
+*@
 @model HakaTech.Portal.Models.ViewModels.Ui.StatusBadgeModel
 @{
     var tone = "tone-" + Model.Tone.ToString().ToLowerInvariant();

@@ -10,6 +10,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Etätyöpöytäyhteyksien controller. Asiakas näkee oman yrityksensä
+/// yhteydet ja voi avata ne selaimessa Apache Guacamolen kautta.
+/// Admin hallinnoi yhteyksiä (luominen, salasanat).
+/// </summary>
 [Authorize]
 public class RemoteDesktopController : Controller
 {

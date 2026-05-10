@@ -7,6 +7,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Globaali pikahaku (cmdk-style). API-controller, jota cmdk-käyttöliittymä
+/// kutsuu AJAX:lla — palauttaa JSON:n. Hakee tikettejä, asiakkaita,
+/// laskuja ja tietopankin artikkeleita yhdellä kyselyllä.
+/// Asiakkaalle näytetään vain oman yrityksen tulokset.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/search")]

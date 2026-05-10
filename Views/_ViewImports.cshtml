@@ -1,5 +1,14 @@
+@*
+    _ViewImports.cshtml — Razor-näkymien yhteiset import-direktiivit.
+    Tämä tiedosto otetaan automaattisesti käyttöön kaikkiin tämän kansion ja
+    sen alikansioiden näkymiin, joten esim. usingit ei tarvitse toistaa.
+*@
 @using HakaTech.Portal
 @using HakaTech.Portal.Models
 @using Microsoft.AspNetCore.Mvc.Localization
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@*
+    Lokalisoija käännöksiä varten — käytä L["Avain"] saadaksesi tekstin
+    nykyisen kielen mukaisesti (Resources/SharedResource.*.resx).
+*@
 @inject IHtmlLocalizer<HakaTech.Portal.SharedResource> L

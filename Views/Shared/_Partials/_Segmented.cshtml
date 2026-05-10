@@ -1,3 +1,7 @@
+@*
+    _Segmented.cshtml — Vierekkäin asetetut radio-painikkeet (yhden valinta).
+    Esim. tilan suodatus: "Kaikki | Avoimet | Suljetut".
+*@
 @model HakaTech.Portal.Models.ViewModels.Ui.SegmentedModel
 @{
     var cls = ("segmented " + (Model.Full ? "full " : "") + (Model.CssClass ?? "")).Trim();

@@ -5,36 +5,55 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Data;
 
+/// <summary>
+/// Sovelluksen alustusdata. Tämä luokka luo tyhjään tietokantaan
+/// roolit, esimerkkikäyttäjät, asiakkaat, tikettejä, laskuja jne.
+/// jotta sovellus on heti valmis demottavaksi ja kehitettäväksi.
+///
+/// InitializeAsync ajetaan jokaisen sovelluksen käynnistyksen yhteydessä,
+/// mutta data luodaan vain kerran (jos asiakkaita ei ole vielä tietokannassa).
+/// </summary>
 public static class SeedData
 {
+    /// <summary>
+    /// Sovelluksen kaksi käyttäjäroolia. Admin = ylläpitäjä, Customer = loppuasiakas.
+    /// Vakiot, jotta nimet eivät pääse kirjoitusvirheinä koodiin.
+    /// </summary>
     public static class Roles
     {
         public const string Admin    = "Admin";
         public const string Customer = "Customer";
     }
 
+    /// <summary>
+    /// Pääfunktio: ajaa migraatiot ja täyttää kannan demo-datalla
+    /// jos kanta on tyhjä.
+    /// </summary>
     public static async Task InitializeAsync(IServiceProvider serviceProvider)
     {
+        // Luodaan oma palvelu-scope, jotta DbContext ja muut scoped-palvelut
+        // saadaan käyttöön staattisessa metodissa.
         using var scope = serviceProvider.CreateScope();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var dbContext   = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        // Aja puuttuvat migraatiot (idempotent — turvallinen ajaa aina)
+        // Ajetaan kaikki vielä ajamattomat migraatiot. Tämä on idempotentti —
+        // jos migraatiot on jo ajettu, mitään ei tapahdu.
         await dbContext.Database.MigrateAsync();
 
-        // Jos kantaan on jo selattu dataa, ei tehdä mitään
+        // Jos asiakkaita on jo (= seed on tehty aiemmin), ei tehdä mitään.
         if (await dbContext.Customers.AnyAsync())
             return;
 
-        // 1. Luo roolit
+        // 1. Luo roolit (Admin & Customer) jos eivät ole olemassa
         foreach (var role in new[] { Roles.Admin, Roles.Customer })
         {
             if (!await roleManager.RoleExistsAsync(role))
                 await roleManager.CreateAsync(new IdentityRole(role));
         }
 
-        // 2. Luo Yritysasiakkaat
+        // 2. Luo demo-yritysasiakkaat (kolme erilaista yritystä)
         var digimolli = new Customer { CompanyName = "DigiMölli Oy", BusinessId = "1234567-8", ContactEmail = "info@digimolli.fi", Phone = "0401234567", Address = "Ohjelmistotie 1, Helsinki" };
         var kivikangas = new Customer { CompanyName = "Kivikangas Rakennus", BusinessId = "9876543-2", ContactEmail = "urakointi@kivikangas.fi", Phone = "0509876543", Address = "Betonikuja 5, Tampere" };
         var techsol = new Customer { CompanyName = "TechSolutions Finland", BusinessId = "1122334-5", ContactEmail = "hello@techsolutions.fi", Phone = "0451122334", Address = "Kuitukaapeli 8, Espoo" };
@@ -42,19 +61,21 @@ public static class SeedData
         dbContext.Customers.AddRange(digimolli, kivikangas, techsol);
         await dbContext.SaveChangesAsync();
 
-        // 3. Luo Admin-käyttäjät
+        // 3. Luo Admin-käyttäjät (HakaTechin oma henkilöstö, ei kuulu mihinkään asiakkaaseen)
+        // Demo-salasana on tarkoituksella sama kaikille — vaihdettava tuotannossa.
         const string defaultPassword = "HakaTech2025!";
         var admin1 = await CreateUserAsync(userManager, "admin@hakatech.fi", "Järjestelmänvalvoja", null, Roles.Admin, defaultPassword);
         var admin2 = await CreateUserAsync(userManager, "support@hakatech.fi", "Asiakastuki", null, Roles.Admin, defaultPassword);
 
-        // 4. Luo Asiakaskäyttäjät yrityksille
+        // 4. Luo asiakaskäyttäjät yrityksille (tavallisia portaalin loppukäyttäjiä).
+        // Yhdellä käyttäjällä (Matti) on lisäksi customer-admin-oikeus omassa yrityksessään.
         var matti = await CreateUserAsync(userManager, "matti@digimolli.fi", "Matti Meikäläinen", digimolli.Id, Roles.Customer, defaultPassword, isCustomerAdmin: true);
         var kalle = await CreateUserAsync(userManager, "kalle@kivikangas.fi", "Kalle Kivikangas", kivikangas.Id, Roles.Customer, defaultPassword);
         var miia = await CreateUserAsync(userManager, "miia@techsolutions.fi", "Miia Mäkelä", techsol.Id, Roles.Customer, defaultPassword);
         // Lisäkäyttäjä DigiMöllille (pääkäyttäjän hallitsema)
         await CreateUserAsync(userManager, "laura@digimolli.fi", "Laura Leinonen", digimolli.Id, Roles.Customer, defaultPassword);
 
-        // 5. Luo Palvelusopimukset
+        // 5. Luo palvelusopimukset (Contract) — määrittelevät mitä tasoista palvelua kukin asiakas saa
         dbContext.Contracts.AddRange(
             new Contract { CustomerId = digimolli.Id, Type = ContractType.SupportBusiness, StartDate = DateTime.UtcNow.AddMonths(-6), EndDate = DateTime.UtcNow.AddMonths(6), MonthlyPrice = 450.00m, Description = "Arkipäivien tukipalvelu" },
             new Contract { CustomerId = kivikangas.Id, Type = ContractType.OneTime, StartDate = DateTime.UtcNow.AddMonths(-1), EndDate = DateTime.UtcNow.AddMonths(1), MonthlyPrice = 0, Description = "Kertaluontoinen laiteasennus" },
@@ -62,7 +83,8 @@ public static class SeedData
         );
         await dbContext.SaveChangesAsync();
 
-        // 6. Luo Tiketit & Kommentit
+        // 6. Luo demo-tikettejä eri tilassa (Open, Resolved, Closed, InProgress, WaitingCustomer)
+        //    sekä niihin liittyviä kommentteja, jotta tikettilistasta saa heti realistisen kuvan
         var t1 = new Ticket { Title = "Sisäänkirjautuminen epäonnistuu järjestelmään", Description = "Käyttäjät eivät pääse kirjautumaan toiminnanohjausjärjestelmään.", Category = TicketCategory.Software, Priority = TicketPriority.High, Status = TicketStatus.Resolved, CreatedAt = DateTime.UtcNow.AddDays(-5), ResolvedAt = DateTime.UtcNow.AddDays(-1), CustomerId = digimolli.Id, CreatedByUserId = matti.Id, AssignedToUserId = admin1.Id };
         var t2 = new Ticket { Title = "Uusien sähköpostitilien luominen", Description = "Tarvitsemme 5 uutta tiliä kesätyöntekijöille.", Category = TicketCategory.Email, Priority = TicketPriority.Low, Status = TicketStatus.Open, CreatedAt = DateTime.UtcNow.AddDays(-1), CustomerId = digimolli.Id, CreatedByUserId = matti.Id };
         var t3 = new Ticket { Title = "Tulostin ei toimi konttorilla", Description = "Kakkoskerroksen tulostin jumittaa heti käynnistyksen jälkeen.", Category = TicketCategory.Hardware, Priority = TicketPriority.Normal, Status = TicketStatus.Closed, CreatedAt = DateTime.UtcNow.AddDays(-20), ResolvedAt = DateTime.UtcNow.AddDays(-19), CustomerId = kivikangas.Id, CreatedByUserId = kalle.Id, AssignedToUserId = admin2.Id };
@@ -82,7 +104,7 @@ public static class SeedData
         );
         await dbContext.SaveChangesAsync();
 
-        // 7. Luo Laskuja ja Laskurivejä
+        // 7. Luo demo-laskuja eri tiloissa (Paid, Overdue, Draft, Sent) ja niiden laskurivit
         var inv1 = new Invoice { CustomerId = digimolli.Id, InvoiceNumber = "INV-2026-001", Status = InvoiceStatus.Paid, InvoiceDate = DateTime.UtcNow.AddMonths(-1).AddDays(2), DueDate = DateTime.UtcNow.AddMonths(-1).AddDays(16), PaidAt = DateTime.UtcNow.AddMonths(-1).AddDays(15), Notes = "Säännöllinen ylläpito" };
         var inv2 = new Invoice { CustomerId = digimolli.Id, InvoiceNumber = "INV-2026-002", Status = InvoiceStatus.Overdue, InvoiceDate = DateTime.UtcNow.AddMonths(-2), DueDate = DateTime.UtcNow.AddMonths(-2).AddDays(14), Notes = "Lisälaitteiden asennus ja konfigurointi" };
         var inv3 = new Invoice { CustomerId = kivikangas.Id, InvoiceNumber = "INV-2026-003", Status = InvoiceStatus.Draft, InvoiceDate = DateTime.UtcNow, DueDate = DateTime.UtcNow.AddDays(14) };
@@ -105,7 +127,7 @@ public static class SeedData
         );
         await dbContext.SaveChangesAsync();
 
-        // 8. Palvelukatalogi
+        // 8. Palvelukatalogi: HakaTechin myytävät palvelut, joista asiakkaat voivat pyytää tarjouksen
         var svc1 = new ServiceCatalogItem { Name = "Palvelinhuolto", Category = "Ylläpito", Description = "Palvelinympäristön huolto ja päivitykset. Sisältää käyttöjärjestelmäpäivitykset, varmuuskopioinnin tarkistuksen ja suorituskyvyn optimoinnin.", Price = 290.00m };
         var svc2 = new ServiceCatalogItem { Name = "Tietoturva-auditointi", Category = "Tietoturva", Description = "Kattava tietoturva-auditointi organisaatiollesi. Selvitämme haavoittuvuudet ja annamme toimenpidesuositukset.", Price = 1200.00m };
         var svc3 = new ServiceCatalogItem { Name = "Verkon suunnittelu ja toteutus", Category = "Verkko", Description = "Uuden verkkoinfrastruktuurin suunnittelu ja käyttöönotto. Langallinen ja langaton verkko, palomuurit ja VPN-ratkaisut." };
@@ -123,7 +145,7 @@ public static class SeedData
         );
         await dbContext.SaveChangesAsync();
 
-        // 9. Tiedotteet
+        // 9. Tiedotteet (Announcements): admin näyttää näitä etusivulla — esim. huoltokatkot
         dbContext.Announcements.AddRange(
             new Announcement
             {
@@ -148,7 +170,8 @@ public static class SeedData
         );
         await dbContext.SaveChangesAsync();
 
-        // 10. Etätyöpöytäyhteydet (demo)
+        // 10. Etätyöpöytäyhteydet — yksi demo-RDP yhteys Guacamolen kautta.
+        //     Salasana salataan ennen tallennusta Data Protection API:lla.
         var guacamole = scope.ServiceProvider.GetRequiredService<IGuacamoleService>();
 
         dbContext.RemoteDesktopConnections.AddRange(
@@ -170,13 +193,13 @@ public static class SeedData
         );
         await dbContext.SaveChangesAsync();
 
-        // 10b. Tikettipalautteet (suljetuille tiketeille)
+        // 10b. Tikettipalaute — vain suljetuille tiketeille pyydetään palautetta (1–5 tähteä)
         dbContext.TicketFeedbacks.AddRange(
             new TicketFeedback { TicketId = t3.Id, UserId = kalle.Id, Rating = 5, Comment = "Nopea ja asiantunteva palvelu, tulostin toimii taas!", SubmittedAt = DateTime.UtcNow.AddDays(-18) }
         );
         await dbContext.SaveChangesAsync();
 
-        // 11. Tietopankki – kategoriat ja artikkelit
+        // 11. Tietopankki: Self-service ohjeet asiakkaille. Kategoriat ja artikkelit (HTML-sisältö).
         var kbYleinen    = new KnowledgeBaseCategory { Name = "Yleistä",          SortOrder = 1, IsActive = true };
         var kbLaskutus   = new KnowledgeBaseCategory { Name = "Laskutus",         SortOrder = 2, IsActive = true };
         var kbTekniset   = new KnowledgeBaseCategory { Name = "Tekniset ohjeet",  SortOrder = 3, IsActive = true };
@@ -354,7 +377,8 @@ public static class SeedData
         );
         await dbContext.SaveChangesAsync();
 
-        // 12. Huoltokalenteri – demo-aikavälyt ja varaukset
+        // 12. Huoltokalenteri: BookingSlot = vapaa aikaikkuna, Booking = asiakkaan varaus siihen.
+        //     Luodaan sekä tulevia että yksi mennyt slotti, jotta historianäkymä toimii.
         var now = DateTime.Now;
 
         // Tulevia aikavälyjä
@@ -458,6 +482,11 @@ public static class SeedData
         await dbContext.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Apufunktio uuden käyttäjän luomiseen. Luo Identity-käyttäjän,
+    /// asettaa salasanan ja lisää käyttäjän annettuun rooliin.
+    /// EmailConfirmed=true ohittaa sähköpostin vahvistuksen demo-dataa varten.
+    /// </summary>
     private static async Task<ApplicationUser> CreateUserAsync(UserManager<ApplicationUser> userManager, string email, string fullName, int? customerId, string role, string password, bool isCustomerAdmin = false)
     {
         var user = new ApplicationUser
@@ -467,7 +496,7 @@ public static class SeedData
             FullName        = fullName,
             CustomerId      = customerId,
             IsCustomerAdmin = isCustomerAdmin,
-            EmailConfirmed  = true
+            EmailConfirmed  = true   // ei vaadi sähköpostin vahvistusta seedauksessa
         };
         var result = await userManager.CreateAsync(user, password);
         if (result.Succeeded)

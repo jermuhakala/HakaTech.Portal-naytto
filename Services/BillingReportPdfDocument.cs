@@ -5,6 +5,11 @@ using QuestPDF.Infrastructure;
 
 namespace HakaTech.Portal.Services;
 
+/// <summary>
+/// Laskutusyhteenvedon PDF-raportti. Näyttää kuukausikohtaiset
+/// laskutusluvut taulukkona (veroton, ALV, verollinen, maksettu).
+/// Käytetään admin-puolella raporttisivulla "Vie PDF" -toiminnolla.
+/// </summary>
 public class BillingReportPdfDocument : IDocument
 {
     private readonly List<MonthlyBillingStat> _stats;

@@ -8,6 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Palvelukatalogin controller. Asiakas selaa palveluita ja voi pyytää
+/// tarjouksen (QuoteRequest). Admin hallinnoi palveluita ja käsittelee
+/// tarjouspyyntöjä.
+/// </summary>
 [Authorize]
 public class ServiceCatalogController : Controller
 {

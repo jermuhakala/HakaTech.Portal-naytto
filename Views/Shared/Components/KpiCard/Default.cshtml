@@ -1,3 +1,8 @@
+@*
+    KpiCard/Default.cshtml — KPI-kortin näkymä. Renderöi tunnusluvun
+    isolla, mahdollisen muutosprosentin merkkinä, ja sparkline-trendin.
+    Jos Href on annettu, koko kortti on klikattava linkki.
+*@
 @model HakaTech.Portal.ViewComponents.KpiCardViewComponent.KpiCardVm
 @{
     var toneClass = "tone-" + (string.IsNullOrEmpty(Model.Tone) ? "neutral" : Model.Tone);

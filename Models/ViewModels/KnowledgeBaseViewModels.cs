@@ -6,6 +6,7 @@ namespace HakaTech.Portal.Models.ViewModels;
 
 // ── Asiakkaan hakusivu ────────────────────────────────────────────────
 
+/// <summary>Tietopankin etusivun malli — sisältää haun, kategorialistan ja artikkelit.</summary>
 public class KbIndexViewModel
 {
     public string?  SearchQuery  { get; set; }
@@ -16,6 +17,7 @@ public class KbIndexViewModel
     public List<KbArticleCardViewModel> Featured  { get; set; } = [];
 }
 
+/// <summary>Yhden artikkelin korttinäkymä listoissa.</summary>
 public class KbArticleCardViewModel
 {
     public int    Id           { get; set; }
@@ -30,6 +32,7 @@ public class KbArticleCardViewModel
 
 // ── Artikkelin detaljisivu ───────────────────────────────────────────
 
+/// <summary>Yksittäisen artikkelin detaljinäkymä (täysi sisältö + samaan kategoriaan liittyvät).</summary>
 public class KbArticleDetailViewModel
 {
     public int      Id           { get; set; }
@@ -47,9 +50,11 @@ public class KbArticleDetailViewModel
 
 // ── Admin: artikkelilomake ───────────────────────────────────────────
 
+/// <summary>Adminin artikkelin luonti- ja muokkauslomake.</summary>
 public class KbArticleFormViewModel
 {
-    public int Id { get; set; }  // 0 = uusi
+    /// <summary>Artikkelin id, 0 = uusi artikkeli.</summary>
+    public int Id { get; set; }
 
     [Required(ErrorMessage = "Otsikko on pakollinen.")]
     [StringLength(300, ErrorMessage = "Otsikko voi olla enintään 300 merkkiä.")]
@@ -75,6 +80,7 @@ public class KbArticleFormViewModel
 
 // ── Admin: kategorialomake ───────────────────────────────────────────
 
+/// <summary>Adminin kategorian luonti- ja muokkauslomake.</summary>
 public class KbCategoryFormViewModel
 {
     public int Id { get; set; }
@@ -97,6 +103,10 @@ public class KbCategoryFormViewModel
 
 // ── JSON-hakuvastaus tikettilomakkeelle ──────────────────────────────
 
+/// <summary>
+/// Tiketin luontilomakkeen JSON-haun tulosrivi: kun käyttäjä kirjoittaa
+/// otsikkoa tiketille, ehdotetaan ratkaisuja tietopankista.
+/// </summary>
 public class KbSearchResultItem
 {
     public int    Id      { get; set; }

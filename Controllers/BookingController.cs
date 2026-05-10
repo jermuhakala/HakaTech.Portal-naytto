@@ -10,6 +10,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Huoltokalenterin controller. Asiakas näkee vapaita aikaikkunoita
+/// (BookingSlot) ja voi tehdä varauksen (Booking). Admin luo ja hallinnoi
+/// aikaikkunoita sekä vahvistaa varaukset.
+/// </summary>
 [Authorize]
 public class BookingController : Controller
 {

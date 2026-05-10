@@ -1,3 +1,12 @@
+@*
+    _Layout.cshtml — Sovelluksen pääpohja, jonka jokainen näkymä periytyy.
+    Sisältää:
+      - HTML-sivun rungon (head, body)
+      - Sidebar-komponentin (vasen valikko)
+      - Topbar:n (leivänmurut + globaalihaku Ctrl+K)
+      - Tyylit, fontit ja JavaScript-skriptit
+    Yksittäinen näkymä asettaa <main>-osion sisällön RenderBody:n kautta.
+*@
 <!DOCTYPE html>
 <html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" data-bs-theme="light">
 <head>
@@ -5,7 +14,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] – HakaTech Portal</title>
     <meta name="description" content="HakaTech asiakasportaali – hallinnoi tikettejä, laskuja ja asiakkuuksia." />
-    @* Anti-flash: apply saved theme + sidebar-collapsed before first paint *@
+    @* Estetään "vilkkuminen" sivun latauksessa: luetaan teema- ja
+       sidebar-asetukset localStoragesta JA otetaan ne käyttöön ENNEN
+       ensimmäistä piirtoa. Muuten sivu välkähtäisi vaaleasta tummaan. *@
     <script>(function(){try{var t=localStorage.getItem('hakatech-theme');if(t)document.documentElement.setAttribute('data-bs-theme',t);var sc=localStorage.getItem('hakatech-sidebar');if(sc==='collapsed')document.documentElement.classList.add('pre-sidebar-collapsed');var lp=localStorage.getItem('hakatech-preset');if(lp)document.documentElement.setAttribute('data-preset',lp);}catch(e){}})()</script>
     <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />

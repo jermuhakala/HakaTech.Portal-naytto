@@ -1,6 +1,13 @@
+@*
+    _FormField.cshtml — Yhtenäinen lomakekenttä: label + input + virheteksti.
+    Renderöi joko <input>:n tai <textarea>:n Textarea-lipun mukaan,
+    näyttää validointivirheet automaattisesti ModelStatesta.
+*@
 @model HakaTech.Portal.Models.ViewModels.Ui.FormFieldModel
 @{
+    // Korvataan piste alaviivalla, koska HTML-id ei salli pistettä esim. "Customer.Name" → "Customer_Name"
     var id   = Model.For.Replace(".", "_");
+    // Tarkistetaan onko kentällä validointivirhe — jos on, lisätään is-invalid -luokka
     var err  = ViewData.ModelState.GetFieldValidationState(Model.For) == Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Invalid;
     var inputCls = "form-control" + (err ? " is-invalid" : "");
     var errMsg = err && ViewData.ModelState.TryGetValue(Model.For, out var entry) && entry.Errors.Count > 0

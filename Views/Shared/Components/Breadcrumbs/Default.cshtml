@@ -1,3 +1,8 @@
+@*
+    Breadcrumbs/Default.cshtml — Breadcrumbs-komponentin näkymä.
+    Renderöi polkuna leivänmuruja ylätunnisteeseen, viimeinen kohta
+    näytetään tekstinä (ei linkkinä) koska se on nykyinen sivu.
+*@
 @model IReadOnlyList<(string Label, string? Href)>
 @if (Model is { Count: > 0 })
 {

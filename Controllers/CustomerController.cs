@@ -7,6 +7,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Asiakasyritysten hallinta. Käyttäjä voi listata, luoda, muokata
+/// ja tarkastella asiakkaita. Asiakaskäyttäjillä on yleensä rajatumpi
+/// pääsy — useimmat toiminnot edellyttävät admin-roolia.
+/// </summary>
 [Authorize]
 public class CustomerController : Controller
 {

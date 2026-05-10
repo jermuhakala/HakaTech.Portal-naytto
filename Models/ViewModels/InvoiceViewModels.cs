@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace HakaTech.Portal.Models.ViewModels;
 
-// ── Laskurivi luontilomakkeella ──────────────────────────────────────
+/// <summary>Yksittäinen laskurivi laskun luontilomakkeessa.</summary>
 public class InvoiceLineInputModel
 {
     [Required(ErrorMessage = "Kuvaus on pakollinen.")]
@@ -23,7 +23,7 @@ public class InvoiceLineInputModel
     public decimal UnitPrice { get; set; }
 }
 
-// ── Lasku luontilomake ───────────────────────────────────────────────
+/// <summary>Laskun luontilomakkeen malli — sisältää laskun tiedot ja vähintään yhden rivin.</summary>
 public class InvoiceCreateViewModel
 {
     [Required(ErrorMessage = "Asiakas on valittava.")]
@@ -59,7 +59,7 @@ public class InvoiceCreateViewModel
         [new InvoiceLineInputModel()];
 }
 
-// ── Tilanvaihto ──────────────────────────────────────────────────────
+/// <summary>Pieni lomake laskun tilan muuttamiseen (esim. Sent → Paid).</summary>
 public class InvoiceStatusViewModel
 {
     public int Id { get; set; }

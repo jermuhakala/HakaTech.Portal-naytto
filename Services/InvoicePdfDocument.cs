@@ -6,6 +6,11 @@ using QuestPDF.Infrastructure;
 
 namespace HakaTech.Portal.Services;
 
+/// <summary>
+/// Yhden laskun PDF-asiakirjan rakentaja (QuestPDF). Sisältää
+/// otsakkeen (HakaTech-tiedot + laskun nro), sisällön (rivit ja summat)
+/// ja alaosan (maksuohjeet).
+/// </summary>
 public class InvoicePdfDocument : IDocument
 {
     private readonly Invoice _invoice;
@@ -17,11 +22,13 @@ public class InvoicePdfDocument : IDocument
 
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
+    /// <summary>QuestPDF kutsuu tätä rakentaakseen koko asiakirjan.</summary>
     public void Compose(IDocumentContainer container)
     {
         container
             .Page(page =>
             {
+                // A4-koko, 2 cm marginaalit, valkoinen tausta, Arial-fontti.
                 page.Size(PageSizes.A4);
                 page.Margin(2, Unit.Centimetre);
                 page.PageColor(Colors.White);
@@ -33,6 +40,7 @@ public class InvoicePdfDocument : IDocument
             });
     }
 
+    /// <summary>Yläosa: HakaTechin tiedot vasemmalla, laskun otsikkotiedot oikealla.</summary>
     private void ComposeHeader(IContainer container)
     {
         container.Row(row =>
@@ -55,6 +63,7 @@ public class InvoicePdfDocument : IDocument
         });
     }
 
+    /// <summary>Pääsisältö: laskutusosoite, taulukko riveistä ja lisätiedot.</summary>
     private void ComposeContent(IContainer container)
     {
         container.PaddingVertical(1, Unit.Centimetre).Column(column =>
@@ -82,6 +91,7 @@ public class InvoicePdfDocument : IDocument
         });
     }
 
+    /// <summary>Laskurivien taulukko + yhteenvetorivit (veroton, ALV, maksettava).</summary>
     private void ComposeTable(IContainer container)
     {
         var headerStyle = TextStyle.Default.SemiBold();
@@ -129,6 +139,7 @@ public class InvoicePdfDocument : IDocument
         });
     }
 
+    /// <summary>Alaosa: maksuohjeet ja tilinumero viitteenä.</summary>
     private void ComposeFooter(IContainer container)
     {
         container.AlignCenter().Text(text =>

@@ -1,4 +1,9 @@
 namespace HakaTech.Portal;
 
-/// <summary>Marker class for shared localisation resources.</summary>
+/// <summary>
+/// Markkeriluokka jaettujen lokalisointiresurssien ohjaamiseen.
+/// Tätä luokkaa ei käytetä koodissa muuten kuin tyyppiparametrina
+/// (esim. <c>IStringLocalizer&lt;SharedResource&gt;</c>), jolloin ASP.NET Core osaa
+/// hakea käännökset Resources/SharedResource.fi-FI.resx -tiedostoista.
+/// </summary>
 public class SharedResource { }

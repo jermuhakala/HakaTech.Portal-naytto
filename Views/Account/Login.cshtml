@@ -1,3 +1,8 @@
+@*
+    Login.cshtml — Kirjautumissivu. Käyttää _AuthLayoutia (yksinkertainen
+    keskitetty kortti, ei sidebariä). ReturnUrl välitetään lomakkeessa
+    jotta käyttäjä palautetaan oikeaan sivuun kirjautumisen jälkeen.
+*@
 @model HakaTech.Portal.Models.ViewModels.LoginViewModel
 @{
     ViewData["Title"] = L["Auth.Login.Title"].Value;

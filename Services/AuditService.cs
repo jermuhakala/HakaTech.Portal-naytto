@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Identity;
 
 namespace HakaTech.Portal.Services;
 
+/// <summary>
+/// Audit-lokituspalvelun toteutus. Tallentaa annetut toiminnot
+/// AuditLog-tauluun ja täydentää ne nykyisellä käyttäjällä ja IP-osoitteella.
+/// </summary>
 public class AuditService : IAuditService
 {
     private readonly ApplicationDbContext         _db;
@@ -29,6 +33,8 @@ public class AuditService : IAuditService
         var ctx   = _httpContextAccessor.HttpContext;
         var user  = ctx?.User;
 
+        // Selvitetään käyttäjätunnus ja sähköposti, jos käyttäjä on kirjautuneena.
+        // Kirjaamattomille pyynnöille (esim. anonyymi vierailu) jätetään null.
         string? userId    = null;
         string? userEmail = null;
 
@@ -39,6 +45,7 @@ public class AuditService : IAuditService
             userEmail = appUser?.Email;
         }
 
+        // IP-osoite jäljitykseen.
         string? ip = ctx?.Connection?.RemoteIpAddress?.ToString();
 
         _db.AuditLogs.Add(new AuditLog

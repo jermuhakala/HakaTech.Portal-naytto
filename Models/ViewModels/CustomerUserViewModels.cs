@@ -2,6 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HakaTech.Portal.Models.ViewModels;
 
+/// <summary>
+/// Asiakasyrityksen uuden käyttäjän luontilomake. Käytetään kun yrityksen
+/// pääkäyttäjä (customer-admin) lisää uuden käyttäjän omaan yritykseensä.
+/// </summary>
 public class CustomerUserFormViewModel
 {
     public int CustomerId { get; set; }
@@ -33,6 +37,7 @@ public class CustomerUserFormViewModel
     public bool IsCustomerAdmin { get; set; }
 }
 
+/// <summary>Asiakasyrityksen olemassaolevan käyttäjän muokkauslomake (ei salasanaa).</summary>
 public class CustomerUserEditViewModel
 {
     [Required]

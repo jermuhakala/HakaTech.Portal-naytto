@@ -3,6 +3,7 @@ using HakaTech.Portal.Models.Domain;
 
 namespace HakaTech.Portal.Models.ViewModels;
 
+/// <summary>Adminin lomake palvelukatalogin tuotteen luomiseen ja muokkaamiseen.</summary>
 public class ServiceCatalogItemFormViewModel
 {
     [Required(ErrorMessage = "Nimi on pakollinen.")]
@@ -26,6 +27,7 @@ public class ServiceCatalogItemFormViewModel
     public bool IsActive { get; set; } = true;
 }
 
+/// <summary>Asiakkaan tarjouspyyntölomake palvelusta.</summary>
 public class QuoteRequestFormViewModel
 {
     [Required]
@@ -36,6 +38,7 @@ public class QuoteRequestFormViewModel
     public string? Message { get; set; }
 }
 
+/// <summary>Adminin lomake tarjouspyynnön tilan ja muistiinpanojen päivittämiseen.</summary>
 public class QuoteRequestUpdateViewModel
 {
     public int Id { get; set; }

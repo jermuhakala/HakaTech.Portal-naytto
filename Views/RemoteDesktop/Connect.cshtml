@@ -1,3 +1,8 @@
+@*
+    RemoteDesktop/Connect.cshtml — Etätyöpöytäyhteyden avaussivu.
+    Renderöi Guacamole-iframen, jossa varsinainen RDP/VNC/SSH-istunto
+    pyörii. URL on kertakäyttöinen — tokenin elinikä on rajoitettu.
+*@
 @{
     string? guacUrl        = ViewBag.GuacamoleUrl as string;
     string  connectionName = ViewBag.ConnectionName as string ?? "Etätyöpöytä";

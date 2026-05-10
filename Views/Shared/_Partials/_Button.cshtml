@@ -1,6 +1,12 @@
+@*
+    _Button.cshtml — Yhtenäinen painike-elementti. Renderöi joko <a>-linkin
+    (jos Href annettu) tai <button>-elementin. Käytä:
+        <partial name="_Partials/_Button" model="new ButtonModel { Text = "Tallenna", Variant = ButtonVariant.Primary, Type = "submit" }" />
+*@
 @model HakaTech.Portal.Models.ViewModels.Ui.ButtonModel
 @using HakaTech.Portal.Models.ViewModels.Ui
 @{
+    // Rakennetaan CSS-luokat variantin ja koon perusteella
     var variantClass = "variant-" + Model.Variant.ToString().ToLowerInvariant();
     var sizeClass    = Model.Size == ButtonSize.Sm ? "size-sm" : "";
     var cls          = ("btn-lnr " + variantClass + " " + sizeClass + " " + (Model.CssClass ?? "")).Trim();

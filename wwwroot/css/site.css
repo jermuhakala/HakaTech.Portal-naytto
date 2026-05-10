@@ -1,9 +1,17 @@
 /* ═══════════════════════════════════════════════════════════════
-   HakaTech Portal – Global CSS
-   Light-mode, sidebar-layout, dashboardkomponentit
+   site.css — HakaTech Portalin globaalit CSS-tyylit
+   ---------------------------------------------------------------
+   Sisältää:
+     - Design-tokenit (CSS-muuttujat) :root-osassa
+     - Sivupalkki, topbar ja päälayout
+     - Dashboard- ja KPI-komponentit
+     - Lomakkeet, painikkeet, kortit, badge:t
+     - Tumma teema (data-bs-theme="dark")
+     - Komentopaletti, toast-ilmoitukset
+     - Mobiili- ja saavutettavuussäätöjä
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Design tokens ──────────────────────────────────────────── */
+/* ── Design-tokenit (väri- ja kokomuuttujat) ────────────────── */
 :root {
     --bg-base:        #f1f5f9;
     --bg-surface:     #ffffff;
@@ -37,7 +45,7 @@
     --transition:     .2s ease;
 }
 
-/* ── Reset & base ────────────────────────────────────────────── */
+/* ── Reset ja perustyylit ────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
 html {
@@ -363,7 +371,7 @@ a:hover { color: var(--accent-hover); }
 .inv-amount { font-size: .87rem; font-weight: 700; color: var(--text-primary); }
 .inv-days   { font-size: .75rem; font-weight: 600; }
 
-/* ── Bootstrap overrides ─────────────────────────────────────── */
+/* ── Bootstrap-yliajot (oman tyylin saamiseksi) ─────────────── */
 .text-muted { color: var(--text-muted) !important; }
 .text-warning { color: var(--warning) !important; }
 .text-danger  { color: var(--danger)  !important; }
@@ -397,7 +405,7 @@ a:hover { color: var(--accent-hover); }
     box-shadow: 0 2px 8px rgba(37,99,235,.25);
 }
 
-/* validation */
+/* validointivirheen tyylit */
 .field-validation-error { color: var(--danger); font-size: .8rem; }
 .input-validation-error { border-color: var(--danger) !important; }
 
@@ -447,7 +455,7 @@ a:hover { color: var(--accent-hover); }
     color: #b91c1c;
 }
 
-/* ── Badge overrides ─────────────────────────────────────────── */
+/* ── Badge-yliajot ───────────────────────────────────────────── */
 .bg-danger   { background-color: var(--danger) !important; }
 .bg-warning  { background-color: var(--warning) !important; }
 .bg-primary  { background-color: var(--accent) !important; }
@@ -475,7 +483,7 @@ a:hover { color: var(--accent-hover); }
     }
 }
 
-/* ── Auth pages (login / register) ──────────────────────────── */
+/* ── Kirjautumis- ja rekisteröintisivut ─────────────────────── */
 .auth-body {
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 40%, #e0e7ff 100%);
     min-height: 100vh;
@@ -559,7 +567,7 @@ a:hover { color: var(--accent-hover); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ── Dark mode ───────────────────────────────────────────────── */
+/* ── Tumma teema (yliajaa muuttujat kun data-bs-theme="dark") ── */
 [data-bs-theme="dark"] {
     --bg-base:        #0f172a;
     --bg-surface:     #1e293b;
@@ -652,7 +660,7 @@ a:hover { color: var(--accent-hover); }
     color: #fcd34d;
 }
 
-/* ── Widget drag handles (custom dashboard) ──────────────────── */
+/* ── Widgettien vetokahvat (mukautettava dashboard) ──────────── */
 .widget-drag-handle {
     cursor: grab;
     color: var(--text-muted);
@@ -871,7 +879,7 @@ a:hover { color: var(--accent-hover); }
 .card-lnr-body.dense { padding: 12px 16px; }
 .card-lnr-footer { padding: 10px 18px; border-top: 1px solid var(--border-subtle); background: var(--surface-2); }
 
-/* ── Linear status-badge (enum-driven tone) ─────────────────── */
+/* ── Status-merkki (väritys enum-arvon mukaan) ──────────────── */
 .badge-status-lnr {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 2px 9px;
@@ -894,7 +902,7 @@ a:hover { color: var(--accent-hover); }
 .badge-status-lnr.tone-neutral { background: var(--neutral-bg); color: var(--neutral-fg); border-color: var(--neutral-border); }
 .badge-status-lnr.no-dot::before { display: none; }
 
-/* ── Page header ────────────────────────────────────────────── */
+/* ── Sivun yläpalkki (page header) ──────────────────────────── */
 .page-header {
     display: flex; align-items: flex-start; justify-content: space-between;
     gap: 16px;
@@ -923,7 +931,7 @@ a:hover { color: var(--accent-hover); }
 }
 .page-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ── Form field ─────────────────────────────────────────────── */
+/* ── Lomakekenttä (label + input + virheviesti) ─────────────── */
 .form-field {
     display: flex; flex-direction: column; gap: 6px;
     margin-bottom: 14px;
@@ -1000,7 +1008,7 @@ a:hover { color: var(--accent-hover); }
 .form-autosave-hint.saving .dot { background: var(--warning-fg); animation: pulse 1.2s infinite; }
 @keyframes pulse { 0%,100% { opacity: .4; } 50% { opacity: 1; } }
 
-/* ── Segmented control (prio/status) ────────────────────────── */
+/* ── Segmentoitu kontrolli (prioriteetti/tila valinta) ──────── */
 .segmented {
     display: inline-flex;
     padding: 3px;
@@ -1028,7 +1036,7 @@ a:hover { color: var(--accent-hover); }
 .segmented.full { display: flex; }
 .segmented.full label { flex: 1; justify-content: center; }
 
-/* ── Empty state ────────────────────────────────────────────── */
+/* ── Tyhjän tilan ohje (empty state) ────────────────────────── */
 .empty-state {
     text-align: center;
     padding: 40px 20px;
@@ -1038,7 +1046,7 @@ a:hover { color: var(--accent-hover); }
 .empty-state-title { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
 .empty-state-body { font-size: .86rem; margin: 0 0 16px; }
 
-/* ── Toast ──────────────────────────────────────────────────── */
+/* ── Toast-ilmoitukset (popup-viestit) ──────────────────────── */
 #toastHost {
     position: fixed; bottom: 18px; right: 18px; z-index: 9999;
     display: flex; flex-direction: column; gap: 10px;
@@ -1076,7 +1084,7 @@ a:hover { color: var(--accent-hover); }
 }
 .toast-lnr .toast-close:hover { background: var(--surface-2); color: var(--text-primary); }
 
-/* ── Command palette ────────────────────────────────────────── */
+/* ── Komentopaletti (Ctrl+K -pikahaku) ──────────────────────── */
 .cmdk-overlay {
     position: fixed; inset: 0;
     background: color-mix(in srgb, var(--surface-0) 60%, transparent);
@@ -1275,13 +1283,13 @@ body.cmdk-open { overflow: hidden; }
     margin-bottom: 20px;
 }
 
-/* ── Layout presets ─────────────────────────────────────────── */
+/* ── Layout-esiasetukset (käyttäjän valittavissa) ───────────── */
 body.preset-compact .kpi-lnr { padding: 12px 14px 8px; min-height: 110px; }
 body.preset-compact .kpi-lnr-value { font-size: 1.55rem; }
 body.preset-compact .card-lnr-body { padding: 12px 14px; }
 body.preset-focus .widget[data-secondary="1"] { display: none; }
 
-/* ── Reduced motion ─────────────────────────────────────────── */
+/* ── Vähennetty animaatio (saavutettavuusasetus) ────────────── */
 @media (prefers-reduced-motion: reduce) {
     .btn-lnr, .card-lnr, .kpi-lnr, .toast-lnr, .cmdk, .cmdk-overlay,
     .sidebar, .main-content {
@@ -1290,7 +1298,7 @@ body.preset-focus .widget[data-secondary="1"] { display: none; }
     }
 }
 
-/* ── Linear right-rail meta list ────────────────────────────── */
+/* ── Oikean palkin metatietolista ────────────────────────────── */
 .meta-list { display: flex; flex-direction: column; }
 .meta-list-row {
     display: flex; justify-content: space-between; align-items: center;
@@ -1377,7 +1385,7 @@ body.preset-focus .widget[data-secondary="1"] { display: none; }
     border-color: var(--border-subtle);
 }
 
-/* Collapsed-rail refinements */
+/* Kavennetun rail-tilan hienosäätö */
 .sidebar.is-collapsed { width: var(--sidebar-rail-w); }
 .sidebar.is-collapsed .sidebar-head {
     padding: 10px;
@@ -1410,10 +1418,10 @@ body.preset-focus .widget[data-secondary="1"] { display: none; }
     z-index: 50;
 }
 
-/* Layout offsets when collapsed */
+/* Layoutin siirtymät kun sivupalkki on kavennettu */
 body.sidebar-collapsed .main-wrapper { margin-left: var(--sidebar-rail-w); }
 
-/* Breadcrumb component */
+/* Leivänmurupolun komponentti (breadcrumb) */
 .breadcrumbs-lnr { font-size: .82rem; color: var(--text-muted); }
 .breadcrumbs-lnr ol {
     list-style: none;
@@ -1427,7 +1435,7 @@ body.sidebar-collapsed .main-wrapper { margin-left: var(--sidebar-rail-w); }
 .breadcrumbs-lnr .sep { font-size: .7rem; opacity: .5; }
 .breadcrumbs-lnr li.is-current span { color: var(--text-primary); font-weight: 500; }
 
-/* Hero refinements */
+/* Hero-osion hienosäätö */
 .dash-hero-inner {
     display: flex; justify-content: space-between; align-items: flex-start;
     gap: 24px; flex-wrap: wrap; position: relative; z-index: 1;
@@ -1451,7 +1459,7 @@ body.sidebar-collapsed .main-wrapper { margin-left: var(--sidebar-rail-w); }
     font-family: var(--font-display);
 }
 
-/* Preset variants */
+/* Esiasetusvariantit (preset-värimaailmat) */
 body.preset-focus .widget[data-widget="invoices"],
 body.preset-focus .widget[data-widget="calendar"],
 body.preset-focus .widget[data-widget="quickactions"] { display: none; }
@@ -1459,13 +1467,13 @@ body.preset-compact .dash-hero { padding: 18px 22px; margin-bottom: 14px; }
 body.preset-compact .dash-hero-title { font-size: 1.4rem; }
 body.preset-compact .dash-hero-sub   { margin-bottom: 8px; }
 
-/* Hide dashboard-preset segmented on mobile */
+/* Piilotetaan dashboard-preset-valitsija mobiilissa */
 @media (max-width: 680px) {
     .segmented.dash-preset { width: 100%; justify-content: stretch; }
     .segmented.dash-preset label { flex: 1; text-align: center; }
 }
 
-/* Command palette – aliases for cmdk.js markup */
+/* Komentopaletti – aliaksia cmdk.js:n DOM-rakennetta varten */
 .cmdk-overlay.show { display: block; opacity: 1; }
 .cmdk.show        { display: block; opacity: 1; transform: translateX(-50%) translateY(0); }
 .cmdk-head {

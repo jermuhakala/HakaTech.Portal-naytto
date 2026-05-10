@@ -12,6 +12,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Käyttäjätilien controller: kirjautuminen, uloskirjautuminen, rekisteröinti
+/// (vain admin), salasanan vaihto, kielen valinta ja käyttöoikeuden eston sivu.
+/// Tärkeää: kirjautumissivulla on rate-limit-suoja brute-forcea vastaan.
+/// </summary>
 public class AccountController : Controller
 {
     private readonly UserManager<ApplicationUser>   _userManager;
@@ -34,7 +39,10 @@ public class AccountController : Controller
         _audit         = audit;
     }
 
-    // ── GET /Account/Login ──────────────────────────────────────────
+    /// <summary>
+    /// GET /Account/Login — Näyttää kirjautumislomakkeen. Jos käyttäjä
+    /// on jo kirjautunut, ohjataan suoraan etusivulle.
+    /// </summary>
     [HttpGet]
     [AllowAnonymous]
     public IActionResult Login(string? returnUrl = null)
@@ -45,7 +53,11 @@ public class AccountController : Controller
         return View(new LoginViewModel { ReturnUrl = returnUrl });
     }
 
-    // ── POST /Account/Login ─────────────────────────────────────────
+    /// <summary>
+    /// POST /Account/Login — Varsinainen kirjautumisen käsittely.
+    /// "auth"-rate-limit suojaa brute-force-yrityksiltä.
+    /// Epäonnistuneet yritykset lukitsevat tilin tilapäisesti (Identity).
+    /// </summary>
     [HttpPost]
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
@@ -67,6 +79,9 @@ public class AccountController : Controller
             _logger.LogInformation("Käyttäjä {UserId} kirjautui sisään.", signedInUser?.Id);
             await _audit.LogAsync("Login", details: model.Email);
 
+            // Varmistetaan että ReturnUrl on paikallinen — estää avoimen ohjauksen
+            // (open redirect) -hyökkäykset, joissa hyökkääjä voisi ohjata käyttäjän
+            // ulkopuoliselle haitalliselle sivustolle kirjautumisen jälkeen.
             if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
                 return Redirect(model.ReturnUrl);
 
@@ -89,7 +104,7 @@ public class AccountController : Controller
         return View(model);
     }
 
-    // ── POST /Account/Logout ────────────────────────────────────────
+    /// <summary>POST /Account/Logout — Kirjautuu ulos ja merkitsee tapahtuman audit-lokiin.</summary>
     [HttpPost]
     [Authorize]
     [ValidateAntiForgeryToken]
@@ -101,7 +116,7 @@ public class AccountController : Controller
         return RedirectToAction("Login", "Account");
     }
 
-    // ── GET /Account/Register ───────────────────────────────────────
+    /// <summary>GET /Account/Register — Adminin lomake uuden käyttäjän luomiseen.</summary>
     [HttpGet]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Register(int? customerId = null)
@@ -114,7 +129,10 @@ public class AccountController : Controller
         return View(model);
     }
 
-    // ── POST /Account/Register ──────────────────────────────────────
+    /// <summary>
+    /// POST /Account/Register — Luo uuden käyttäjän adminin pyynnöstä.
+    /// Vain admin saa kutsua. Asiakaskäyttäjälle valittu yritys on pakollinen.
+    /// </summary>
     [HttpPost]
     [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
@@ -170,7 +188,7 @@ public class AccountController : Controller
         return View(model);
     }
 
-    // ── GET /Account/ChangePassword ─────────────────────────────────
+    /// <summary>GET /Account/ChangePassword — Salasanan vaihtolomake.</summary>
     [HttpGet]
     [Authorize]
     public IActionResult ChangePassword()
@@ -178,7 +196,11 @@ public class AccountController : Controller
         return View(new ChangePasswordViewModel());
     }
 
-    // ── POST /Account/ChangePassword ────────────────────────────────
+    /// <summary>
+    /// POST /Account/ChangePassword — Vaihtaa salasanan jos vanha salasana
+    /// täsmää. RefreshSignInAsync uudistaa istuntoevästeen, jotta käyttäjä
+    /// ei kirjaudu ulos vaihdon yhteydessä.
+    /// </summary>
     [HttpPost]
     [Authorize]
     [ValidateAntiForgeryToken]
@@ -209,7 +231,7 @@ public class AccountController : Controller
         return View(model);
     }
 
-    // ── GET /Account/AccessDenied ───────────────────────────────────
+    /// <summary>GET /Account/AccessDenied — Sivu johon ohjataan jos käyttöoikeus puuttuu.</summary>
     [HttpGet]
     [AllowAnonymous]
     public IActionResult AccessDenied()
@@ -217,7 +239,10 @@ public class AccountController : Controller
         return View();
     }
 
-    // ── POST /Account/SetLanguage ─────────────────────────────────────
+    /// <summary>
+    /// POST /Account/SetLanguage — Tallentaa käyttäjän valitseman kielen
+    /// evästeeseen, jonka ASP.NET Core lukee jokaisella pyynnöllä.
+    /// </summary>
     [HttpPost]
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
@@ -240,6 +265,8 @@ public class AccountController : Controller
     }
 
     // ── Apumetodit ───────────────────────────────────────────────────
+
+    /// <summary>Rakentaa pudotusvalikon vaihtoehdot (aktiiviset asiakkaat aakkosjärjestyksessä).</summary>
     private async Task<IEnumerable<SelectListItem>> BuildCustomerOptions() =>
         (await _db.Customers
             .Where(c => c.IsActive)

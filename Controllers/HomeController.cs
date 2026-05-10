@@ -10,6 +10,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Kotisivun (dashboardin) controller. Vastaa portaalin etusivusta,
+/// käyttäjän mukautetun widget-järjestyksen tallentamisesta ja
+/// virhe- ja yksityisyyssivuista.
+/// </summary>
 public class HomeController : Controller
 {
     private readonly ApplicationDbContext         _db;
@@ -26,7 +31,10 @@ public class HomeController : Controller
         _logger      = logger;
     }
 
-    // ── GET / (Dashboard) ────────────────────────────────────────────
+    /// <summary>
+    /// GET / — Dashboard. Kerää roolikohtaiset luvut, listat ja sparkline-trendit.
+    /// Adminille näytetään kaikki asiakkaat, asiakaskäyttäjälle vain oman yrityksen tiedot.
+    /// </summary>
     [Authorize]
     public async Task<IActionResult> Index()
     {
@@ -231,23 +239,37 @@ public class HomeController : Controller
         return View(vm);
     }
 
-    // ── POST /Home/SaveLayout ────────────────────────────────────────
+    /// <summary>
+    /// POST /Home/SaveLayout — Tallentaa käyttäjän mukautetun widget-järjestyksen.
+    /// Selain lähettää avaimien taulukon (esim. ["tickets", "kpi"]).
+    /// Validoidaan että avaimet ovat tunnettuja, jotta tietokantaan ei pääse roskaa.
+    /// </summary>
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> SaveLayout([FromBody] string[] order)
     {
         var user = await _userManager.GetUserAsync(User);
         if (user is null) return Unauthorized();
+
+        // Sallitut widget-avaimet — kaikki muu suodatetaan pois.
         var allowed = new HashSet<string> { "kpi", "tickets", "invoices", "calendar", "quickactions" };
         var clean   = order.Where(w => allowed.Contains(w)).Distinct().ToArray();
+
+        // Tallennetaan pilkulla erotettuna merkkijonona.
         user.DashboardLayout = string.Join(",", clean);
         await _userManager.UpdateAsync(user);
         return Ok();
     }
 
+    /// <summary>GET /Home/Privacy — staattinen tietosuojaseloste-sivu.</summary>
     [AllowAnonymous]
     public IActionResult Privacy() => View();
 
+    /// <summary>
+    /// GET /Home/Error — virhesivu. Välitetään pyyntötunnus,
+    /// jolla virhe voidaan jäljittää lokeista.
+    /// ResponseCache estää välimuistituksen — virhesivua ei saa cacheta.
+    /// </summary>
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error() =>
         View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });

@@ -1,5 +1,14 @@
+@*
+    Sidebar/Default.cshtml — Vasen sivupalkki, joka näkyy kaikilla sivuilla.
+    Sisältää brändin, navigaatiolinkit (rooliin perustuen), kielivalitsijan
+    ja teemanvaihtimen. Tukee kapeaa "rail"-tilaa kun käyttäjä haluaa lisää
+    leveyttä pääsisältöön.
+*@
 @model HakaTech.Portal.ViewComponents.SidebarViewComponent.SidebarVm
 @{
+    // Apufunktio: palauttaa "active"-CSS-luokan jos nykyinen sivu osuu
+    // annettuun controlleriin (ja valinnaisesti actioniin) — korostaa
+    // valittua valikkokohtaa.
     string ActiveIf(string controller, string? action = null)
     {
         var ok = string.Equals(Model.Controller, controller, StringComparison.OrdinalIgnoreCase);

@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Audit-lokin selailusivu — vain ylläpitäjille. Lokimerkintöjen avulla
+/// voi tutkia kuka teki mitä, milloin ja mistä IP:stä (esim. tietoturvatutkinta).
+/// </summary>
 [Authorize(Roles = "Admin")]
 public class AuditLogController : Controller
 {

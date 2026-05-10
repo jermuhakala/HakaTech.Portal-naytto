@@ -2,6 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HakaTech.Portal.Models.ViewModels;
 
+/// <summary>
+/// Kirjautumislomakkeen malli. Sisältää sähköpostin, salasanan ja
+/// "muista minut" -valinnan. Validointiattribuutit varmistavat
+/// että lomake on oikein täytetty ennen palvelimelle lähetystä.
+/// </summary>
 public class LoginViewModel
 {
     [Required(ErrorMessage = "Sähköposti on pakollinen.")]
@@ -14,9 +19,10 @@ public class LoginViewModel
     [Display(Name = "Salasana")]
     public string Password { get; set; } = string.Empty;
 
+    /// <summary>Pidennetty istunto: eväste säilyy myös selaimen sulkemisen jälkeen.</summary>
     [Display(Name = "Muista minut")]
     public bool RememberMe { get; set; }
 
-    // Palautusosoite onnistuneen kirjautumisen jälkeen
+    /// <summary>Mihin osoitteeseen ohjataan onnistuneen kirjautumisen jälkeen.</summary>
     public string? ReturnUrl { get; set; }
 }

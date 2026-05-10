@@ -11,6 +11,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Laskujen controller. Vastaa laskujen luomisesta (admin), näyttämisestä
+/// (asiakkaalle vain omat), PDF-vientinä ja tilanvaihdosta (Sent/Paid jne.).
+/// Asiakas voi myös ladata laskuun liitettyjä tiedostoja.
+/// </summary>
 [Authorize]
 public class InvoiceController : Controller
 {

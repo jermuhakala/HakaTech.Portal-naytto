@@ -10,6 +10,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Raporttien controller — vain admin. Tarjoaa viikoittaiset
+/// tikettiluvut, kuukausittaiset laskutusluvut sekä CSV- ja PDF-viennit.
+/// </summary>
 [Authorize(Roles = "Admin")]
 public class ReportController : Controller
 {

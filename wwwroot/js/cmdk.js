@@ -1,17 +1,29 @@
-// HakaTech Portal – Command palette (Ctrl/Cmd + K)
+// =============================================================================
+// cmdk.js — Komentopaletti (Cmd/Ctrl + K).
+// -----------------------------------------------------------------------------
+// Linear/Vercel-tyylinen pikahaku, joka avautuu pikanäppäimellä Ctrl+K.
+// Antaa nopean tavan navigoida sivulle, etsiä tikettejä, asiakkaita,
+// laskuja ja tietopankin artikkeleita yhdestä paikasta.
+// Käyttää /api/search-rajapintaa palvelinhakuun (yli 2 merkin syötteet).
+// =============================================================================
 (function () {
     'use strict';
+
+    // Käännökset ja navigaatio annetaan globaaleilla muuttujilla layoutista.
     var I18N = window.__cmdkI18n || {};
     var NAV = window.__cmdkNav || []; // [{label, url, icon, kind}]
 
+    // DOM-viittaukset paletin osiin.
     var root = null, input = null, list = null, hintEl = null, overlay = null;
-    var items = [];   // flat {el, action}
-    var groups = [];  // {title, items}
-    var activeIdx = 0;
-    var lastFocus = null;
+    var items = [];   // näkyvät rivit [{el, action}]
+    var groups = [];  // ryhmäotsikot
+    var activeIdx = 0; // mikä rivi on tällä hetkellä korostettuna
+    var lastFocus = null; // mihin elementtiin fokus palautetaan paletin sulkeutuessa
     var xhr = null;
-    var debounceT = null;
+    var debounceT = null; // odotetaan käyttäjän lopettaa kirjoittamisen ennen API-kutsua
 
+    // Luo paletin DOM-rakenteen ensimmäisellä avauksella, sen jälkeen
+    // pidetään se piilossa ja näytetään uudelleen tarvittaessa.
     function ensureDom() {
         if (root) return;
         overlay = document.createElement('div');
@@ -56,6 +68,7 @@
         input.addEventListener('keydown', onKey);
     }
 
+    // Avaa paletin näkyviin ja kohdistaa fokuksen hakukenttään.
     function open() {
         ensureDom();
         lastFocus = document.activeElement;
@@ -63,8 +76,10 @@
         root.classList.add('show');
         input.value = '';
         render({}, NAV);
+        // Pieni viive jotta animaatio ehtii alkaa ennen fokusointia.
         setTimeout(function () { input.focus(); }, 10);
     }
+    // Sulkee paletin ja palauttaa fokuksen sinne missä oltiin avauksen hetkellä.
     function close() {
         if (!root) return;
         overlay.classList.remove('show');
@@ -72,6 +87,9 @@
         if (lastFocus && lastFocus.focus) lastFocus.focus();
     }
 
+    // Ajetaan jokaisen näppäilyn jälkeen. Alle 2 merkin haku tehdään
+    // pelkästään navigaatiosta paikallisesti, pidempi haku menee palvelimelle
+    // 160 ms viiveen jälkeen (debounce), jotta jokaista näppäilyä ei kutsuta API:a.
     function onInput() {
         var q = input.value.trim();
         if (debounceT) clearTimeout(debounceT);
@@ -82,6 +100,7 @@
         debounceT = setTimeout(function () { search(q); }, 160);
     }
 
+    // Näppäimistöohjaus: ↑↓ liikkuu listassa, Enter aktivoi, Esc sulkee.
     function onKey(e) {
         if (e.key === 'Escape') { e.preventDefault(); close(); return; }
         if (e.key === 'ArrowDown') { e.preventDefault(); move(1); return; }
@@ -102,6 +121,8 @@
         if (it.action) it.action();
     }
 
+    // Yksinkertainen "fuzzy"-suodatus paikallisille navigaatiokohteille:
+    // tarkistaa sisältyykö hakuteksti label:in osana (case-insensitive).
     function fuzzy(navArr, q) {
         if (!q) return navArr;
         var qq = q.toLowerCase();
@@ -110,6 +131,8 @@
         });
     }
 
+    // Tekee palvelinhaun /api/search-rajapintaan. Aiempi käynnissä oleva
+    // pyyntö perutaan AbortControllerilla, jotta vain uusin tulos näytetään.
     function search(q) {
         if (xhr) xhr.abort?.();
         var navFiltered = fuzzy(NAV, q);
@@ -120,6 +143,8 @@
             .catch(function () { render({}, navFiltered); });
     }
 
+    // Renderöi koko listan annettujen hakutulosten ja navigaatiokohteiden pohjalta.
+    // Tulokset näytetään ryhmissä (Navigaatio / Tiketit / Laskut / Asiakkaat / Tietopankki).
     function render(results, navFiltered) {
         list.innerHTML = '';
         items = [];
@@ -183,11 +208,11 @@
         });
     }
 
-    // Public open API
+    // Julkinen API — paletti voidaan avata/sulkea myös ohjelmallisesti.
     window.cmdkOpen = open;
     window.cmdkClose = close;
 
-    // Global keybinding
+    // Globaali pikanäppäin: Ctrl/Cmd + K avaa paletin mistä tahansa.
     document.addEventListener('keydown', function (e) {
         var isKey = (e.key === 'k' || e.key === 'K');
         if ((e.ctrlKey || e.metaKey) && isKey) {
@@ -196,7 +221,7 @@
         }
     });
 
-    // Wire trigger button
+    // Topbar-painikkeen kytkentä: klikkaus avaa paletin.
     document.addEventListener('DOMContentLoaded', function () {
         var btn = document.getElementById('cmdkTrigger');
         if (btn) {

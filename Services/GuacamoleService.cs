@@ -7,6 +7,12 @@ using Microsoft.Extensions.Options;
 
 namespace HakaTech.Portal.Services;
 
+/// <summary>
+/// Guacamole-integraation toteutus. Hoitaa kaksi tehtävää:
+///   1) Salaa/avaa etätyöpöytäyhteyden salasanat Data Protection API:lla.
+///   2) Rakentaa selaimelle URL:n, jolla käyttäjä voi avata etäyhteyden
+///      Guacamole-palvelimen kautta ilman omia tunnuksia.
+/// </summary>
 public class GuacamoleService : IGuacamoleService
 {
     private readonly GuacamoleSettings _settings;
@@ -21,6 +27,8 @@ public class GuacamoleService : IGuacamoleService
         ILogger<GuacamoleService>     logger)
     {
         _settings = options.Value;
+        // Erillinen suojausnimi varmistaa että nämä avaimet eivät sotke
+        // muiden tarkoitusten salausta (esim. evästeitä).
         _protector = dpProvider.CreateProtector("RemoteDesktopPasswords");
         _http      = httpClient;
         _logger    = logger;
@@ -30,12 +38,15 @@ public class GuacamoleService : IGuacamoleService
 
     public async Task<string?> BuildConnectionUrlAsync(RemoteDesktopConnection connection)
     {
+        // Tarkistetaan että Guacamole on konfiguroitu ennen kuin yritetään mitään.
         if (!_settings.IsConfigured)
         {
             _logger.LogWarning("Guacamole ei ole konfiguroitu (BaseUrl/AdminUsername/AdminPassword puuttuu).");
             return null;
         }
 
+        // Jokaisen yhteyden täytyy olla rekisteröity Guacamolen päässä, ja sen
+        // ID tallennettu meidän kantaan.
         if (string.IsNullOrWhiteSpace(connection.GuacamoleConnectionId))
         {
             _logger.LogWarning(
@@ -44,15 +55,17 @@ public class GuacamoleService : IGuacamoleService
             return null;
         }
 
-        // 1. Kirjaudu Guacamoleen admin-tunnuksilla → hae authToken
+        // 1) Kirjaudutaan Guacamole REST -rajapintaan admin-tunnuksilla
+        //    ja saadaan kertakäyttöinen authToken.
         string? token = await GetAuthTokenAsync();
         if (token is null) return null;
 
-        // 2. Rakenna client-URL
-        //    Guacamole client-identifier = base64( {connectionId}\0c\0{dataSource} )
+        // 2) Rakennetaan Guacamolen vaatima yhdistetty tunniste.
+        //    Muoto: base64( {connectionId}\0c\0{dataSource} )
         string identifier = BuildIdentifier(connection.GuacamoleConnectionId, _settings.DataSource);
         string baseUrl    = _settings.BaseUrl!.TrimEnd('/');
 
+        // Lopullinen URL: käyttäjä voidaan ohjata suoraan tähän osoitteeseen.
         return $"{baseUrl}/#/client/{identifier}?token={token}";
     }
 
@@ -61,6 +74,10 @@ public class GuacamoleService : IGuacamoleService
 
     // ── Yksityiset apumetodit ────────────────────────────────────────
 
+    /// <summary>
+    /// Pyytää Guacamolelta kertakäyttöisen authTokenin admin-tunnuksilla.
+    /// Token on voimassa rajatun ajan ja annetaan vain käyttäjän selaimelle.
+    /// </summary>
     private async Task<string?> GetAuthTokenAsync()
     {
         string apiUrl = $"{_settings.BaseUrl!.TrimEnd('/')}/api/tokens";
@@ -98,22 +115,26 @@ public class GuacamoleService : IGuacamoleService
     }
 
     /// <summary>
-    /// Guacamole client-identifier: base64( connectionId + NUL + "c" + NUL + dataSource )
+    /// Rakentaa Guacamolen vaatiman client-identifier-merkkijonon.
+    /// Muoto on Guacamolen sisäinen vaatimus:
+    ///   base64( connectionId + NUL + "c" + NUL + dataSource )
+    /// — esim. yhteyden ID + tyyppi (c=connection) + tietolähde (mysql).
     /// </summary>
     private static string BuildIdentifier(string connectionId, string dataSource)
     {
-        // Muodosta tavu-array: id, 0x00, 'c', 0x00, dataSource
+        // Rakennetaan tavu-array käsin: connectionId, NUL, 'c', NUL, dataSource
         byte[] idBytes  = Encoding.UTF8.GetBytes(connectionId);
         byte[] dsBytes  = Encoding.UTF8.GetBytes(dataSource);
         byte[] combined = new byte[idBytes.Length + 1 + 1 + 1 + dsBytes.Length];
 
         int pos = 0;
         Buffer.BlockCopy(idBytes, 0, combined, pos, idBytes.Length); pos += idBytes.Length;
-        combined[pos++] = 0x00;   // NUL
-        combined[pos++] = (byte)'c';
-        combined[pos++] = 0x00;   // NUL
+        combined[pos++] = 0x00;        // NUL-erotinmerkki
+        combined[pos++] = (byte)'c';   // 'c' = connection
+        combined[pos++] = 0x00;        // toinen NUL
         Buffer.BlockCopy(dsBytes, 0, combined, pos, dsBytes.Length);
 
+        // Base64-koodataan, jotta tunniste voidaan välittää URL:ssa turvallisesti.
         return Convert.ToBase64String(combined);
     }
 }

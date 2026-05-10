@@ -1,4 +1,7 @@
-﻿// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
-// for details on configuring this project to bundle and minify static web assets.
-
-// Write your JavaScript code.
+// =============================================================================
+// site.js — Sovelluksen pääjavascript-tiedosto.
+// -----------------------------------------------------------------------------
+// Tällä hetkellä tyhjä — sovelluksen muut JS-toiminnot ovat omissa
+// tiedostoissaan (cmdk.js, toast.js). Tähän voi lisätä jaetut, sivuihin
+// liittymättömät apufunktiot.
+// =============================================================================

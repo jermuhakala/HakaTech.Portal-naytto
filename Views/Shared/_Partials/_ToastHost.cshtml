@@ -1,8 +1,13 @@
+@*
+    _ToastHost.cshtml — Toast-ilmoituksien isäntä. Lukee TempDatasta
+    palautteet (esim. "SuccessMessage") ja syöttää ne JavaScriptille,
+    joka näyttää ne pieninä popup-ilmoituksina sivun reunassa.
+*@
 @using System.Text.Json
 @{
     var seed = new List<object>();
-    // Supports both short keys (Success/Error/...) and the legacy
-    // controller convention *Message (SuccessMessage/ErrorMessage/...).
+    // Tuetaan sekä uutta lyhyttä avainmuotoa (Success/Error/...) että
+    // vanhempaa controllerien käytäntöä (SuccessMessage/ErrorMessage/...).
     var keyMap = new (string key, string tone)[]
     {
         ("Success",        "success"),

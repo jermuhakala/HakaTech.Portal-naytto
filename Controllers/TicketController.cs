@@ -11,6 +11,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HakaTech.Portal.Controllers;
 
+/// <summary>
+/// Tikettien (tukipyyntöjen) controller. Vastaa tikettien luomisesta,
+/// listaamisesta, kommenttien lisäämisestä ja liitteistä. Asiakas näkee
+/// vain oman yrityksensä tiketit, admin näkee kaikki ja voi hallinnoida
+/// tilaa, prioriteettia ja vastuuhenkilöä.
+///
+/// Tärkeitä toimintoja:
+///  - Index, Create, Details — perustoiminnot
+///  - SetStatus / Assign — admin muuttaa tiketin tilaa
+///  - AddComment / AddAttachment — keskustelu ja liitteet
+///  - Feedback — asiakas antaa palautteen suljetusta tiketistä
+/// </summary>
 [Authorize]
 public class TicketController : Controller
 {

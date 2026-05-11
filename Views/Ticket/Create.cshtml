@@ -1,64 +1,116 @@
 @*
-    Ticket/Create.cshtml — Uuden tiketin luontilomake. Kun käyttäjä
-    kirjoittaa otsikkoa, ehdotetaan ratkaisuja tietopankista (live-haku).
+    ════════════════════════════════════════════════════════════════════
+    Ticket/Create.cshtml — Uuden tiketin luontilomake.
+
+    Sivu sisältää:
+      - Otsikko + kuvaus (pakolliset)
+      - Kategoria ja prioriteetti (pudotusvalikot)
+      - Adminille lisäksi asiakkaan valinta
+      - Live-haku tietopankista (kun käyttäjä kirjoittaa otsikkoa,
+        ehdotetaan ratkaisuja olemassa olevista artikkeleista —
+        näin osa tiketeistä ratkeaa itsepalveluna ennen lähetystä)
+    ════════════════════════════════════════════════════════════════════
 *@
+
+@* Razor-direktiivi: tämä näkymä saa parametrina TicketCreateViewModel-olion.
+   Sen kentät (Title, Description jne.) ovat lomakkeen kenttiä. *@
 @model HakaTech.Portal.Models.ViewModels.TicketCreateViewModel
+
+@* Tuodaan TicketCategory ja TicketPriority -enumit käyttöön. *@
 @using HakaTech.Portal.Models.Domain
+
 @{
+    @* Asetetaan sivun otsikko (näkyy selaimen välilehdellä).
+       L["..."] on lokalisointi: hakee käännöksen Resources-kansiosta. *@
     ViewData["Title"] = L["Ticket.Create.Title"].Value;
+
+    @* Leivänmurupolku yläpalkkiin: "Tiketit > Uusi tiketti".
+       Toinen rivi (null Href) tarkoittaa että ollaan tällä sivulla. *@
     ViewData["Breadcrumbs"] = new List<(string, string?)>
     {
         (L["Ticket.Index.Title"].Value, Url.Action("Index", "Ticket")),
         (L["Ticket.Create.Title"].Value, null)
     };
+
+    @* Tarkistetaan onko nykyinen käyttäjä admin — vaikuttaa siihen,
+       näytetäänkö asiakaspudotusvalikko. *@
     bool isAdmin = User.IsInRole("Admin");
 
+    @* Apufunktiot kategoria- ja prioriteetti-enumien näyttönimien
+       hakemiseen käännösresursseista. Esim. TicketCategory.Software → "Ohjelmistot". *@
     string CategoryLabel(TicketCategory c) => L[$"TicketCategory.{c}"].Value;
     string PriorityLabel(TicketPriority p) => L[$"TicketPriority.{p}"].Value;
 }
 
+@* ── Sivun otsikkopalkki ─────────────────────────────────────────── *@
 <header class="page-header">
     <div class="page-header-main">
+        @* Iso otsikko ja ikoni *@
         <h1 class="page-header-title"><i class="bi bi-ticket-perforated"></i> @L["Ticket.Create.Heading"]</h1>
         <p class="page-header-sub">@L["Ticket.Create.Title"]</p>
     </div>
     <div class="page-header-actions">
+        @* "Takaisin"-linkki tikettilistaan *@
         <a asp-action="Index" class="btn-lnr variant-ghost size-sm">
             <i class="bi bi-arrow-left"></i> @L["UI.Button.Back"]
         </a>
+        @* Lähetä-nappi. form="ticketCreateForm" yhdistää napin alempaan lomakkeeseen,
+           jotta nappi voi olla otsikkopalkissa muttta silti lähettää lomakkeen. *@
         <button type="submit" form="ticketCreateForm" class="btn-lnr variant-primary size-sm">
             <i class="bi bi-send"></i> @L["Ticket.Create.Submit"]
         </button>
     </div>
 </header>
 
+@* ── Varsinainen lomake ──────────────────────────────────────────────
+   asp-action="Create" + method="post" → lähettää POST-pyynnön
+   TicketController.Create-actioniin. Antiforgery-token lisätään
+   automaattisesti, koska kontrollerissa on [ValidateAntiForgeryToken]. *@
 <form asp-action="Create" method="post" id="ticketCreateForm">
+
+    @* Validointivirheiden yhteenveto lomakkeen yläosassa.
+       "ModelOnly" = vain mallin tason virheet, ei yksittäisten kenttien
+       (ne näkyvät kenttien alla erikseen). *@
     <div asp-validation-summary="ModelOnly" class="card-lnr tone-danger" style="padding: 12px 16px; margin-bottom: 16px; color: var(--danger-fg);"></div>
 
+    @* Grid-layout: pääsisältö (otsikko + kuvaus) vasemmalle,
+       metatiedot (asiakas/kategoria/prioriteetti) oikealle. *@
     <div class="form-grid">
+
+        @* ── Pääsisältö-sarake ─────────────────────────────────── *@
         <div class="form-grid-main">
             <fieldset class="form-section">
                 <legend>@L["UI.Form.Section.Main"]</legend>
 
+                @* Otsikko-kenttä *@
                 <div class="form-field">
+                    @* asp-for="Title" → kytkee tämän labelin TicketCreateViewModel.Title-kenttään.
+                       Näyttää automaattisesti [Display(Name="...")]-attribuutin arvon. *@
                     <label asp-for="Title" class="form-field-label"></label>
                     <div class="form-field-input-wrap">
+                        @* asp-for tekee myös tästä inputista oikean tyyppisen
+                           ja lisää validointiattribuutit (required, maxlength jne.). *@
                         <input asp-for="Title" class="form-control" id="create-title"
                                placeholder="@L["Ticket.Create.TitlePlaceholder"]" autocomplete="off" />
                     </div>
+                    @* Tämän kentän validointivirhe (esim. "Otsikko on pakollinen.") *@
                     <span asp-validation-for="Title" class="form-field-error"></span>
 
+                    @* Tietopankin ehdotusalue — piilotettu kunnes JavaScript löytää osumia.
+                       Sisältö täytetään dynaamisesti alimman skriptin toimesta. *@
                     <div id="kb-suggestions" class="mt-2" style="display:none">
                         <div class="card-lnr" style="padding: 10px 14px;">
                             <div class="d-flex align-items-center gap-2 mb-2">
                                 <i class="bi bi-lightbulb-fill" style="color: var(--warning-fg);"></i>
                                 <span class="fw-semibold small">@L["Ticket.Create.KbSuggestions"]</span>
                             </div>
+                            @* Lista, johon ehdotukset renderöidään JavaScriptilla *@
                             <ul id="kb-suggestion-list" class="list-unstyled mb-0"></ul>
                         </div>
                     </div>
                 </div>
 
+                @* Kuvaus-kenttä (textarea, 8 riviä) *@
                 <div class="form-field">
                     <label asp-for="Description" class="form-field-label"></label>
                     <textarea asp-for="Description" class="form-control" id="create-description"
@@ -69,14 +121,20 @@
             </fieldset>
         </div>
 
+        @* ── Sivupalkki: metatiedot ────────────────────────────── *@
         <aside class="form-grid-aside">
             <fieldset class="form-section">
                 <legend>@L["UI.Form.Section.Meta"]</legend>
 
+                @* Asiakaspudotusvalikko näkyy VAIN adminille — asiakaskäyttäjälle
+                   asiakas asetetaan automaattisesti palvelimella nykyisen käyttäjän
+                   yritystiedoista, jotta ei voi luoda tikettiä toisen yrityksen nimissä. *@
                 @if (isAdmin)
                 {
                     <div class="form-field">
                         <label asp-for="CustomerId" class="form-field-label"></label>
+                        @* asp-items lukee Model.CustomerOptions-listan (täytetään
+                           kontrollerissa SelectListItem-listana). *@
                         <select asp-for="CustomerId" asp-items="Model.CustomerOptions"
                                 id="create-customer" class="form-select">
                             <option value="">@L["Ticket.Create.SelectCustomer"]</option>
@@ -86,12 +144,18 @@
                 }
                 else
                 {
+                    @* Asiakaskäyttäjä: piilotetaan kenttä lomakkeessa.
+                       Kontrolleri ohittaa tämän arvon ja asettaa asiakkaan käyttäjän
+                       omasta CustomerId:stä → tietoturva. *@
                     <input type="hidden" asp-for="CustomerId" />
                 }
 
+                @* Kategoria-pudotusvalikko: Network, Hardware, Software, Email, Access, Other *@
                 <div class="form-field">
                     <label asp-for="Category" class="form-field-label"></label>
                     <select asp-for="Category" id="create-category" class="form-select">
+                        @* Käydään läpi kaikki TicketCategory-enumin arvot ja
+                           luodaan jokaisesta oma <option>. *@
                         @foreach (var c in Enum.GetValues<TicketCategory>())
                         {
                             <option value="@c">@CategoryLabel(c)</option>
@@ -99,6 +163,7 @@
                     </select>
                 </div>
 
+                @* Prioriteetti: Low, Normal, High, Critical *@
                 <div class="form-field">
                     <label asp-for="Priority" class="form-field-label"></label>
                     <select asp-for="Priority" id="create-priority" class="form-select">
@@ -113,27 +178,52 @@
     </div>
 </form>
 
+@* ──────────────────────────────────────────────────────────────────
+   Scripts-osio lisätään sivun loppuun (_Layout.cshtml renderöi sen).
+   Sisältää sekä jQuery-validoinnin että live-haun tietopankista.
+   ────────────────────────────────────────────────────────────────── *@
 @section Scripts {
+    @* jQuery Validation + Unobtrusive — käsittelee asp-validation-* -ohjeet
+       client-puolella, jolloin virheet näkyvät heti ennen palvelimelle lähetystä. *@
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
     <script>
+        // IIFE (heti suoritettava funktio) suojaa muuttujat globaalilta scopelta.
         (function () {
-            const titleInput  = document.getElementById('create-title');
-            const panel       = document.getElementById('kb-suggestions');
-            const list        = document.getElementById('kb-suggestion-list');
-            let   debounce;
+            // Haetaan tarvittavat DOM-elementit kerran muistiin.
+            const titleInput  = document.getElementById('create-title');         // otsikkokenttä
+            const panel       = document.getElementById('kb-suggestions');        // ehdotuspaneeli
+            const list        = document.getElementById('kb-suggestion-list');    // <ul> johon ehdotukset
+            let   debounce;                                                       // setTimeout-ID viiveelle
+
+            // Turvalla: jos elementtejä ei löydy, lopetetaan ettei tule virheitä.
             if (!titleInput) return;
 
+            // Kuunnellaan otsikkokentän jokainen näppäimen painallus.
             titleInput.addEventListener('input', function () {
+                // Peruutetaan aiempi ajastin — odotetaan että käyttäjä lopettaa kirjoittamisen.
                 clearTimeout(debounce);
+
                 const q = this.value.trim();
+
+                // Alle 3 merkin haut ovat liian epätarkkoja → piilotetaan paneeli.
                 if (q.length < 3) { panel.style.display = 'none'; return; }
 
+                // "Debounce" = odotetaan 350ms ennen hakua. Estää että jokainen
+                // kirjain laukaisee oman pyynnön palvelimelle. Vain viimeisin haku jää voimaan.
                 debounce = setTimeout(async function () {
                     try {
+                        // Haetaan tietopankin hakurajapinnasta. encodeURIComponent
+                        // suojaa erikoismerkit (?, &, /) URL:n osana.
                         const res  = await fetch(`/KnowledgeBase/Search?q=${encodeURIComponent(q)}`);
                         const data = await res.json();
+
+                        // Jos osumia ei ole, piilotetaan paneeli.
                         if (!data || data.length === 0) { panel.style.display = 'none'; return; }
 
+                        // Rakennetaan HTML jokaisesta ehdotuksesta ja yhdistetään yhdeksi
+                        // merkkijonoksi. target="_blank" → linkki avautuu uuteen välilehteen,
+                        // jolloin käyttäjä ei menetä jo kirjoittamiaan tiketin tietoja.
                         list.innerHTML = data.map(a => `
                             <li class="mb-1">
                                 <a href="/KnowledgeBase/Article/${a.id}" target="_blank"
@@ -146,11 +236,20 @@
                                     </div>
                                 </a>
                             </li>`).join('');
+
+                        // Näytetään paneeli kun tulokset on renderöity.
                         panel.style.display = 'block';
-                    } catch { panel.style.display = 'none'; }
+                    } catch {
+                        // Verkkovirhe tai virheellinen JSON — piilotetaan hiljaa,
+                        // ei haluta että käyttäjälle näkyy hakuvirhe (lomake toimii silti).
+                        panel.style.display = 'none';
+                    }
                 }, 350);
             });
 
+            // Kun käyttäjä klikkaa pois otsikkokentästä, piilotetaan paneeli.
+            // Pieni viive (300ms) varmistaa että ehdotuksen klikkaus ehtii toimia
+            // ennen kuin paneeli katoaa.
             titleInput.addEventListener('blur', function () {
                 setTimeout(() => { panel.style.display = 'none'; }, 300);
             });

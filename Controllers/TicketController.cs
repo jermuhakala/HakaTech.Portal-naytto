@@ -142,71 +142,131 @@ public class TicketController : Controller
         return View(ticket);
     }
 
-    // ── GET /Ticket/Create ───────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    //  TIKETIN LUONTI — kahden vaiheen putki:
+    //
+    //   1) GET /Ticket/Create   → Näyttää tyhjän lomakkeen
+    //   2) POST /Ticket/Create  → Vastaanottaa täytetyn lomakkeen,
+    //                             tallentaa tiketin ja ohjaa detaljisivulle
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// GET /Ticket/Create — Näyttää tyhjän tiketin luontilomakkeen.
+    /// Adminille näytetään asiakaspudotusvalikko, asiakaskäyttäjälle
+    /// asiakkuus täytetään automaattisesti omasta käyttäjäprofiilista.
+    /// </summary>
+    /// <param name="customerId">Vapaaehtoinen esivalinta adminille (esim. tultaessa asiakassivulta).</param>
     public async Task<IActionResult> Create(int? customerId)
     {
+        // Haetaan kirjautuneen käyttäjän tiedot. _userManager on Identityn hallinta-olio.
         var currentUser = await _userManager.GetUserAsync(User);
+
+        // Onko käyttäjä admin-roolissa? Vaikuttaa lomakkeen näkymään.
         bool isAdmin    = User.IsInRole("Admin");
 
+        // Luodaan tyhjä ViewModel oletusarvoilla.
         var model = new TicketCreateViewModel
         {
-            Category        = TicketCategory.Other,
-            Priority        = TicketPriority.Normal,
-            CustomerOptions = []
+            Category        = TicketCategory.Other,    // oletuskategoria
+            Priority        = TicketPriority.Normal,   // oletusprioriteetti
+            CustomerOptions = []                       // tyhjä lista — täytetään vain adminille alla
         };
 
         if (isAdmin)
         {
+            // Adminille esitäytetään mahdollinen ennaltavalittu asiakas
+            // ja rakennetaan asiakaspudotusvalikon vaihtoehdot.
             model.CustomerId      = customerId;
             model.CustomerOptions = await BuildCustomerOptions();
         }
         else
         {
+            // Asiakaskäyttäjälle asiakas tulee suoraan käyttäjän omasta yritykssesidostuksesta.
+            // Lomakkeen kentästä asiakas EI voi vaihtaa toista yritystä (turvallisuus).
             model.CustomerId = currentUser?.CustomerId;
         }
 
+        // Palautetaan View-olio: ASP.NET renderöi Views/Ticket/Create.cshtml -näkymän
+        // ja antaa sille parametrina tämän model-olion.
         return View(model);
     }
 
-    // ── POST /Ticket/Create ──────────────────────────────────────────
+    /// <summary>
+    /// POST /Ticket/Create — Vastaanottaa lomakkeen tiedot, validoi, tallentaa tiketin
+    /// tietokantaan ja ohjaa onnistumisen jälkeen tiketin detaljisivulle.
+    ///
+    /// Suojaukset:
+    ///  - [ValidateAntiForgeryToken] tarkistaa CSRF-tokenin → estää ulkopuolisten sivustojen
+    ///    väärennetyt POST-pyynnöt käyttäjän selaimen kautta.
+    ///  - ModelState validoi DataAnnotations-säännöt (pakolliset kentät, pituudet).
+    ///  - Asiakaskäyttäjän CustomerId pakotetaan palvelinpuolella omaksi yritykseksi.
+    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(TicketCreateViewModel model)
     {
+        // ASP.NET on jo täyttänyt 'model'-olion automaattisesti lomakkeen kentistä.
+        // Haetaan nykyinen käyttäjä ja rooli.
         var currentUser = await _userManager.GetUserAsync(User);
         bool isAdmin    = User.IsInRole("Admin");
 
+        // ── TIETOTURVA: yliajetaan asiakaskäyttäjän CustomerId ─────────
+        // Asiakas EI voi luoda tikettiä toisen yrityksen nimissä.
+        // Tämä rivi varmistaa että lomakkeesta tulleen CustomerId:n sijaan
+        // käytetään aina käyttäjän omaa yritystä (jos hän ei ole admin).
         if (!isAdmin)
             model.CustomerId = currentUser?.CustomerId;
 
+        // Tarkistetaan että asiakas on valittu (admin-näkymässä se on pakollinen valinta).
         if (model.CustomerId is null)
             ModelState.AddModelError(nameof(model.CustomerId), "Asiakas on valittava.");
 
+        // ── Validointi ─────────────────────────────────────────────────
+        // ModelState.IsValid tarkistaa:
+        //   - DataAnnotations-attribuutit (Required, StringLength jne.)
+        //   - Yllä lisätyt manuaaliset virheet
         if (!ModelState.IsValid)
         {
+            // Validointi epäonnistui → palautetaan lomakkeelle.
+            // Adminille pitää täyttää pudotusvalikko uudelleen (sitä ei lähetetä lomakkeessa).
             if (isAdmin) model.CustomerOptions = await BuildCustomerOptions();
             return View(model);
         }
 
+        // ── Tiketin entiteetin rakentaminen ────────────────────────────
+        // Muunnetaan ViewModelista Ticket-entiteetti, joka tallennetaan tietokantaan.
         var ticket = new Ticket
         {
             Title            = model.Title,
             Description      = model.Description,
             Category         = model.Category,
             Priority         = model.Priority,
-            Status           = TicketStatus.Open,
-            CustomerId       = model.CustomerId!.Value,
-            CreatedByUserId  = currentUser!.Id,
-            CreatedAt        = DateTime.UtcNow,
+            Status           = TicketStatus.Open,        // uusi tiketti on aina avoin
+            CustomerId       = model.CustomerId!.Value,  // ! koska null-tarkistus on jo tehty
+            CreatedByUserId  = currentUser!.Id,          // tiketin luonut käyttäjä
+            CreatedAt        = DateTime.UtcNow,          // aikaleimat UTC:nä — kanta yleensä UTC
             UpdatedAt        = DateTime.UtcNow
         };
 
+        // Lisätään entiteetti EF Coren seurantaan ja tallennetaan kantaan.
+        // SaveChangesAsync generoi INSERT-SQL:n, lähettää sen tietokantaan
+        // ja täyttää ticket.Id-arvon automaattisesti.
         _db.Tickets.Add(ticket);
         await _db.SaveChangesAsync();
 
+        // ── Lokitus ja audit-jälki ──────────────────────────────────────
+        // Sovelluksen oma diagnostiikkaloki (kehittäjille).
         _logger.LogInformation("Tiketti #{Id} '{Title}' luotu.", ticket.Id, ticket.Title);
+
+        // Audit-loki (tietoturva ja jäljitettävyys). Tallennetaan kuka, mitä, mille.
         await _audit.LogAsync("TicketCreated", "Ticket", ticket.Id.ToString(), ticket.Title);
+
+        // TempData säilyy yhden uudelleenohjauksen yli — näytetään seuraavalla sivulla
+        // onnistumisviestinä toast-ilmoituksena.
         TempData["SuccessMessage"] = $"Tiketti #{ticket.Id} luotu onnistuneesti.";
+
+        // Ohjataan käyttäjä luodun tiketin detaljisivulle. Käytetään nameof:ia,
+        // jotta jos Details-metodi nimetään uudelleen, kääntäjä huomaa virheen.
         return RedirectToAction(nameof(Details), new { id = ticket.Id });
     }
 
@@ -473,12 +533,16 @@ public class TicketController : Controller
         await _emailService.SendEmailAsync(ticket.CreatedByUser.Email, subject, htmlMessage);
     }
 
+    /// <summary>
+    /// Apufunktio: rakentaa pudotusvalikon vaihtoehdot kaikista
+    /// aktiivisista asiakkaista aakkosjärjestyksessä.
+    /// </summary>
     private async Task<IEnumerable<SelectListItem>> BuildCustomerOptions() =>
-        (await _db.Customers
-            .Where(c => c.IsActive)
-            .OrderBy(c => c.CompanyName)
-            .ToListAsync())
-        .Select(c => new SelectListItem(c.CompanyName, c.Id.ToString()));
+        (await _db.Customers                                      // Customers-taulusta
+            .Where(c => c.IsActive)                               // vain aktiiviset
+            .OrderBy(c => c.CompanyName)                          // aakkosjärjestyksessä
+            .ToListAsync())                                       // SQL → muistiin listaksi
+        .Select(c => new SelectListItem(c.CompanyName, c.Id.ToString())); // muunnetaan select-vaihtoehdoiksi
 
     private async Task<TicketEditViewModel> BuildEditViewModel(Ticket ticket)
     {

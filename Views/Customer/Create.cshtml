@@ -1,38 +1,67 @@
 @*
-    Customer/Create.cshtml — Uuden asiakasyrityksen luontilomake (admin).
+    Customer/Create.cshtml — Uuden asiakasyrityksen luontilomake (vain admin).
+
+    Lomake kerää yrityksen perustiedot:
+      - Yritysnimi (pakollinen)
+      - Y-tunnus (pakollinen)
+      - Yhteyssähköposti (pakollinen)
+      - Puhelinnumero (valinnainen)
+      - Osoite (valinnainen)
+      - Aktiivinen-tila (oletuksena päällä)
+
+    Yhteys: CustomerController.Create (GET = tyhjä lomake, POST = tallennetaan).
 *@
+
+@* CustomerFormViewModel sisältää kaikki yrityksen tiedot:
+   CompanyName, BusinessId, ContactEmail, Phone, Address, IsActive, Id *@
 @model HakaTech.Portal.Models.ViewModels.CustomerFormViewModel
+
 @{
+    @* Sivun otsikko välilehdellä. *@
     ViewData["Title"] = L["Customer.Index.Add"].Value;
+
+    @* Leivänmurupolku: "Asiakkaat > Uusi asiakas".
+       Url.Action generoi oikean URL:n kontrollerin nimestä. *@
     ViewData["Breadcrumbs"] = new List<(string, string?)>
     {
         (L["Customer.Index.Title"].Value, Url.Action("Index", "Customer")),
-        (L["Customer.Index.Add"].Value, null)
+        (L["Customer.Index.Add"].Value, null)   // null = nykyinen sivu, ei linkki
     };
 }
 
+@* Sivun yläpalkki: otsikko vasemmalla, toimintopainikkeet oikealla. *@
 <header class="page-header">
     <div class="page-header-main">
+        @* bi-building-add = rakennus-plus-ikoni (uusi yritys). *@
         <h1 class="page-header-title"><i class="bi bi-building-add"></i> @L["Customer.Index.Add"]</h1>
     </div>
     <div class="page-header-actions">
+        @* Takaisin-linkki asiakaslistaan. *@
         <a asp-action="Index" class="btn-lnr variant-ghost size-sm">
             <i class="bi bi-arrow-left"></i> @L["UI.Button.Back"]
         </a>
+        @* Tallenna-painike. form="customerCreateForm" kytkee sen alla olevaan lomakkeeseen —
+           painike voi olla otsikkopalkissa, lomake alempana sivulla. *@
         <button type="submit" form="customerCreateForm" class="btn-lnr variant-primary size-sm">
             <i class="bi bi-check-lg"></i> @L["UI.Button.Save"]
         </button>
     </div>
 </header>
 
+@* Varsinainen lomake. id="customerCreateForm" = otsikkopalkin painike viittaa tähän. *@
 <form asp-action="Create" method="post" id="customerCreateForm">
+    @* Virheyhteenveto. tone-danger = portaalin oma punainen tyylitys (ei Bootstrap). *@
     <div asp-validation-summary="ModelOnly" class="card-lnr tone-danger" style="padding: 12px 16px; margin-bottom: 16px; color: var(--danger-fg);"></div>
 
+    @* form-grid = CSS-ruudukko: pääsisältö vasemmalla, metatiedot oikealla. *@
     <div class="form-grid">
+        @* Vasen sarake: perustiedot. *@
         <div class="form-grid-main">
             <fieldset class="form-section">
+                @* <legend> = kenttiryhmän otsikko (renderöidään viivana reunuksen päällä). *@
                 <legend>@L["UI.Form.Section.Main"]</legend>
 
+                @* Kahden sarakkeen rivi: yritysnimi (8/12) + Y-tunnus (4/12). *@
                 <div class="row g-3">
                     <div class="col-md-8">
                         <div class="form-field">
@@ -44,10 +73,13 @@
                     <div class="col-md-4">
                         <div class="form-field">
                             <label asp-for="BusinessId" class="form-field-label"></label>
+                            @* Y-tunnus (Business ID): Suomalaisessa muodossa esim. 1234567-8. *@
                             <input asp-for="BusinessId" class="form-control" id="create-businessid" />
                             <span asp-validation-for="BusinessId" class="form-field-error"></span>
                         </div>
                     </div>
+
+                    @* Yhteyssähköposti (7/12) + Puhelin (5/12). *@
                     <div class="col-md-7">
                         <div class="form-field">
                             <label asp-for="ContactEmail" class="form-field-label"></label>
@@ -62,6 +94,8 @@
                             <span asp-validation-for="Phone" class="form-field-error"></span>
                         </div>
                     </div>
+
+                    @* Osoite: koko leveys (12/12). *@
                     <div class="col-12">
                         <div class="form-field">
                             <label asp-for="Address" class="form-field-label"></label>
@@ -73,11 +107,14 @@
             </fieldset>
         </div>
 
+        @* Oikea sivupalkki: metatiedot (aktiivisuus). *@
         <aside class="form-grid-aside">
             <fieldset class="form-section">
                 <legend>@L["UI.Form.Section.Meta"]</legend>
                 <div class="form-field">
                     <div class="form-check">
+                        @* asp-for="IsActive" → type="checkbox" automaattisesti.
+                           Oletuksena valittu jos CustomerFormViewModel.IsActive = true. *@
                         <input asp-for="IsActive" class="form-check-input" id="create-active" />
                         <label asp-for="IsActive" class="form-check-label fw-semibold"></label>
                     </div>

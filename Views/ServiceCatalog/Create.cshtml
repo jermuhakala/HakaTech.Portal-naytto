@@ -1,31 +1,70 @@
 @*
     ServiceCatalog/Create.cshtml — Adminin lomake uuden palvelun lisäämiseen
     palvelukatalogiin.
+
+    Rakenne:
+      - Yksinkertainen korttilomake (max-width:640px — sopiva leveys yhdelle lomakkeelle)
+      - Kentät: Name, Description, Category, Price (nullable €), IsActive
+      - input-group: Price-kenttä ja "€"-liite vierekkäin yhdessä ryhmässä
+      - Ei @section Scripts — ei tarvita erityistä JS-logiikkaa
+
+    Yhteys: ServiceCatalogController.Create (GET + POST).
 *@
+
+@* Malli = ServiceCatalogItemFormViewModel, jossa kaikki lomakkeen kentät.
+   Sama ViewModel käytetään sekä Create- että Edit-lomakkeessa. *@
 @model HakaTech.Portal.Models.ViewModels.ServiceCatalogItemFormViewModel
+
 @{
+    @* Selaimen välilehden otsikko haetaan lokalisointipalvelusta (L = IHtmlLocalizer).
+       .Value = palauttaa käännetyn merkkijonon (ei IHtmlContent-oliota). *@
     ViewData["Title"] = L["Service.New"].Value;
 }
 
+@* Otsikkorivi: takaisin-painike + sivun otsikko vierekkäin.
+   align-items-center = elementit tasataan pystysuunnassa keskelle.
+   gap-3 = 1rem väli painikkeen ja otsikon välillä. *@
 <div class="d-flex align-items-center gap-3 mb-3">
+    @* Takaisin hallintasivulle — pieni nuolipainike (btn-sm). *@
     <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
     </a>
+    @* Sivun otsikko ikonin kera. L["Service.New"] = lokalisoitu teksti (esim. "Uusi palvelu"). *@
     <h2 class="mb-0"><i class="bi bi-plus-circle me-2"></i>@L["Service.New"]</h2>
 </div>
 
+@* Lomakekortti. max-width:640px = rajoittaa leveyttä niin, että lomake ei veny
+   koko sivun leveydelle — parantaa luettavuutta leveillä näytöillä.
+   shadow-sm = kevyt varjo. border-0 = ei oletusreunaa. *@
 <div class="card shadow-sm border-0" style="max-width:640px;">
     <div class="card-body">
+        @* Lomake lähettää POST /ServiceCatalog/Create.
+           asp-action="Create" = Tag Helper generoi action-attribuutin kontrollerin mukaan. *@
         <form asp-action="Create" method="post">
+            @* CSRF-suojaustunnus: piilokenttä joka estää väärentyneet lomakelähetykset
+               muilta sivustoilta. Kontrolleri tarkistaa tämän [ValidateAntiForgeryToken]-attribuutilla. *@
             @Html.AntiForgeryToken()
+
+            @* Palvelinpuolen validointivirheet (kaikki [ModelOnly]-virheet = ei kentäkohtaiset).
+               Näytetään punaisena alert-boksina jos kontrolleri palauttaa ModelState-virheitä.
+               Tyhjä div: jos virheitä ei ole, ASP.NET Core jättää tämän tyhjäksi (ei näytä). *@
             <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
 
+            @* Palvelun nimi. asp-for="Name" = Tag Helper:
+               - generoi id="Name" name="Name" -attribuutit
+               - sitoo arvon ViewModeliin model-bindingissä
+               - lisää aria-describedby virheviestikenttää varten *@
             <div class="mb-3">
+                @* label asp-for = lukee kentän nimen [Display(Name="...")]-attribuutista. *@
                 <label asp-for="Name" class="form-label fw-semibold"></label>
+                @* placeholder = ohjeteksti tyhjässä kentässä (katoaa kun kirjoitetaan). *@
                 <input asp-for="Name" class="form-control" placeholder="Esim. Tietoturva-auditointi" />
+                @* Kentäkohtainen validointivirhe — näytetään punaisena pienenä tekstinä. *@
                 <span asp-validation-for="Name" class="text-danger small"></span>
             </div>
 
+            @* Palvelun kuvaus. textarea = monirivisyöttökenttä.
+               rows="4" = neljä riviä näkyvissä oletuksena (voi venyttää). *@
             <div class="mb-3">
                 <label asp-for="Description" class="form-label fw-semibold"></label>
                 <textarea asp-for="Description" class="form-control" rows="4"
@@ -33,33 +72,53 @@
                 <span asp-validation-for="Description" class="text-danger small"></span>
             </div>
 
+            @* Kategoria + hinta vierekkäin (puolet leveydestä kummallekin).
+               row g-3 = Bootstrap-ruudukko 12px välein. col-md-6 = puolikas sarake. *@
             <div class="row g-3 mb-3">
+                @* Kategoria: vapaa tekstikenttä (ei pudotusvalikko).
+                   Kategoriaa käytetään ryhmittelyyn Index-sivulla (GroupBy). *@
                 <div class="col-md-6">
                     <label asp-for="Category" class="form-label fw-semibold"></label>
                     <input asp-for="Category" class="form-control" placeholder="Esim. Tietoturva" />
                     <span asp-validation-for="Category" class="text-danger small"></span>
                 </div>
+
+                @* Hinta (nullable decimal). Tyhjä = "Hinta sopimuksen mukaan" Index-sivulla.
+                   input-group = Bootstrap-komponentti joka yhdistää kentän ja liitetekstin ("€")
+                   yhdeksi visuaaliseksi kokonaisuudeksi. *@
                 <div class="col-md-6">
                     <label asp-for="Price" class="form-label fw-semibold"></label>
+                    @* input-group wrapper: kenttä ja €-merkki sulautetaan yhteen. *@
                     <div class="input-group">
+                        @* Hintakenttä. Tyhjä syöte = null (nullable decimal). *@
                         <input asp-for="Price" class="form-control" placeholder="Jätä tyhjäksi = ei lähtöhintaa" />
+                        @* input-group-text = liiteteksti kentän vieressä (oikealla).
+                           Näyttää €-merkin selkeyttämään mitä yksikköä kenttä odottaa. *@
                         <span class="input-group-text">€</span>
                     </div>
                     <span asp-validation-for="Price" class="text-danger small"></span>
                 </div>
             </div>
 
+            @* Aktiivinen-valintaruutu. IsActive=true → palvelu näkyy asiakkaille Index-sivulla.
+               IsActive=false → pehmytpoisto, palvelu piilotettuna asiakkailta. *@
             <div class="mb-4">
                 <div class="form-check">
+                    @* type="checkbox" on jo oletuksena asp-for boolean-kentälle,
+                       mutta kirjoitetaan eksplisiittisesti selvyyden vuoksi. *@
                     <input asp-for="IsActive" class="form-check-input" type="checkbox" />
                     <label asp-for="IsActive" class="form-check-label">Aktiivinen (näkyy asiakkaille)</label>
                 </div>
             </div>
 
+            @* Toimintopainikkeet vierekkäin.
+               d-flex gap-2 = flexbox, 0.5rem väli painikkeiden välillä. *@
             <div class="d-flex gap-2">
+                @* Tallenna-painike: lähettää lomakkeen (type="submit"). *@
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i>Tallenna
                 </button>
+                @* Peruuta: navigoi takaisin hallintasivulle ilman tallennusta. *@
                 <a asp-action="Manage" class="btn btn-outline-secondary">Peruuta</a>
             </div>
         </form>

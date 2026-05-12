@@ -1,13 +1,28 @@
 @*
-    Booking/MyBookings.cshtml — Asiakkaan omat varaukset, jaettu
-    tuleviin ja menneisiin (historia).
+    Booking/MyBookings.cshtml — Asiakkaan omat varaukset.
+
+    Jaettu kahteen osioon:
+      1. Tulevat varaukset — aktiiviset (Pending tai Confirmed) joita ei ole mennyt.
+         Peruuta-painike poistaa varauksen (Cancel → POST).
+      2. Menneet ja peruutetut — historialista.
+
+    Yhteys: BookingController.MyBookings.
 *@
+
+@* BookingMyViewModel sisältää: Upcoming (List<Booking>), Past (List<Booking>). *@
 @model HakaTech.Portal.Models.ViewModels.BookingMyViewModel
 @using HakaTech.Portal.Models.Domain
+
 @{
     ViewData["Title"] = L["Booking.MyBookings"].Value;
+    @* fi = fi-FI kulttuuri suomenkielisiin päivämäärä/viikonpäivänimiin. *@
     var fi = new System.Globalization.CultureInfo("fi-FI");
 
+    @* TypeColor, TypeName, StatusColor, StatusName: apufunktiot tyypin/tilan
+       mukaisiin Bootstrap-väreihin ja suomenkielisiin nimiin.
+       Samat kuin Booking/Index.cshtml:ssä — kopioitu tähän näkymään
+       koska Razor-apufunktiot eivät ole jaettuja eri .cshtml-tiedostojen välillä
+       (ei yhteistä base-luokkaa apufunktioille). *@
     string TypeColor(BookingSlotType t) => t switch {
         BookingSlotType.Maintenance   => "warning",
         BookingSlotType.Consulting    => "primary",
@@ -34,8 +49,10 @@
     };
 }
 
+@* Otsikkorivi + takaisin kalenteriin. *@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">
+        @* bi-bookmark-check = kirjanmerkki tarkistusmerkillä. *@
         <i class="bi bi-bookmark-check me-2 text-primary"></i>Omat varaukset
     </h2>
     <a asp-action="Index" class="btn btn-outline-primary btn-sm">
@@ -43,15 +60,19 @@
     </a>
 </div>
 
-@* ── Tulevat varaukset ───────────────────────────────────────────── *@
+@* ── Tulevat varaukset ──
+   Model.Upcoming.Count = varausten lukumäärä badgena. *@
 <h5 class="mb-3">Tulevat varaukset <span class="badge bg-primary ms-1">@Model.Upcoming.Count</span></h5>
 
 @if (!Model.Upcoming.Any())
 {
+    @* Tyhjä tila: ei tulevia varauksia. *@
     <div class="card border-0 shadow-sm text-center py-5 text-muted mb-4">
         <div>
+            @* bi-calendar-plus = kalenteri plus-merkillä. display-4 = iso ikoni. *@
             <i class="bi bi-calendar-plus display-4 d-block mb-3 opacity-50"></i>
             <p class="mb-3">Sinulla ei ole tulevia varauksia.</p>
+            @* Ohjaus kalenteriin varaamaan. *@
             <a asp-action="Index" class="btn btn-primary btn-sm">
                 <i class="bi bi-calendar3 me-1"></i>Selaa kalenteria
             </a>
@@ -60,21 +81,32 @@
 }
 else
 {
+    @* Varaukset pystysuorassa listassa (flex-column), gap-2 = 8px väli. *@
     <div class="d-flex flex-column gap-2 mb-4">
         @foreach (var b in Model.Upcoming)
         {
+            @* b.BookingSlot! = huutomerkki = null-poikkeukseton (non-null assertion).
+               Upcoming-lista sisältää vain varauksia joilla on BookingSlot
+               (kontrolleri Include():lla ladattu). *@
             <div class="card border-0 shadow-sm slot-card slot-card-@TypeColor(b.BookingSlot!.SlotType)">
                 <div class="card-body py-3">
                     <div class="d-flex gap-3 align-items-center">
+
+                        @* Aika-pylväs. *@
                         <div class="text-center flex-shrink-0" style="width:52px">
+                            @* fs-5 = 1.25rem. lh-1 = tiivis rivitys. *@
                             <div class="fw-bold fs-5 lh-1">
                                 @b.BookingSlot.StartTime.ToString("HH:mm")
                             </div>
                             <div class="text-muted small">
+                                @* d.M. = päivä ja kuukausi, esim. "5.5." *@
                                 @b.BookingSlot.StartTime.ToString("d.M.", fi)
                             </div>
                         </div>
+
+                        @* Sisältö. *@
                         <div class="flex-grow-1">
+                            @* Kaksi badgeä: tyyppi + tila. *@
                             <div class="d-flex flex-wrap gap-1 mb-1">
                                 <span class="badge text-bg-@TypeColor(b.BookingSlot.SlotType)">
                                     @TypeName(b.BookingSlot.SlotType)
@@ -83,22 +115,32 @@ else
                                     @StatusName(b.Status)
                                 </span>
                             </div>
+                            @* Aikavälin otsikko. *@
                             <div class="fw-semibold">@b.BookingSlot.Title</div>
+                            @* Koko aikaväli: "dddd d.M.yyyy HH:mm – HH:mm (60 min)". *@
                             <div class="text-muted small">
                                 @b.BookingSlot.StartTime.ToString("dddd d.M.yyyy HH:mm", fi)
                                 – @b.BookingSlot.EndTime.ToString("HH:mm")
                                 (@b.BookingSlot.DurationMinutes min)
                             </div>
+                            @* Käyttäjän kirjoittamat lisätiedot kursiivilla. *@
                             @if (!string.IsNullOrWhiteSpace(b.Notes))
                             {
+                                @* fst-italic = kursiivimuotoilu Bootstrap-apuluokalla. *@
                                 <div class="text-muted small mt-1 fst-italic">"@b.Notes"</div>
                             }
                         </div>
+
+                        @* Peruuta-painike oikealla. *@
                         <div class="flex-shrink-0">
+                            @* Vain ei-peruutetut varaukset voi peruuttaa. *@
                             @if (b.Status != BookingStatus.Cancelled)
                             {
+                                @* POST /Booking/Cancel/{id}. *@
                                 <form asp-action="Cancel" asp-route-id="@b.Id" method="post">
                                     @Html.AntiForgeryToken()
+                                    @* data-confirm = _Layout.cshtml:n event delegaatio näyttää
+                                       vahvistusdialogissa aikavälin nimen. *@
                                     <button type="submit" class="btn btn-outline-danger btn-sm"
                                             data-confirm="Peruutetaanko varaus '@b.BookingSlot.Title'?">
                                         <i class="bi bi-x-circle me-1"></i>Peruuta
@@ -113,29 +155,39 @@ else
     </div>
 }
 
-@* ── Menneet ja peruutetut ───────────────────────────────────────── *@
+@* ── Menneet ja peruutetut ──
+   Näytetään vain jos niitä on (Past.Any()). *@
 @if (Model.Past.Any())
 {
     <h5 class="mb-3 text-muted">Menneet ja peruutetut <span class="badge bg-secondary ms-1">@Model.Past.Count</span></h5>
     <div class="d-flex flex-column gap-2">
         @foreach (var b in Model.Past)
         {
+            @* Historiakortit himmennetty (opacity-65). *@
             <div class="card border-0 shadow-sm opacity-65">
+                @* py-2 = tiiviimpi kuin tulevissa (py-3). *@
                 <div class="card-body py-2">
                     <div class="d-flex gap-3 align-items-center">
+
+                        @* Aika-pylväs historialle (harmaana). *@
                         <div class="text-center flex-shrink-0 text-muted" style="width:52px">
                             <div class="fw-semibold lh-1">
+                                @* ?. null-ehdollinen — Past-listassa BookingSlot voi teoriassa puuttua. *@
                                 @b.BookingSlot?.StartTime.ToString("HH:mm")
                             </div>
                             <div class="small">
                                 @b.BookingSlot?.StartTime.ToString("d.M.", fi)
                             </div>
                         </div>
+
                         <div class="flex-grow-1">
+                            @* Vain tila-badge (ei tyyppiä — historianäkymä on tiiviimpi). *@
                             <div class="d-flex flex-wrap gap-1 mb-1">
                                 <span class="badge text-bg-@StatusColor(b.Status)">@StatusName(b.Status)</span>
                             </div>
+                            @* Aikavälin otsikko. *@
                             <div class="fw-medium">@b.BookingSlot?.Title</div>
+                            @* Peruutussyy harmaana pienellä tekstillä. *@
                             @if (!string.IsNullOrWhiteSpace(b.CancellationReason))
                             {
                                 <div class="text-muted small">Syy: @b.CancellationReason</div>
@@ -148,12 +200,16 @@ else
     </div>
 }
 
+@* Inline-CSS aikavälikorttien tyyleihin.
+   Sama slot-card-tyyli kuin Index.cshtml:ssä (ei yhteistä CSS-tiedostoa). *@
 @section Scripts {
 <style>
+@* Aikavälikortin vasen reuna tyypin värin mukaan. *@
 .slot-card { border-left: 4px solid transparent !important; }
 .slot-card-warning  { border-left-color: #f59e0b !important; }
 .slot-card-primary  { border-left-color: #3b82f6 !important; }
 .slot-card-success  { border-left-color: #22c55e !important; }
+@* Mennyt/peruutettu: 65 % läpinäkyvyys. *@
 .opacity-65 { opacity: .65; }
 </style>
 }

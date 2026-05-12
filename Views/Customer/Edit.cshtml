@@ -1,44 +1,74 @@
 @*
-    Customer/Edit.cshtml — Asiakasyrityksen muokkauslomake (admin).
+    Customer/Edit.cshtml — Asiakasyrityksen muokkauslomake (vain admin).
+
+    Identtinen rakenne Create.cshtml:n kanssa, mutta esitäytetty nykyisillä
+    tiedoilla. Kontrolleri hakee yrityksen tietokannasta FindAsync:lla,
+    täyttää CustomerFormViewModel-olion ja palauttaa lomakkeen.
+
+    Erityistä:
+      - Id kulkee sekä piilokenttänä lomakkeessa (estää tamperoinnin)
+        että URL:ssa (asp-route-id = /Customer/Edit/5).
+      - Leivänmurupolku: "Asiakkaat > YritysNimi > Muokkaa".
+
+    Yhteys: CustomerController.Edit (GET = esitäytetty lomake, POST = tallennetaan).
 *@
+
 @model HakaTech.Portal.Models.ViewModels.CustomerFormViewModel
+
 @{
+    @* Otsikko: "Muokkaa – YritysNimi" *@
     ViewData["Title"] = L["Common.Edit"].Value + " – " + Model.CompanyName;
+
+    @* Kolmetasoinen leivänmuru: lista → yritys → muokkaa. *@
     ViewData["Breadcrumbs"] = new List<(string, string?)>
     {
         (L["Customer.Index.Title"].Value, Url.Action("Index", "Customer")),
+        @* Yrityksen tietosivu linkkinä (toinen taso). *@
         (Model.CompanyName, Url.Action("Details", "Customer", new { id = Model.Id })),
-        (L["Common.Edit"].Value, null)
+        (L["Common.Edit"].Value, null)   // Nykyinen sivu, ei linkki
     };
 }
 
+@* Sivun yläpalkki. *@
 <header class="page-header">
     <div class="page-header-main">
+        @* Otsikkona yrityksen nimi (ei geneerinen "Muokkaa"). *@
         <h1 class="page-header-title"><i class="bi bi-pencil-square"></i> @Model.CompanyName</h1>
         <p class="page-header-sub">@L["Common.Edit"]</p>
     </div>
     <div class="page-header-actions">
+        @* Takaisin-linkki yrityksen tietosivulle (ei listaan, koska tultiin tietosivulta). *@
         <a asp-action="Details" asp-route-id="@Model.Id" class="btn-lnr variant-ghost size-sm">
             <i class="bi bi-arrow-left"></i> @L["UI.Button.Back"]
         </a>
+        @* Tallenna muutokset -painike. form-attribuutti kytkee sen alla olevaan lomakkeeseen. *@
         <button type="submit" form="customerEditForm" class="btn-lnr variant-primary size-sm">
             <i class="bi bi-check-lg"></i> @L["Common.SaveChanges"]
         </button>
     </div>
 </header>
 
+@* Lomake. asp-route-id = ID kulkee URL:ssa (/Customer/Edit/5).
+   Molemmat tavat (route + piilokenttä) varmistavat turvallisuuden. *@
 <form asp-action="Edit" asp-route-id="@Model.Id" method="post" id="customerEditForm">
+    @* Piilokenttä Id:lle — varmistaa ettei Id voi muuttua URL-manipuloinnilla.
+       ModelBinder sitoo tämän CustomerFormViewModel.Id:hen. *@
     <input type="hidden" asp-for="Id" />
+
+    @* Virheyhteenveto. *@
     <div asp-validation-summary="ModelOnly" class="card-lnr tone-danger" style="padding: 12px 16px; margin-bottom: 16px; color: var(--danger-fg);"></div>
 
+    @* Kaksipalstainen asettelu: pääsisältö + sivupalkki. *@
     <div class="form-grid">
         <div class="form-grid-main">
             <fieldset class="form-section">
                 <legend>@L["UI.Form.Section.Main"]</legend>
                 <div class="row g-3">
+                    @* Yritysnimi (8/12) + Y-tunnus (4/12). *@
                     <div class="col-md-8">
                         <div class="form-field">
                             <label asp-for="CompanyName" class="form-field-label"></label>
+                            @* Esitäytetty: asp-for lukee Model.CompanyName. *@
                             <input asp-for="CompanyName" class="form-control" id="edit-company" />
                             <span asp-validation-for="CompanyName" class="form-field-error"></span>
                         </div>
@@ -50,6 +80,8 @@
                             <span asp-validation-for="BusinessId" class="form-field-error"></span>
                         </div>
                     </div>
+
+                    @* Sähköposti (7/12) + Puhelin (5/12). *@
                     <div class="col-md-7">
                         <div class="form-field">
                             <label asp-for="ContactEmail" class="form-field-label"></label>
@@ -64,6 +96,8 @@
                             <span asp-validation-for="Phone" class="form-field-error"></span>
                         </div>
                     </div>
+
+                    @* Osoite koko leveydelle. *@
                     <div class="col-12">
                         <div class="form-field">
                             <label asp-for="Address" class="form-field-label"></label>
@@ -75,11 +109,13 @@
             </fieldset>
         </div>
 
+        @* Sivupalkki: aktiivisuus-valintaruutu. *@
         <aside class="form-grid-aside">
             <fieldset class="form-section">
                 <legend>@L["UI.Form.Section.Meta"]</legend>
                 <div class="form-field">
                     <div class="form-check">
+                        @* Esitäytetty: jos yritys on aktiivinen, rasti on päällä. *@
                         <input asp-for="IsActive" class="form-check-input" id="edit-active" />
                         <label asp-for="IsActive" class="form-check-label fw-semibold"></label>
                     </div>

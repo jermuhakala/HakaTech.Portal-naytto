@@ -1,37 +1,59 @@
 @*
     Announcement/Edit.cshtml — Olemassaolevan tiedotteen muokkauslomake (admin).
+
+    Rakenne on identtinen Create.cshtml:n kanssa, mutta lomake on esitäytetty
+    valitun tiedotteen nykyisillä tiedoilla. Kontrolleri hakee tiedotteen
+    FindAsync:lla ja täyttää AnnouncementFormViewModel-olion siitä.
+
+    POST lähettää muokatut tiedot AnnouncementController.Edit-metodille,
+    joka päivittää tietueen tietokannassa (SaveChangesAsync).
+
+    Yhteys: AnnouncementController.Edit (GET = lomake tiedoilla täytettynä,
+    POST = tallennetaan muutokset).
 *@
+
+@* Sama ViewModel kuin Create:ssa — reusable form. *@
 @model HakaTech.Portal.Models.ViewModels.AnnouncementFormViewModel
 @using HakaTech.Portal.Models.Domain
+
 @{
     ViewData["Title"] = L["Announcement.Edit.Title"].Value;
 }
 
+@* Otsikkorivi: Takaisin-linkki + "Muokkaa tiedotetta" -otsikko. *@
 <div class="d-flex align-items-center gap-3 mb-3">
     <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
     </a>
+    @* bi-pencil = kynä-ikoni viittaa muokkaustilaan. *@
     <h2 class="mb-0"><i class="bi bi-pencil me-2"></i>Muokkaa tiedotetta</h2>
 </div>
 
 <div class="card shadow-sm border-0" style="max-width:680px;">
     <div class="card-body">
+        @* asp-action="Edit" = lähettää POST:in Edit-metodille.
+           ID kulkee URL:ssa (asp-route-id lisätty kontrollerissa RedirectToAction-kutsussa). *@
         <form asp-action="Edit" method="post">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
 
+            @* Otsikko — esitäytetty ViewModelista (kontrolleri haki tiedot tietokannasta). *@
             <div class="mb-3">
                 <label asp-for="Title" class="form-label fw-semibold"></label>
+                @* Ei placeholder-tekstiä — kenttä on jo täytetty. *@
                 <input asp-for="Title" class="form-control" />
                 <span asp-validation-for="Title" class="text-danger small"></span>
             </div>
 
+            @* Sisältö — esitäytetty. *@
             <div class="mb-3">
                 <label asp-for="Content" class="form-label fw-semibold"></label>
                 <textarea asp-for="Content" class="form-control" rows="4"></textarea>
                 <span asp-validation-for="Content" class="text-danger small"></span>
             </div>
 
+            @* Tyyppi-valikko — kontrollerin asettama arvo on valittuna automaattisesti
+               koska asp-for kytkee sen ViewModelin Type-kenttään. *@
             <div class="mb-3">
                 <label asp-for="Type" class="form-label fw-semibold"></label>
                 <select asp-for="Type" class="form-select">
@@ -41,9 +63,12 @@
                 </select>
             </div>
 
+            @* Aikarajat — esitäytetty jos ne oli asetettu. *@
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <label asp-for="ValidFrom" class="form-label fw-semibold"></label>
+                    @* type="datetime-local" ymmärtää DateTime?-arvon automaattisesti
+                       ja täyttää sen oikeaan muotoon (yyyy-MM-ddTHH:mm). *@
                     <input asp-for="ValidFrom" type="datetime-local" class="form-control" />
                     <div class="form-text">Jätä tyhjäksi = näkyy heti.</div>
                 </div>
@@ -54,6 +79,7 @@
                 </div>
             </div>
 
+            @* Julkaisutila — rasti = julkaistu, tyhjä = luonnos. *@
             <div class="mb-4">
                 <div class="form-check">
                     <input asp-for="IsPublished" class="form-check-input" type="checkbox" />
@@ -61,6 +87,7 @@
                 </div>
             </div>
 
+            @* Tallenna + Peruuta. *@
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i>Tallenna

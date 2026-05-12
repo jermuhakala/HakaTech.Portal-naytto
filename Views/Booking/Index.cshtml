@@ -1,57 +1,94 @@
 @*
-    Booking/Index.cshtml — Huoltokalenterin pääsivu. Näyttää valitun
-    kuukauden ruudukkona, jossa näkyvät kaikki vapaat aikaikkunat.
-    Asiakas voi suodattaa palvelutyypin mukaan ja klikata varatakseen.
+    Booking/Index.cshtml — Huoltokalenterin pääsivu.
+
+    Rakenne:
+      - Otsikkorivi: admin saa "Varaukset"- ja "Lisää aikaväli" -painikkeet,
+        asiakas saa "Omat varaukset" -painikkeen
+      - Palvelusuodatinpalkki: Kaikki / Huolto / Konsultointi / Etätuki
+      - Vasemmalla (col-lg-4): minikalenteriruudukko (7×N grid)
+          - Väripisteet päivissä joissa on aikavälyjä
+          - Klikattu päivä = SelectedDay (korostuu sinisellä)
+          - Tänään = sininen taustaympyrä
+      - Oikealla (col-lg-8): valitun päivän tai koko kuukauden aikavälykortit
+          - Admin: näkee kaikki varaukset + muokkaa/poista
+          - Asiakas: näkee vapaana/varattu/täynnä + varaa-painike
+
+    Yhteys: BookingController.Index.
 *@
+
+@* BookingCalendarViewModel sisältää: Year, Month, MonthName, DaysInMonth,
+   MonthStartOffset, PrevMonth, NextMonth, SelectedDay, Slots,
+   SlotsOnDay(d), DisplayedSlots, MyBookedSlotIds, IsAdmin, ServiceTypeFilter. *@
 @model HakaTech.Portal.Models.ViewModels.BookingCalendarViewModel
+
+@* Tarvitaan BookingSlotType- ja BookingStatus-enumeja varten. *@
 @using HakaTech.Portal.Models.Domain
+
 @{
+    @* Sivun otsikko selaimelle. *@
     ViewData["Title"] = L["Booking.MaintenanceCalendar"].Value;
+
+    @* fi = suomenkielinen kulttuuri päivä- ja kuukausinimille (esim. "maanantai"). *@
     var fi     = new System.Globalization.CultureInfo("fi-FI");
+
+    @* today = tämän päivän päivämäärä (ilman kellonaikaa) tänään-korostukseen. *@
     var today  = DateTime.Today;
+
+    @* Tuplatuple: puretaan PrevMonth ja NextMonth ViewModelin
+       (int Year, int Month) -tuplereturneista.
+       var (prevY, prevM) = ... = dekonstruointi C# 7+. *@
     var (prevY, prevM) = Model.PrevMonth;
     var (nextY, nextM) = Model.NextMonth;
 
+    @* TypeColor: Bootstrap-värinimi tyypin mukaan (badge, kortin reuna). *@
     string TypeColor(BookingSlotType t) => t switch {
         BookingSlotType.Maintenance   => "warning",
         BookingSlotType.Consulting    => "primary",
         BookingSlotType.RemoteSupport => "success",
         _                             => "secondary"
     };
+    @* TypeName: suomenkielinen palvelutyyppinimi. *@
     string TypeName(BookingSlotType t) => t switch {
         BookingSlotType.Maintenance   => "Huolto",
         BookingSlotType.Consulting    => "Konsultointi",
         BookingSlotType.RemoteSupport => "Etätuki",
         _                             => t.ToString()
     };
+    @* TypeIcon: Bootstrap Icons -luokka palvelutyypille. *@
     string TypeIcon(BookingSlotType t) => t switch {
-        BookingSlotType.Maintenance   => "bi-wrench-adjustable",
-        BookingSlotType.Consulting    => "bi-person-video3",
-        BookingSlotType.RemoteSupport => "bi-display",
+        BookingSlotType.Maintenance   => "bi-wrench-adjustable",  // jakoavain
+        BookingSlotType.Consulting    => "bi-person-video3",       // videoneuvottelu
+        BookingSlotType.RemoteSupport => "bi-display",             // näyttö
         _                             => "bi-calendar-event"
     };
 
-    // Palvelusuodatin – apumuuttuja linkkejä varten
+    @* sf = ServiceTypeFilter lyhyempänä muuttujana linkkejä varten.
+       Säilyttää suodattimen sivunvaihdon ja päivänvalinnan yli. *@
     var sf = Model.ServiceTypeFilter;
 }
 
-@* ── Otsikkorivi ────────────────────────────────────────────────── *@
+@* ── Otsikkorivi ── *@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">
+        @* bi-calendar3 = kalenteriikonin Bootstrap Icons -luokka. *@
         <i class="bi bi-calendar3 me-2 text-primary"></i>Huoltokalenteri
     </h2>
     <div class="d-flex gap-2">
+        @* Admin näkee kaksi toimintopainiketta. *@
         @if (Model.IsAdmin)
         {
+            @* Varausten hallintasivu. *@
             <a asp-action="ManageBookings" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-list-check me-1"></i>Varaukset
             </a>
+            @* Uuden aikavälin luonti. *@
             <a asp-action="CreateSlot" class="btn btn-primary btn-sm">
                 <i class="bi bi-plus-lg me-1"></i>Lisää aikaväli
             </a>
         }
         else
         {
+            @* Asiakas pääsee omiin varauksiin. *@
             <a asp-action="MyBookings" class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-bookmark-check me-1"></i>Omat varaukset
             </a>
@@ -59,26 +96,34 @@
     </div>
 </div>
 
-@* ── Palveluvalikkopalkki ──────────────────────────────────────── *@
+@* ── Palvelusuodatinpalkki ──
+   Jokainen painike on linkki saman Index-sivun eri suodattimella.
+   "active" = nykyinen aktiivinen suodatin korostetaan. *@
 <div class="service-filter-bar mb-4">
     <span class="service-filter-label">
         <i class="bi bi-funnel me-1"></i>Valitse palvelu:
     </span>
     <div class="service-filter-btns">
+        @* "Kaikki" = ei service-parametria → nollaa suodattimen.
+           sf is null = vertaa onko suodatin asetettu. *@
         <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
            class="service-btn @(sf is null ? "active" : "")">
             <i class="bi bi-grid me-1"></i>Kaikki
         </a>
+        @* Huolto-suodatin. asp-route-service välittää enum-arvon URL-parametrina.
+           sf == BookingSlotType.Maintenance = verrataan nykyiseen suodattimeen. *@
         <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
            asp-route-service="@BookingSlotType.Maintenance"
            class="service-btn service-btn-warning @(sf == BookingSlotType.Maintenance ? "active" : "")">
             <i class="bi bi-wrench-adjustable me-1"></i>Huolto
         </a>
+        @* Konsultointi-suodatin. *@
         <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
            asp-route-service="@BookingSlotType.Consulting"
            class="service-btn service-btn-primary @(sf == BookingSlotType.Consulting ? "active" : "")">
             <i class="bi bi-person-video3 me-1"></i>Konsultointi
         </a>
+        @* Etätuki-suodatin. *@
         <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
            asp-route-service="@BookingSlotType.RemoteSupport"
            class="service-btn service-btn-success @(sf == BookingSlotType.RemoteSupport ? "active" : "")">
@@ -87,18 +132,25 @@
     </div>
 </div>
 
+@* Kaksipalstainen asettelu: kalenteri (4/12) + aikavälylista (8/12).
+   align-items-start = palkit alkavat samasta kohdasta, eivät veny. *@
 <div class="row g-3 align-items-start">
 
-    @* ── Kalenteriruudukko ──────────────────────────────────────── *@
+    @* ── VASEN SARAKE: minikalenteriruudukko ── *@
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm">
+            @* Korttinotsikko: ← kuukausinimi → navigointi. *@
             <div class="card-header d-flex justify-content-between align-items-center py-2">
+                @* Edellinen kuukausi — asp-route-year ja asp-route-month.
+                   asp-route-service="@sf" = säilytetään suodatin kuukauttaselattaessa. *@
                 <a asp-action="Index" asp-route-year="@prevY" asp-route-month="@prevM"
                    asp-route-service="@sf"
                    class="btn btn-sm btn-link text-secondary p-0 px-1 text-decoration-none">
                     <i class="bi bi-chevron-left"></i>
                 </a>
+                @* Kuukausinimi ja vuosi (esim. "Toukokuu 2025"). *@
                 <span class="fw-semibold">@Model.MonthName</span>
+                @* Seuraava kuukausi. *@
                 <a asp-action="Index" asp-route-year="@nextY" asp-route-month="@nextM"
                    asp-route-service="@sf"
                    class="btn btn-sm btn-link text-secondary p-0 px-1 text-decoration-none">
@@ -107,7 +159,8 @@
             </div>
             <div class="card-body p-3">
 
-                @* Päivänimiotsikot *@
+                @* Viikonpäivien otsikkoriivi: Ma–Su.
+                   CSS: 7 yhtä leveää saraketta (grid-template-columns: repeat(7, 1fr)). *@
                 <div class="cal-header-row mb-1">
                     @foreach (var d in new[] { "Ma","Ti","Ke","To","Pe","La","Su" })
                     {
@@ -115,31 +168,50 @@
                     }
                 </div>
 
-                @* Kalenterisolut *@
+                @* Kalenterisolut. *@
                 <div class="cal-grid">
+                    @* Tyhjät solut kuukauden ensimmäistä päivää ennen (offset).
+                       MonthStartOffset = montako saraketta jätetään tyhjäksi ennen 1. päivää
+                       (0=maanantai, 6=sunnuntai). *@
                     @for (int i = 0; i < Model.MonthStartOffset; i++)
                     {
                         <div></div>
                     }
+
+                    @* Kuukauden päivät 1..DaysInMonth. *@
                     @for (int d = 1; d <= Model.DaysInMonth; d++)
                     {
+                        @* SlotsOnDay(d) = suodatetut aikavälyt tälle päivälle (IEnumerable). *@
                         var daySlots = Model.SlotsOnDay(d).ToList();
+                        @* isToday = onko tämä päivä tänään → sininen ympyrä. *@
                         bool isToday    = today.Year == Model.Year && today.Month == Model.Month && today.Day == d;
+                        @* isSelected = onko tämä päivä valittuna → korostus. *@
                         bool isSelected = Model.SelectedDay == d;
+                        @* hasSlots = onko päivässä aikavälejä → päivä on klikattava. *@
                         bool hasSlots   = daySlots.Any();
 
+                        @* cal-cell = yksi päiväsolu.
+                           cal-today = tänään-korostus.
+                           cal-selected = valittu päivä (sininen taustaympyrä).
+                           cal-has-slots = klikatttavissa. *@
                         <div class="cal-cell @(isToday ? "cal-today" : "") @(isSelected ? "cal-selected" : "") @(hasSlots ? "cal-has-slots" : "")">
                             @if (hasSlots)
                             {
+                                @* Klikattavissa olevat päivät ovat linkkejä.
+                                   targetDay = jos päivä on jo valittuna, klikki poistaa valinnan (null),
+                                   muuten asetetaan valituksi (d). *@
                                 int? targetDay = isSelected ? null : (int?)d;
                                 <a asp-action="Index"
                                    asp-route-year="@Model.Year" asp-route-month="@Model.Month"
                                    asp-route-day="@targetDay" asp-route-service="@sf"
                                    class="cal-cell-link text-decoration-none" style="color:inherit">
                                     <span class="cal-num">@d</span>
+                                    @* Enintään 3 väripistettä päiväsoluun (pisteet).
+                                       Take(3) = otetaan max 3 aikavälyslotin pistettä. *@
                                     <div class="cal-dots">
                                         @foreach (var s in daySlots.Take(3))
                                         {
+                                            @* cal-dot-warning/primary/success = väri tyypin mukaan. *@
                                             <span class="cal-dot cal-dot-@TypeColor(s.SlotType)"></span>
                                         }
                                     </div>
@@ -147,13 +219,15 @@
                             }
                             else
                             {
+                                @* Ei aikavälyjä: pelkkä numero ilman linkkiä. *@
                                 <span class="cal-num">@d</span>
                             }
                         </div>
                     }
                 </div>
 
-                @* Selite *@
+                @* Värikanselite. d-inline-block = tekee span-elementistä lohkomaisen
+                   jottei se veny. me-1 = pieni oikeamarginaali pisteen jälkeen. *@
                 <div class="d-flex gap-3 justify-content-center mt-3 small text-muted">
                     <span><span class="cal-dot cal-dot-warning d-inline-block me-1"></span>Huolto</span>
                     <span><span class="cal-dot cal-dot-primary d-inline-block me-1"></span>Konsultointi</span>
@@ -163,20 +237,29 @@
         </div>
     </div>
 
-    @* ── Aikavälylista ──────────────────────────────────────────── *@
+    @* ── OIKEA SARAKE: aikavälylista ── *@
     <div class="col-lg-8">
         @{
+            @* displaySlots = joko valitun päivän tai koko kuukauden aikavälyt. *@
             var displaySlots = Model.DisplayedSlots;
+
+            @* listTitle = otsikko listalle:
+               jos päivä valittu → "maanantai 5.5.2025", muuten kuukausinimi. *@
             string listTitle = Model.SelectedDay.HasValue
                 ? new DateTime(Model.Year, Model.Month, Model.SelectedDay.Value)
                       .ToString("dddd d.M.yyyy", fi)
                 : Model.MonthName;
         }
 
+        @* Listan otsikko + "Näytä kaikki" -linkki jos päivä on valittuna. *@
         <div class="d-flex justify-content-between align-items-center mb-2">
+            @* text-capitalize = ensimmäinen kirjain isoksi (päivännimi).
+               .NET:n fi-FI kulttuurissa "dddd" antaa pienaakkosin. *@
             <h5 class="mb-0 text-capitalize">@listTitle</h5>
             @if (Model.SelectedDay.HasValue)
             {
+                @* Poistaa päiväsuodattimen — palaa koko kuukauden näkymään.
+                   Suodatin (sf) säilyy. *@
                 <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month"
                    asp-route-service="@sf"
                    class="btn btn-link btn-sm p-0 text-decoration-none">
@@ -185,12 +268,16 @@
             }
         </div>
 
+        @* Tyhjä tila: ei aikavälyjä. *@
         @if (!displaySlots.Any())
         {
             <div class="card border-0 shadow-sm text-center py-5 text-muted">
                 <div>
+                    @* display-4 = iso ikoni (2.5rem). opacity-50 = puoliläpinäkyvä. *@
                     <i class="bi bi-calendar-x display-4 d-block mb-3 opacity-50"></i>
                     <p class="mb-3">Ei aikavälyjä valitulle ajankohdalle.</p>
+                    @* Admin näkee pikälinkin uuden aikavälin luomiseen.
+                       asp-route-date = esitäyttää alkamisajan lomakkeessa. *@
                     @if (Model.IsAdmin)
                     {
                         <a asp-action="CreateSlot"
@@ -204,20 +291,29 @@
         }
         else
         {
+            @* Aikavälykortit pystysuorassa listassa, gap-2 = 8px väli. *@
             <div class="d-flex flex-column gap-2">
                 @foreach (var slot in displaySlots)
                 {
+                    @* myBooked = onko kirjautunut asiakas jo varannut tämän aikavälin.
+                       MyBookedSlotIds = HashSet<int> nopean O(1) .Contains()-haun vuoksi. *@
                     bool myBooked  = Model.MyBookedSlotIds.Contains(slot.Id);
+                    @* color = Bootstrap-värinimi tyypin mukaan. *@
                     string color   = TypeColor(slot.SlotType);
 
+                    @* slot-card-@color = vasemman reunan väriviiva CSS:ssä.
+                       opacity-65 = mennyt aikaväli himmennetty. *@
                     <div class="card border-0 shadow-sm slot-card slot-card-@color @(slot.IsPast ? "opacity-65" : "")">
                         <div class="card-body py-3">
+                            @* Kolmiosio: aika-pylväs | sisältö | toiminnot. *@
                             <div class="d-flex gap-3 align-items-start">
-                                @* Aika-pylväs *@
+
+                                @* Aika-pylväs: kellonaika + päivä + kesto. *@
                                 <div class="text-center flex-shrink-0" style="width:52px">
                                     <div class="fw-bold" style="font-size:18px;line-height:1.1">
                                         @slot.StartTime.ToString("HH:mm")
                                     </div>
+                                    @* d.M. = päivä ja kuukausi ilman vuotta (tiivis). *@
                                     <div class="text-muted" style="font-size:11px">
                                         @slot.StartTime.ToString("d.M.", fi)
                                     </div>
@@ -226,46 +322,59 @@
                                     </div>
                                 </div>
 
-                                @* Sisältö *@
+                                @* Sisältö: badget + otsikko + kuvaus + varaustiedot. *@
                                 <div class="flex-grow-1 min-width-0">
                                     <div class="d-flex flex-wrap gap-1 mb-1">
+                                        @* Palvelutyyppi-badge. *@
                                         <span class="badge text-bg-@color">
                                             <i class="bi @TypeIcon(slot.SlotType) me-1"></i>@TypeName(slot.SlotType)
                                         </span>
+                                        @* Ei-aktiivinen varoitusteksti (admin piilottanut). *@
                                         @if (!slot.IsActive)
                                         {
                                             <span class="badge bg-secondary">Ei aktiivinen</span>
                                         }
+                                        @* Mennyt aikaväli -merkki. *@
                                         @if (slot.IsPast)
                                         {
                                             <span class="badge bg-light text-muted border">Mennyt</span>
                                         }
                                     </div>
 
+                                    @* Aikavälin otsikko. *@
                                     <div class="fw-semibold">@slot.Title</div>
 
+                                    @* Kuvaus (vapaaehtoinen). *@
                                     @if (!string.IsNullOrWhiteSpace(slot.Description))
                                     {
                                         <div class="text-muted small mt-1">@slot.Description</div>
                                     }
 
-                                    @* Varaukset *@
+                                    @* Varaustiedot — eri sisältö adminille ja asiakkaalle. *@
                                     @if (Model.IsAdmin)
                                     {
+                                        @* Admin: varausten määrä + varattujen nimet. *@
                                         <div class="mt-2 small">
                                             <span class="text-muted">
                                                 <i class="bi bi-people me-1"></i>@slot.ActiveBookingsCount / @slot.MaxCapacity
                                             </span>
+                                            @* Jokainen aktiivinen varaus omana badgenaan.
+                                               Peruutetut suodatetaan pois. *@
                                             @foreach (var b in slot.Bookings.Where(b => b.Status != BookingStatus.Cancelled))
                                             {
                                                 <span class="badge bg-light text-dark border ms-1">
+                                                    @* b.User?.FullName ?? b.User?.Email ?? "?"
+                                                       = kokeillaan täyttä nimeä, sitten sähköpostia,
+                                                       sitten kysymysmerkkiä. *@
                                                     @(b.User?.FullName ?? b.User?.Email ?? "?")
+                                                    @* Ikoni vahvistuksen tilan mukaan. *@
                                                     @if (b.Status == BookingStatus.Confirmed)
                                                     {
                                                         <i class="bi bi-check-circle-fill text-success ms-1"></i>
                                                     }
                                                     else
                                                     {
+                                                        @* Tiimalasi = odottaa vahvistusta. *@
                                                         <i class="bi bi-hourglass text-warning ms-1"></i>
                                                     }
                                                 </span>
@@ -274,6 +383,7 @@
                                     }
                                     else if (!slot.IsPast)
                                     {
+                                        @* Asiakas: vapaat paikat tai "Täynnä". *@
                                         <div class="mt-1 small">
                                             @if (slot.AvailableSpots > 0)
                                             {
@@ -291,14 +401,18 @@
                                     }
                                 </div>
 
-                                @* Toiminnot *@
+                                @* Toiminnot oikeassa reunassa. *@
                                 <div class="d-flex flex-column gap-1 flex-shrink-0 align-items-end">
                                     @if (Model.IsAdmin)
                                     {
+                                        @* Admin: Muokkaa-linkki + Poista-painike. *@
                                         <a asp-action="EditSlot" asp-route-id="@slot.Id"
                                            class="btn btn-outline-secondary btn-sm">
                                             <i class="bi bi-pencil"></i>
                                         </a>
+                                        @* Jokainen poisto on erillinen <form> (POST + AntiForgery).
+                                           data-confirm = _Layout.cshtml kuuntelee ja näyttää
+                                           confirm()-dialogin ennen lomakkeen lähetystä. *@
                                         <form asp-action="DeleteSlot" asp-route-id="@slot.Id" method="post">
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="btn btn-outline-danger btn-sm"
@@ -309,12 +423,16 @@
                                     }
                                     else if (myBooked)
                                     {
+                                        @* Asiakas on jo varannut — näytetään "Varattu" -badge.
+                                           bg-success-subtle = vaalea vihreä tausta (BS5.3).
+                                           border border-success = vihreä kehys. *@
                                         <span class="badge bg-success-subtle text-success border border-success py-2 px-3">
                                             <i class="bi bi-bookmark-check-fill me-1"></i>Varattu
                                         </span>
                                     }
                                     else if (!slot.IsPast && slot.IsAvailable)
                                     {
+                                        @* Vapaita paikkoja — "Varaa" -painike. *@
                                         <a asp-action="Book" asp-route-id="@slot.Id"
                                            class="btn btn-primary btn-sm">
                                             <i class="bi bi-calendar-check me-1"></i>Varaa
@@ -322,6 +440,8 @@
                                     }
                                     else if (!slot.IsPast && slot.IsFull)
                                     {
+                                        @* Täynnä — passiivinen varoitusbadge.
+                                           bg-danger-subtle = vaalea punainen tausta. *@
                                         <span class="badge bg-danger-subtle text-danger border border-danger py-2 px-3">
                                             Täynnä
                                         </span>
@@ -336,14 +456,17 @@
     </div>
 </div>
 
+@* Scripts-osiossa inline-CSS kalenterin ja korttien tyyleihin.
+   CSS on sijoitettu Scripts-osioon eikä erilliseen tiedostoon,
+   koska se on tiukasti sidottu tähän yksittäiseen näkymään. *@
 @section Scripts {
 <style>
-/* ── Palveluvalikkopalkki ── */
+/* ── Palvelusuodatinpalkki ── */
 .service-filter-bar {
     display: flex;
     align-items: center;
     gap: 12px;
-    flex-wrap: wrap;
+    flex-wrap: wrap;                /* Rivityytyy pienillä näytöillä. */
     background: var(--bs-body-bg, #fff);
     border: 1px solid var(--bs-border-color, #e2e8f0);
     border-radius: 10px;
@@ -353,18 +476,19 @@
     font-size: 13px;
     font-weight: 600;
     color: #64748b;
-    white-space: nowrap;
+    white-space: nowrap;            /* Ei rivu etikettitekstistä. */
 }
 .service-filter-btns {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
 }
+/* Yksittäinen suodatinpainike (linkki pillerimuodossa). */
 .service-btn {
     display: inline-flex;
     align-items: center;
     padding: 5px 14px;
-    border-radius: 20px;
+    border-radius: 20px;            /* Pyöristetty = pilleri. */
     font-size: 13px;
     font-weight: 500;
     text-decoration: none;
@@ -374,21 +498,27 @@
     transition: background .15s, color .15s, border-color .15s;
 }
 .service-btn:hover { background: #f1f5f9; color: #1e293b; }
+/* Aktiivinen (valittu) painike: tumma tausta. */
 .service-btn.active { background: #1e293b; color: #fff; border-color: #1e293b; }
 
+/* Tyypin mukaiset aktiiviset värit. */
 .service-btn-warning.active  { background: #d97706; border-color: #d97706; color: #fff; }
 .service-btn-primary.active  { background: #2563eb; border-color: #2563eb; color: #fff; }
 .service-btn-success.active  { background: #16a34a; border-color: #16a34a; color: #fff; }
 
+/* Hover-värit ei-aktiivisille tyyppikohtaisille painikkeille. */
 .service-btn-warning:not(.active):hover  { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
 .service-btn-primary:not(.active):hover  { background: #dbeafe; border-color: #3b82f6; color: #1e40af; }
 .service-btn-success:not(.active):hover  { background: #dcfce7; border-color: #22c55e; color: #15803d; }
 
 /* ── Kalenteriruudukko ── */
+/* 7 saraketta (Ma–Su) tasaleveillä riveillä. */
 .cal-header-row,
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+/* Päivännimet harmaana pienessä tekstissä. */
 .cal-hdr  { font-size:11px; font-weight:600; color:#94a3b8; text-align:center; padding:2px 0; }
 
+/* Päiväsolu: pystysuoraan keskitetty, min-height varmistaa korkeuden. */
 .cal-cell {
     display: flex;
     flex-direction: column;
@@ -399,32 +529,43 @@
     position: relative;
 }
 .cal-cell-link { display:flex; flex-direction:column; align-items:center; width:100%; }
+/* Päivänumero: ympyrä jossa numero. */
 .cal-num {
     width: 28px; height: 28px;
     display: flex; align-items: center; justify-content: center;
-    border-radius: 50%;
+    border-radius: 50%;             /* Täysi pyöristys = ympyrä. */
     font-size: 13px;
     line-height: 1;
 }
+/* Väriaika-pisteriviä varten: display:flex rivittää pisteet. */
 .cal-dots { display:flex; gap:3px; margin-top:2px; justify-content:center; flex-wrap:wrap; }
+/* Yksittäinen väripsiste: pieni täytetty ympyrä. */
 .cal-dot  { width:6px; height:6px; border-radius:50%; display:inline-block; }
+/* Väri palvelutyypin mukaan. */
 .cal-dot-warning  { background:#f59e0b; }
 .cal-dot-primary  { background:#3b82f6; }
 .cal-dot-success  { background:#22c55e; }
 .cal-dot-secondary { background:#94a3b8; }
 
+/* Tänään: sininen tausta numeroympyrässä. */
 .cal-cell.cal-today .cal-num        { background:#dbeafe; color:#1d4ed8; font-weight:700; }
+/* Valittu päivä: täytesininen tausta. */
 .cal-cell.cal-selected .cal-num     { background:#2563eb; color:#fff; font-weight:700; }
+/* Klikattavissa olevat solut: sormi-kursori. */
 .cal-cell.cal-has-slots             { cursor:pointer; }
+/* Hover: vaalea tausta ei-valituille klikattaville päiville. */
 .cal-cell.cal-has-slots:hover:not(.cal-selected) { background:#f1f5f9; }
 
 /* ── Aikavälykortit ── */
+/* Vasen reuna: läpinäkyvä oletuksena, väri palvelutyypin mukaan. */
 .slot-card { border-left: 4px solid transparent !important; }
 .slot-card-warning  { border-left-color: #f59e0b !important; }
 .slot-card-primary  { border-left-color: #3b82f6 !important; }
 .slot-card-success  { border-left-color: #22c55e !important; }
 .slot-card-secondary { border-left-color: #94a3b8 !important; }
+/* Mennyt aikaväli: himmennä 65 %. */
 .opacity-65 { opacity: .65; }
+/* min-width:0 estää flex-lapsia kasvamasta yli kontainerin (tekstin katkaisua varten). */
 .min-width-0 { min-width: 0; }
 </style>
 }

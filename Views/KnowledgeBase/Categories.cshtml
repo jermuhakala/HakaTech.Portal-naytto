@@ -1,29 +1,45 @@
 @*
-    KnowledgeBase/Categories.cshtml — Adminin kategorioiden hallintasivu.
-    Listaa kategoriat järjestysnumeron mukaan.
+    KnowledgeBase/Categories.cshtml — Adminin KB-kategorioiden hallintasivu.
+
+    Listaa kaikki kategoriat taulukossa järjestysnumeron mukaan.
+    Admin voi:
+      - Muokata kategoriaa (EditCategory)
+      - Poistaa kategoriaa — VAIN jos kategorialla ei ole artikkeleita
+        (poistopainike on disabled jos Articles.Count > 0)
+
+    Yhteys: KnowledgeBaseController.Categories.
 *@
+
+@* Malli = lista kaikista kategorioista, joihin on ladattu Articles-navigaatio-ominaisuus
+   (kontrolleri Include():lla) artikkelihlukumäärää varten. *@
 @model List<HakaTech.Portal.Models.Domain.KnowledgeBaseCategory>
+
 @{
     ViewData["Title"] = L["KB.CategoriesTitle"].Value;
 }
 
+@* Otsikkorivi: vasemmalla otsikko, oikealla painikkeet. *@
 <div class="d-flex align-items-center justify-content-between mb-4">
     <h2 class="fw-bold mb-0"><i class="bi bi-tags me-2"></i>Kategoriat</h2>
     <div class="d-flex gap-2">
+        @* Takaisin artikkelien hallintaan. *@
         <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1"></i>Artikkelit
         </a>
+        @* Uusi kategoria. *@
         <a asp-action="CreateCategory" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg me-1"></i>Uusi kategoria
         </a>
     </div>
 </div>
 
+@* Kategoriataulukko kortissa. *@
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
+                    @* ps-4 = vasen sisäpadding taulukon ensimmäiseen sarakkeeseen. *@
                     <th class="ps-4">Nimi</th>
                     <th>Kuvaus</th>
                     <th class="text-center">Järjestys</th>
@@ -36,29 +52,44 @@
                 @foreach (var c in Model)
                 {
                     <tr>
+                        @* Kategorian nimi lihavoidulla. *@
                         <td class="ps-4 fw-medium">@c.Name</td>
+                        @* Kuvaus harmaana pienellä. ?? "–" = jos kuvaus puuttuu. *@
                         <td class="text-muted small">@(c.Description ?? "–")</td>
+                        @* Järjestysnumero (pienempi = ensin Index-sivulla). *@
                         <td class="text-center">@c.SortOrder</td>
+                        @* Artikkelihlukumäärä linkkinä (klikkaus suodattaa Index-sivulle). *@
                         <td class="text-center">
                             <a asp-action="Index" asp-route-categoryId="@c.Id" class="text-decoration-none">
                                 @c.Articles.Count
                             </a>
                         </td>
+                        @* Aktiivisuus: check-merkki (vihreä) tai X-merkki (harmaa). *@
                         <td class="text-center">
                             @if (c.IsActive)
                             {
+                                @* bi-check-circle-fill = täytetty vihreä tarkistusmerkki. *@
                                 <i class="bi bi-check-circle-fill text-success"></i>
                             }
                             else
                             {
+                                @* bi-x-circle = harmaana (inaktiivinen). *@
                                 <i class="bi bi-x-circle text-muted"></i>
                             }
                         </td>
+                        @* Toiminnot: muokkaa + poista. *@
                         <td class="pe-4 text-end">
+                            @* Muokkaa-linkki. *@
                             <a asp-action="EditCategory" asp-route-id="@c.Id"
                                class="btn btn-outline-secondary btn-sm me-1">
                                 <i class="bi bi-pencil"></i>
                             </a>
+                            @* Poistolomake. data-confirm = _Layout.cshtml:n event delegaatio.
+                               &quot; = lainausmerkki HTML-enkoodattuna attribuutissa
+                               (tarvitaan koska data-confirm on jo lainausmerkeissä).
+                               @(c.Articles.Count > 0 ? "disabled" : "") = poistaa painikkeen
+                               käytöstä jos kategorialla on artikkeleita
+                               (tyhjä merkkijono = ei disabled-attribuuttia). *@
                             <form asp-action="DeleteCategory" asp-route-id="@c.Id" method="post" class="d-inline kb-delete-form">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-outline-danger btn-sm"

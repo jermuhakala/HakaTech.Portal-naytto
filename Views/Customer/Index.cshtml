@@ -1,15 +1,32 @@
 @*
-    Customer/Index.cshtml — Asiakaslista. Hakukenttä etsii nimellä,
-    Y-tunnuksella tai sähköpostilla. Vain admin näkee.
+    Customer/Index.cshtml — Asiakaslista (vain admin).
+
+    Listaa kaikki asiakasyritykset. Hakukenttä suodattaa yrityksen
+    nimen, Y-tunnuksen tai sähköpostiosoitteen perusteella
+    (EF.Functions.Like-haku kontrollerissa).
+
+    Toiminnot jokaisella rivillä:
+      - Katso yrityksen tiedot (Details)
+      - Muokkaa yritystä (Edit) — vain admin
+
+    Yhteys: CustomerController.Index.
 *@
+
+@* Lista asiakasolioista — kontrolleri suodattaa ja järjestää. *@
 @model IEnumerable<HakaTech.Portal.Models.Domain.Customer>
+
 @{
     ViewData["Title"] = L["Customer.Index.Title"].Value;
+    @* Haetaan hakusana ViewBag:sta (kontrolleri asetti sen).
+       as string = turvallinen tyyppimuunnos (null jos ei string). *@
     var search = ViewBag.Search as string;
 }
 
+@* Otsikkorivi: vasemmalla otsikko, oikealla "Uusi asiakas" -painike (vain adminille). *@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0"><i class="bi bi-building me-2"></i>@L["Customer.Index.Title"]</h2>
+    @* User.IsInRole("Admin") = tarkistetaan kirjautuneen käyttäjän rooli.
+       Tämä on Razor-puolen näkyvyystarkistus — palvelinpuoli suojaa myös. *@
     @if (User.IsInRole("Admin"))
     {
         <a asp-action="Create" id="btn-customer-create" class="btn btn-primary">
@@ -18,14 +35,19 @@
     }
 </div>
 
+@* Hakupalkki. method="get" = hakutermi näkyy URL:ssa (?search=...). *@
 <form asp-action="Index" method="get" class="mb-3">
     <div class="input-group" style="max-width:480px;">
+        @* Hakukenttä, esitäytetty nykyisellä hakusanalla. *@
         <input type="text" name="search" value="@search"
                class="form-control" id="customer-search"
                placeholder="@L["Customer.Index.SearchPlaceholder"]" />
+        @* Hae-painike. *@
         <button type="submit" class="btn btn-outline-secondary">
             <i class="bi bi-search"></i>
         </button>
+        @* Tyhjennä-painike näkyy vain jos haku on käynnissä.
+           Linkki ilman parametreja nollaa haun. *@
         @if (!string.IsNullOrEmpty(search))
         {
             <a asp-action="Index" class="btn btn-outline-danger" title="@L["Customer.Index.ClearSearch"]">
@@ -35,10 +57,13 @@
     </div>
 </form>
 
+@* Tyhjä tila: näytetään eri viesti riippuen onko haku käynnissä. *@
 @if (!Model.Any())
 {
     <div class="alert alert-info">
         <i class="bi bi-info-circle me-1"></i>
+        @* Ternary-operaattori: jos haku on tyhjä → "Ei asiakkaita vielä",
+           muuten → "Ei hakutuloksia haulle 'xxx'". *@
         @(string.IsNullOrEmpty(search)
             ? L["Customer.Index.Empty"].Value
             : string.Format(L["Customer.Index.SearchEmpty"].Value, search))
@@ -50,27 +75,36 @@ else
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>@L["Customer.Col.Name"]</th>
-                    <th>@L["Customer.Col.BusinessId"]</th>
-                    <th>@L["Customer.Col.Email"]</th>
-                    <th>@L["Customer.Col.Phone"]</th>
-                    <th class="text-center">@L["Dash.Col.Status"]</th>
-                    <th></th>
+                    <th>@L["Customer.Col.Name"]</th>         @* Yritysnimi *@
+                    <th>@L["Customer.Col.BusinessId"]</th>   @* Y-tunnus *@
+                    <th>@L["Customer.Col.Email"]</th>        @* Yhteyssähköposti *@
+                    <th>@L["Customer.Col.Phone"]</th>        @* Puhelinnumero *@
+                    <th class="text-center">@L["Dash.Col.Status"]</th>  @* Aktiivinen/passiivinen *@
+                    <th></th>                                @* Toiminnot *@
                 </tr>
             </thead>
             <tbody>
                 @foreach (var c in Model)
                 {
                     <tr>
+                        @* Yritysnimi linkkinä yrityksen tietosivulle. *@
                         <td>
                             <a asp-action="Details" asp-route-id="@c.Id"
                                class="fw-semibold text-decoration-none">
                                 @c.CompanyName
                             </a>
                         </td>
+
+                        @* Y-tunnus: pieni teksti, harmaannettu (toissijainen tieto). *@
                         <td class="text-muted small">@c.BusinessId</td>
+
+                        @* Yhteyssähköposti. *@
                         <td class="text-muted small">@c.ContactEmail</td>
+
+                        @* Puhelinnumero. ?? "—" = null → em-viiva. *@
                         <td class="text-muted small">@(c.Phone ?? "—")</td>
+
+                        @* Aktiivisuus-merkki. *@
                         <td class="text-center">
                             @if (c.IsActive)
                             {
@@ -78,14 +112,19 @@ else
                             }
                             else
                             {
+                                @* bg-secondary = harmaa = passiivinen asiakas. *@
                                 <span class="badge bg-secondary">@L["Common.Inactive"]</span>
                             }
                         </td>
+
+                        @* Toimintopainikkeet. *@
                         <td class="text-end">
+                            @* Katso-painike — kaikille adminille. *@
                             <a asp-action="Details" asp-route-id="@c.Id"
                                class="btn btn-sm btn-outline-primary me-1">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            @* Muokkaa-painike — vain adminille (turvallisuus: myös kontrolleri tarkistaa). *@
                             @if (User.IsInRole("Admin"))
                             {
                                 <a asp-action="Edit" asp-route-id="@c.Id"
@@ -99,5 +138,6 @@ else
             </tbody>
         </table>
     </div>
+    @* Yhteenveto löydettyjen asiakkaiden määrästä. *@
     <p class="text-muted small">@string.Format(L["Customer.Total"].Value, Model.Count())</p>
 }

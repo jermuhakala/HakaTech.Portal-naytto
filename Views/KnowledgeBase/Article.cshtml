@@ -1,58 +1,98 @@
 @*
-    KnowledgeBase/Article.cshtml — Yksittäisen artikkelin näyttösivu.
-    Renderöi sanitoidun HTML-sisällön ja ehdottaa samaan kategoriaan
-    kuuluvia artikkeleita.
+    KnowledgeBase/Article.cshtml — Yksittäisen KB-artikkelin näyttösivu.
+
+    Rakenne:
+      - Vasen sarake (col-lg-8): artikkelin otsikko, metatiedot, sanitoitu HTML-sisältö,
+        muokkaalinkki (admin) + "Luo tiketti silti" -linkki
+      - Oikea sarake (col-lg-4): samaan kategoriaan kuuluvat muut artikkelit +
+        "Eikö ohje auttanut?" -tukikortti
+
+    Turvallisuus:
+      @Html.Raw(Model.Content) = sisältö renderöidään HTML:nä ilman enkoodausta.
+      TÄRKEÄÄ: Content on sanitoitu palvelinpuolella HtmlSanitizer-kirjastolla
+      ennen tietokantaan tallentamista, joten XSS-riski on poistettu.
+
+    Yhteys: KnowledgeBaseController.Article.
 *@
+
+@* KbArticleDetailViewModel sisältää: Id, Title, Content (sanitoitu HTML),
+   CategoryId, CategoryName, ViewCount, Author, CreatedAt, UpdatedAt,
+   RelatedArticles (muut saman kategorian artikkelit). *@
 @model HakaTech.Portal.Models.ViewModels.KbArticleDetailViewModel
+
 @{
+    @* Sivun otsikko selaimelle = artikkelin otsikko. *@
     ViewData["Title"] = Model.Title;
+
+    @* Kolmitasoinen murupolku: Tietopankki → Kategoria → Artikkeli. *@
     ViewData["Breadcrumbs"] = new List<(string, string?)>
     {
         (L["Nav.KnowledgeBase"].Value, Url.Action("Index", "KnowledgeBase")),
+        @* Kategorialinkki suodattaa Index-sivun kyseiseen kategoriaan. *@
         (Model.CategoryName, Url.Action("Index", "KnowledgeBase", new { categoryId = Model.CategoryId })),
+        @* Artikkelin otsikko viimeisenä (ei linkkiä). *@
         (Model.Title, null)
     };
 }
 
+@* Murupolku manuaalisena Bootstrap breadcrumb -HTML:nä.
+   (Osa sivuista käyttää ViewComponent-breadcrumbia, osa manuaalista — molemmat toimivat.) *@
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-action="Index">Tietopankki</a></li>
+        @* Kategoriasuodatin Index-sivulle. *@
         <li class="breadcrumb-item">
             <a asp-action="Index" asp-route-categoryId="@Model.CategoryId">@Model.CategoryName</a>
         </li>
+        @* text-truncate max-width:300px = erittäin pitkät otsikot lyhennetään. *@
         <li class="breadcrumb-item active text-truncate" style="max-width:300px">@Model.Title</li>
     </ol>
 </nav>
 
+@* Kaksipalstainen asettelu: sisältö (8/12) + sivupalkki (4/12). g-4 = 24px väli. *@
 <div class="row g-4">
 
-    @* ── Artikkelin sisältö ──────────────────────────────────────── *@
+    @* ── Artikkelin pääsisältö ── *@
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm">
+            @* p-md-5 = isompi padding leveällä näytöllä (parempi luettavuus). *@
             <div class="card-body p-4 p-md-5">
 
+                @* Metatietorivi: kategoria + lukemat + päivitysaika. *@
                 <div class="d-flex align-items-center gap-2 mb-2">
+                    @* Kategorian nimi badgena. *@
                     <span class="badge bg-light text-secondary border">@Model.CategoryName</span>
                     <span class="text-muted small">
+                        @* bi-eye = silmä-ikoni. ViewCount = katselukerrat (kasvaa joka latauksella). *@
                         <i class="bi bi-eye me-1"></i>@Model.ViewCount lukemista
                     </span>
                     <span class="text-muted small">
+                        @* Viimeisin muokkausaika. *@
                         <i class="bi bi-clock me-1"></i>Päivitetty @Model.UpdatedAt.ToString("d.M.yyyy")
                     </span>
                 </div>
 
+                @* Artikkelin otsikko: h1 mutta visuaalisesti h3-kokoinen (h3 fw-bold). *@
                 <h1 class="h3 fw-bold mb-4">@Model.Title</h1>
 
+                @* kb-content = CSS-luokka joka tyylittää artikkelin sisällön
+                   (h2, h3, p, ul, ol, li, table — ks. inline-CSS alla).
+                   @Html.Raw(Model.Content) = renderöi HTML suoraan ilman enkoodausta.
+                   TURVALLISUUS: Content on puhdistettu HtmlSanitizer-kirjastolla
+                   tallennusvaiheessa — <script>-tagit ja vaaralliset attribuutit poistettu. *@
                 <div class="kb-content">
                     @Html.Raw(Model.Content)
                 </div>
 
+                @* Vaakaviiva erottaa sisällön alatunnisteesta. *@
                 <hr class="my-4" />
                 <div class="d-flex justify-content-between align-items-center">
+                    @* Kirjoittajan nimi ja luomispäivä. *@
                     <div class="text-muted small">
                         Kirjoittanut @Model.Author · @Model.CreatedAt.ToString("d.M.yyyy")
                     </div>
                     <div class="d-flex gap-2">
+                        @* Muokkaa-linkki vain adminille. *@
                         @if (User.IsInRole("Admin"))
                         {
                             <a asp-action="EditArticle" asp-route-id="@Model.Id"
@@ -60,6 +100,7 @@
                                 <i class="bi bi-pencil me-1"></i>Muokkaa
                             </a>
                         }
+                        @* Linkki tikettien luontiin — jos artikkeli ei ratkaissut ongelmaa. *@
                         <a asp-controller="Ticket" asp-action="Create"
                            class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-ticket-perforated me-1"></i>Luo tiketti silti
@@ -70,22 +111,29 @@
         </div>
     </div>
 
-    @* ── Sivupalkki: muut artikkelit ────────────────────────────── *@
+    @* ── Sivupalkki: liittyvät artikkelit + tukikortti ── *@
     <div class="col-lg-4">
+        @* Liittyvät artikkelit — vain jos niitä on. *@
         @if (Model.RelatedArticles.Count > 0)
         {
+            @* bg-transparent border-0 pb-0 = hienovarainen korttiotsikko ilman taustaa. *@
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header bg-transparent border-0 pb-0 pt-3 px-4">
                     <h6 class="fw-semibold mb-0">
+                        @* bi-collection = kokoelma-ikoni. *@
                         <i class="bi bi-collection me-2 text-primary"></i>Muut ohjeet samassa kategoriassa
                     </h6>
                 </div>
+                @* px-2 pb-2 = pieni sisäpadding lisälinkkejä varten. *@
                 <div class="list-group list-group-flush px-2 pb-2">
                     @foreach (var a in Model.RelatedArticles)
                     {
+                        @* border-0 rounded = listaryhmätyyli pyöristetyillä kulmilla. *@
                         <a asp-action="Article" asp-route-id="@a.Id"
                            class="list-group-item list-group-item-action border-0 py-2 px-3 rounded">
+                            @* Artikkelin otsikko. *@
                             <div class="small fw-medium">@a.Title</div>
+                            @* Katselukerrat. font-size:.75rem = erittäin pieni teksti. *@
                             <div class="text-muted" style="font-size:.75rem">
                                 <i class="bi bi-eye me-1"></i>@a.ViewCount
                             </div>
@@ -95,11 +143,16 @@
             </div>
         }
 
+        @* Tukikortti: "Eikö ohje auttanut?" — ohjaa tiketin luontiin.
+           bg-primary text-white = sininen tausta, valkoinen teksti. *@
         <div class="card border-0 shadow-sm bg-primary text-white">
             <div class="card-body p-4 text-center">
+                @* bi-headset = kuuloke-ikoni. display-6 = iso ikoni (2.5rem). *@
                 <i class="bi bi-headset display-6 mb-2"></i>
                 <h6 class="fw-bold">Eikö ohje auttanut?</h6>
+                @* opacity-75 = 75 % läpinäkyvä teksti hienovaraisempaan ilmeeseen. *@
                 <p class="small mb-3 opacity-75">Tukitiimimme auttaa arkisin 8–17.</p>
+                @* btn-light = valkoinen painike sinisellä taustakortilla. *@
                 <a asp-controller="Ticket" asp-action="Create"
                    class="btn btn-light btn-sm fw-semibold">
                     <i class="bi bi-ticket-perforated me-1"></i>Luo tukitiketti
@@ -110,11 +163,18 @@
 
 </div>
 
+@* Inline-CSS artikkelisisällön typografiselle tyylittelylle.
+   .kb-content-luokka säätää artikkelin HTML-elementit luettavaan asuun. *@
 <style>
+    @* h2/h3: isot alaotsikot lihavoidulla, ylimarginallla. *@
     .kb-content h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; }
     .kb-content h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1.25rem; }
+    @* Kappaleiden riviväli tilavaksi (1.75). *@
     .kb-content p  { line-height: 1.75; }
+    @* Listojen vasemmapadding sisentää pisteet/numerot. *@
     .kb-content ul, .kb-content ol { padding-left: 1.5rem; }
+    @* Listaalkioiden marginaali parantaa luettavuutta. *@
     .kb-content li { margin-bottom: .35rem; line-height: 1.7; }
+    @* Taulukon teksti hieman pienempi kuin artikkelin normaali. *@
     .kb-content table { font-size: .9rem; }
 </style>

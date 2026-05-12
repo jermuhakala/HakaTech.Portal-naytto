@@ -1,20 +1,41 @@
 @*
-    Announcement/Index.cshtml — Adminin tiedotelista. Näyttää kaikki
-    tiedotteet (julkaistut + luonnokset) ja niiden voimassaoloajan.
+    Announcement/Index.cshtml — Adminin tiedotelista.
+
+    Näyttää kaikki tiedotteet (julkaistut + luonnokset) hallintanäkymässä.
+    Asiakas ei näe tätä sivua — tiedotteet näkyvät asiakkaalle suoraan
+    etusivun (Dashboard) yläosassa aktiivisina ilmoituspalkkeina.
+
+    Tiedotteet voivat olla:
+      - Info (sininen): yleinen tiedote
+      - Maintenance (keltainen): huoltokatko/päivitys
+      - Warning (punainen): varoitus, esim. tietoturvaongelma
+
+    Jokaisen tiedotteen voi:
+      - Julkaista/piilottaa yhdellä napilla (TogglePublish)
+      - Muokata (Edit)
+      - Poistaa (Delete)
 *@
+
+@* Lista kaikista tiedotteista (järjestetty kontrollerin toimesta). *@
 @model IEnumerable<HakaTech.Portal.Models.Domain.Announcement>
+
+@* Tuodaan AnnouncementType-enum käyttöön Razor-koodissa. *@
 @using HakaTech.Portal.Models.Domain
+
 @{
     ViewData["Title"] = "Tiedotteet";
 }
 
+@* Otsikkorivi: vasemmalla otsikko, oikealla "Uusi tiedote" -painike. *@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0"><i class="bi bi-megaphone me-2"></i>Tiedotteet & huoltoikkunat</h2>
+    @* asp-action="Create" = linkki AnnouncementController.Create-metodille. *@
     <a asp-action="Create" class="btn btn-primary">
         <i class="bi bi-plus-lg me-1"></i>Uusi tiedote
     </a>
 </div>
 
+@* Jos lista on tyhjä — näytetään informatiivinen tyhjäilmoitus. *@
 @if (!Model.Any())
 {
     <div class="alert alert-info">
@@ -23,40 +44,60 @@
 }
 else
 {
+    @* Responsiivinen taulukko — vaakavieritys mobiililla. *@
     <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>Otsikko</th>
-                    <th>Tyyppi</th>
-                    <th>Voimassa</th>
-                    <th class="text-center">Julkaistu</th>
-                    <th>Luoja</th>
-                    <th></th>
+                    <th>Otsikko</th>      @* Tiedotteen otsikko *@
+                    <th>Tyyppi</th>       @* Info / Huoltokatko / Varoitus *@
+                    <th>Voimassa</th>     @* Aikaväli jolloin tiedote näkyy *@
+                    <th class="text-center">Julkaistu</th>  @* Julkaisutila-nappi *@
+                    <th>Luoja</th>        @* Tiedotteen luonut käyttäjä *@
+                    <th></th>             @* Toimintopainikkeet (muokkaa/poista) *@
                 </tr>
             </thead>
             <tbody>
+                @* Käydään läpi kaikki tiedotteet. *@
                 @foreach (var a in Model)
                 {
+                    @* Lasketaan onko tiedote tällä hetkellä aktiivinen:
+                       1. IsPublished = täytyy olla julkaistu
+                       2. ValidFrom on null TAI ValidFrom on mennyt (näkyvyys alkanut)
+                       3. ValidUntil on null TAI ValidUntil ei ole mennyt (ei vielä päättynyt) *@
                     var now = DateTime.UtcNow;
                     bool isActive = a.IsPublished &&
                                     (a.ValidFrom  == null || a.ValidFrom  <= now) &&
                                     (a.ValidUntil == null || a.ValidUntil >= now);
+
                     <tr>
+                        @* Otsikko-solu: ikoni + otsikkoteksti + "Näkyy"-merkki jos aktiivinen. *@
                         <td class="fw-semibold">
+                            @* Tyyppi-ikoni: TypeIcon palauttaa Bootstrap Icons -luokan
+                               TypeColor palauttaa väriluokan (text-warning/text-danger/text-info). *@
                             <span class="@(TypeIcon(a.Type)) me-1 @(TypeColor(a.Type))"></span>
                             @a.Title
+                            @* Vihreä "Näkyy"-merkki jos tiedote on juuri nyt aktiivinen. *@
                             @if (isActive)
                             {
                                 <span class="badge bg-success ms-1 small">Näkyy</span>
                             }
                         </td>
+
+                        @* Tyyppi-merkki: värillinen badge. TypeBadge palauttaa väriluokan. *@
                         <td>
                             <span class="badge @TypeBadge(a.Type)">@TypeLabel(a.Type)</span>
                         </td>
+
+                        @* Voimassaoloaika. *@
                         <td class="small text-muted">
+                            @* Näytetään aikaväli vain jos jompi kumpi raja on asetettu. *@
                             @if (a.ValidFrom.HasValue || a.ValidUntil.HasValue)
                             {
+                                @* ToLocalTime() muuntaa UTC-ajan paikalliseksi.
+                                   ?. = null-ehdollinen: jos null, jätetään formatointi tekemättä.
+                                   ?? "—" = jos null, näytetään em-viiva (ei alkamisaikaa = heti).
+                                   ∞ = äärettömyys-merkki (ei päättymisaikaa = näkyy aina). *@
                                 <span>
                                     @(a.ValidFrom?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "—")
                                     –
@@ -65,26 +106,41 @@ else
                             }
                             else
                             {
+                                @* Ei aikarajoja → näkyy aina kun julkaistu. *@
                                 <span>Aina</span>
                             }
                         </td>
+
+                        @* Julkaisu/piilotus-painike. Jokainen on oma POST-lomakkeensa.
+                           TogglePublish-action vaihtaa IsPublished-lipun (true→false tai false→true).
+                           Painikkeen väri ja ikoni vaihtuvat tilan mukaan. *@
                         <td class="text-center">
                             <form asp-action="TogglePublish" asp-route-id="@a.Id" method="post" class="d-inline">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm @(a.IsPublished ? "btn-success" : "btn-outline-secondary")"
                                         title="@(a.IsPublished ? "Piilota" : "Julkaise")">
+                                    @* bi-eye-fill = silmä täynnä (näkyy) / bi-eye-slash = silmä yliviivattu (piilotettu). *@
                                     <i class="bi @(a.IsPublished ? "bi-eye-fill" : "bi-eye-slash")"></i>
                                 </button>
                             </form>
                         </td>
+
+                        @* Luojan nimi tai sähköposti.
+                           FullName.Length > 0 = tarkistaa ettei FullName ole tyhjä merkkijono.
+                           ?? "—" = jos käyttäjä on null (poistettu käyttäjä). *@
                         <td class="small text-muted">
                             @(a.CreatedByUser?.FullName.Length > 0 ? a.CreatedByUser.FullName : a.CreatedByUser?.Email ?? "—")
                         </td>
+
+                        @* Toimintopainikkeet: Muokkaa + Poista. *@
                         <td class="text-end">
+                            @* Muokkaa-linkki. me-1 = pieni väli seuraavaan painikkeeseen. *@
                             <a asp-action="Edit" asp-route-id="@a.Id"
                                class="btn btn-sm btn-outline-secondary me-1">
                                 <i class="bi bi-pencil"></i>
                             </a>
+                            @* Poisto-lomake. onsubmit=confirm → varmistusikkuna ennen poistoa.
+                               Poisto on pysyvä, joten käyttäjältä pyydetään vahvistus. *@
                             <form asp-action="Delete" asp-route-id="@a.Id" method="post" class="d-inline"
                                   onsubmit="return confirm('Poistetaanko tiedote?')">
                                 @Html.AntiForgeryToken()
@@ -100,25 +156,35 @@ else
     </div>
 }
 
+@* @functions-lohko: Razor-näkymän sisäiset apufunktiot.
+   static = ei tarvita instanssia; voidaan kutsua suoraan.
+   switch-lauseke (switch expression, C# 8+): lyhyt switch palauttaa arvon suoraan. *@
 @functions {
+    @* TypeLabel: palauttaa tiedotteen tyypin suomenkielisen nimen. *@
     static string TypeLabel(AnnouncementType t) => t switch
     {
         AnnouncementType.Maintenance => "Huoltokatko",
         AnnouncementType.Warning     => "Varoitus",
-        _                            => "Tiedote"
+        _                            => "Tiedote"   // _ = oletusarvo (Info ja muut)
     };
+
+    @* TypeBadge: palauttaa Bootstrap-väriluokan badge-elementille. *@
     static string TypeBadge(AnnouncementType t) => t switch
     {
-        AnnouncementType.Maintenance => "bg-warning text-dark",
-        AnnouncementType.Warning     => "bg-danger",
-        _                            => "bg-info text-dark"
+        AnnouncementType.Maintenance => "bg-warning text-dark",  // keltainen
+        AnnouncementType.Warning     => "bg-danger",             // punainen
+        _                            => "bg-info text-dark"      // sininen
     };
+
+    @* TypeIcon: palauttaa Bootstrap Icons -luokan tyypille. *@
     static string TypeIcon(AnnouncementType t) => t switch
     {
-        AnnouncementType.Maintenance => "bi bi-tools",
-        AnnouncementType.Warning     => "bi bi-exclamation-triangle-fill",
-        _                            => "bi bi-info-circle-fill"
+        AnnouncementType.Maintenance => "bi bi-tools",                     // jakoavain
+        AnnouncementType.Warning     => "bi bi-exclamation-triangle-fill", // kolmio
+        _                            => "bi bi-info-circle-fill"           // ympyrä-i
     };
+
+    @* TypeColor: palauttaa tekstiväriluokan ikonille. *@
     static string TypeColor(AnnouncementType t) => t switch
     {
         AnnouncementType.Maintenance => "text-warning",

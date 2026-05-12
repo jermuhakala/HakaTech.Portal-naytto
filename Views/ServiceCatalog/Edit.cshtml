@@ -1,52 +1,92 @@
 @*
     ServiceCatalog/Edit.cshtml — Palvelukatalogin tuotteen muokkauslomake.
+
+    Sama rakenne kuin Create.cshtml, mutta:
+      - Sivun otsikko on "Muokkaa palvelua" (L["Service.Edit"])
+      - Kentissä EI ole placeholder-tekstejä — niiden sijaan asp-for täyttää
+        kentät ViewModelin nykyisillä arvoilla (palvelimen palauttama data)
+      - asp-action="Edit" → POST /ServiceCatalog/Edit
+
+    Yhteys: ServiceCatalogController.Edit (GET + POST).
 *@
+
+@* Sama ViewModel kuin Create.cshtml — molemmat lomakkeet jakavat saman mallin.
+   Edit-tilanteessa ViewModel on täytetty tietokannasta haetulla datalla. *@
 @model HakaTech.Portal.Models.ViewModels.ServiceCatalogItemFormViewModel
+
 @{
+    @* Selaimen välilehden otsikko. L["Service.Edit"] = lokalisoitu "Muokkaa palvelua". *@
     ViewData["Title"] = L["Service.Edit"].Value;
 }
 
+@* Otsikkorivi: takaisin-nuoli + muokkaustyyppinen otsikko.
+   Sama rakenne kuin Create.cshtml, mutta ikoni on kynä (bi-pencil) luomisen sijaan. *@
 <div class="d-flex align-items-center gap-3 mb-3">
+    @* Takaisin hallintasivulle. *@
     <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
     </a>
+    @* L["Service.Edit"] = lokalisoitu teksti esim. "Muokkaa palvelua". *@
     <h2 class="mb-0"><i class="bi bi-pencil me-2"></i>@L["Service.Edit"]</h2>
 </div>
 
+@* Lomakekortti. max-width:640px = sama rajaus kuin Create.cshtml. *@
 <div class="card shadow-sm border-0" style="max-width:640px;">
     <div class="card-body">
+        @* POST /ServiceCatalog/Edit — kontrolleri tunnistaa muokattavan palvelun
+           ViewModelin Id-kentän perusteella (piilokenttänä muistissa model-bindingin kautta). *@
         <form asp-action="Edit" method="post">
+            @* CSRF-suojaustunnus: estää väärennetyt lomakelähetykset. *@
             @Html.AntiForgeryToken()
+
+            @* Palvelinvalidoinnin virheviestit — näytetään vain jos kontrolleri
+               palauttaa ModelState-virheitä (esim. pakolliset kentät tyhjinä). *@
             <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
 
+            @* Palvelun nimi — esitäytetty nykyisellä arvolla.
+               asp-for="Name" hakee ViewModel.Name:n ja asettaa sen value-attribuutiksi. *@
             <div class="mb-3">
                 <label asp-for="Name" class="form-label fw-semibold"></label>
+                @* Ei placeholder: kenttä on jo täytetty nykyisellä palvelun nimellä. *@
                 <input asp-for="Name" class="form-control" />
                 <span asp-validation-for="Name" class="text-danger small"></span>
             </div>
 
+            @* Palvelun kuvaus — esitäytetty. rows="4" = saman korkuinen kuin Create. *@
             <div class="mb-3">
                 <label asp-for="Description" class="form-label fw-semibold"></label>
+                @* asp-for="Description" asettaa textarean sisällön (value ei toimi textarealle —
+                   ASP.NET Core Tag Helper lisää tekstin elementtien väliin automaattisesti). *@
                 <textarea asp-for="Description" class="form-control" rows="4"></textarea>
                 <span asp-validation-for="Description" class="text-danger small"></span>
             </div>
 
+            @* Kategoria + hinta vierekkäin — sama layout kuin Create.cshtml. *@
             <div class="row g-3 mb-3">
+                @* Kategoria — esitäytetty nykyisellä kategorialla. *@
                 <div class="col-md-6">
                     <label asp-for="Category" class="form-label fw-semibold"></label>
+                    @* Ei placeholder — kenttä on valmiiksi täytetty. *@
                     <input asp-for="Category" class="form-control" />
                     <span asp-validation-for="Category" class="text-danger small"></span>
                 </div>
+
+                @* Hinta (nullable decimal) — esitäytetty tai tyhjä (null = ei lähtöhintaa).
+                   input-group = kenttä + €-liite. *@
                 <div class="col-md-6">
                     <label asp-for="Price" class="form-label fw-semibold"></label>
                     <div class="input-group">
+                        @* Hintakenttä esitäytettynä. Tyhjäksi jättäminen = null = poistetaan hinta. *@
                         <input asp-for="Price" class="form-control" />
+                        @* €-merkki kentän oikealla puolella. *@
                         <span class="input-group-text">€</span>
                     </div>
                     <span asp-validation-for="Price" class="text-danger small"></span>
                 </div>
             </div>
 
+            @* Aktiivinen-valintaruutu — esitäytetty palvelun nykyisellä IsActive-arvolla.
+               asp-for="IsActive" asettaa checked-attribuutin automaattisesti jos IsActive=true. *@
             <div class="mb-4">
                 <div class="form-check">
                     <input asp-for="IsActive" class="form-check-input" type="checkbox" />
@@ -54,6 +94,7 @@
                 </div>
             </div>
 
+            @* Toimintopainikkeet — sama kuin Create.cshtml. *@
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i>Tallenna

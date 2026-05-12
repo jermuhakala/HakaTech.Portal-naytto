@@ -1,26 +1,62 @@
 @*
-    Breadcrumbs/Default.cshtml — Breadcrumbs-komponentin näkymä.
-    Renderöi polkuna leivänmuruja ylätunnisteeseen, viimeinen kohta
-    näytetään tekstinä (ei linkkinä) koska se on nykyinen sivu.
+    Breadcrumbs/Default.cshtml — Leivänmurut-ViewComponentin näkymä.
+
+    "Leivänmurut" (breadcrumbs) on navigaatiorakenne joka näyttää käyttäjälle
+    missä kohtaa sivustoa hän on, esim.:
+        Etusivu  >  Tiketit  >  #42
+
+    Viimeinen kohta on nykyinen sivu — se näytetään tekstinä (ei linkkinä),
+    koska olet jo sillä sivulla. Kaikki aiemmat kohteet ovat klikattavia linkkejä.
+
+    ViewComponent sijaitsee ViewComponents/BreadcrumbsViewComponent.cs.
+    Se rakentaa leivänmurulistan automaattisesti ViewData["Breadcrumbs"]-arvosta
+    joka asetetaan jokaisessa näkymässä.
+
+    Leivänmurut ovat tärkeät saavutettavuuden kannalta:
+      - aria-label="Breadcrumb" = ruudunlukijat tunnistavat tämän navigaatioksi
+      - <ol> = järjestetty lista (kohteet ovat tärkeysjärjestyksessä)
+      - viimeisellä on is-current -tyyli → CSS voi tehdä siitä lihavoidun
 *@
+
+@* Model on lista tupleja: (Label=teksti, Href=URL tai null).
+   IReadOnlyList = vain lukuoikeus, ei voi muuttaa listaa.
+   Tuple (string Label, string? Href) = nimi + navigointiosoite tai null. *@
 @model IReadOnlyList<(string Label, string? Href)>
+
+@* { Count: > 0 } = property pattern: näytetään leivänmurut vain jos listassa
+   on elementtejä. Tyhjä lista → ei renderöidä lainkaan (säästää HTML-tilaa). *@
 @if (Model is { Count: > 0 })
 {
+    @* <nav> = HTML5:n navigaatio-elementti.
+       aria-label = saavutettavuusteksti ruudunlukijoille. *@
     <nav class="breadcrumbs-lnr" aria-label="Breadcrumb">
+
+        @* <ol> = ordered list (järjestetty lista).
+           Semanttisesti oikein: leivänmurut ovat järjestyksessä tärkeitä. *@
         <ol>
+            @* Käydään läpi leivänmurut indeksillä (tarvitaan is-current -tarkistukseen). *@
             @for (var i = 0; i < Model.Count; i++)
             {
-                var c = Model[i];
-                var isLast = i == Model.Count - 1;
+                var c      = Model[i];                   // nykyinen leivänmuru
+                var isLast = i == Model.Count - 1;       // onko viimeinen = nykyinen sivu?
+
+                @* is-current = CSS-luokka viimeiselle kohdalle (lihavoidaan tai kursiivoidaan). *@
                 <li class="@(isLast ? "is-current" : null)">
+
+                    @* Jos ei ole viimeinen JA Href on asetettu → klikattava linkki. *@
                     @if (!isLast && !string.IsNullOrEmpty(c.Href))
                     {
                         <a href="@c.Href">@c.Label</a>
                     }
                     else
                     {
+                        @* Viimeinen (nykyinen sivu) tai kohdistettu kohde → vain teksti. *@
                         <span>@c.Label</span>
                     }
+
+                    @* Erotin nuoli ">" seuraavaan kohteeseen paitsi viimeisen jälkeen.
+                       aria-hidden="true" = ruudunlukija jättää ikonin väliin
+                       (se on vain visuaalinen erotin, ei informatiivinen). *@
                     @if (!isLast)
                     {
                         <i class="bi bi-chevron-right sep" aria-hidden="true"></i>

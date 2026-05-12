@@ -1,29 +1,51 @@
 @*
     Booking/ManageBookings.cshtml — Adminin varausten hallintasivu.
-    Listaa kaikki varaukset ja sallii niiden vahvistamisen tai peruutuksen.
+
+    Listaa kaikki varaukset suodatettuna tilan ja asiakkaan mukaan.
+    Admin voi:
+      - Vahvistaa "Odottaa"-varauksen (Pending → Confirmed)
+      - Peruuttaa aktiivisen varauksen (→ Cancelled)
+
+    Suodattimet ovat GET-lomakkeessa (URL-parametrit säilyvät).
+    Peruutetut varaukset himmennetään (table-secondary opacity-65).
+
+    Yhteys: BookingController.ManageBookings.
 *@
+
+@* Malli = kaikki varaukset (navigaatio-ominaisuuksineen: BookingSlot, User, Customer). *@
 @model IEnumerable<HakaTech.Portal.Models.Domain.Booking>
 @using HakaTech.Portal.Models.Domain
+
 @{
     ViewData["Title"] = L["Booking.Manage"].Value;
-    var fi            = new System.Globalization.CultureInfo("fi-FI");
+    @* fi = suomenkielinen kulttuuri päivämäärämuotoiluun. *@
+    var fi = new System.Globalization.CultureInfo("fi-FI");
 
+    @* Suodattimet ViewBag:sta. as BookingStatus? = nullable-tyyppimuunnos.
+       null = "kaikki tilat" tai "kaikki asiakkaat". *@
     BookingStatus? statusFilter   = ViewBag.StatusFilter   as BookingStatus?;
     int?           customerFilter = ViewBag.CustomerFilter as int?;
+    @* customers = asiakaslist tilasuodattimen viereen.
+       ?? [] = jos null, käytetään tyhjää listaa (C# 12 kollektion literaali). *@
     var customers = ViewBag.Customers as List<HakaTech.Portal.Models.Domain.Customer> ?? [];
 
+    @* StatusColor: Bootstrap-värinimi varauksen tilan mukaan. *@
     string StatusColor(BookingStatus s) => s switch {
-        BookingStatus.Confirmed => "success",
-        BookingStatus.Pending   => "warning",
-        BookingStatus.Cancelled => "secondary",
+        BookingStatus.Confirmed => "success",   // vihreä — vahvistettu
+        BookingStatus.Pending   => "warning",   // keltainen — odottaa
+        BookingStatus.Cancelled => "secondary", // harmaa — peruutettu
         _                       => "secondary"
     };
+
+    @* StatusName: suomenkielinen tilan nimi badgeen. *@
     string StatusName(BookingStatus s) => s switch {
         BookingStatus.Confirmed => "Vahvistettu",
         BookingStatus.Pending   => "Odottaa",
         BookingStatus.Cancelled => "Peruutettu",
         _                       => s.ToString()
     };
+
+    @* TypeName: suomenkielinen palvelutyyppi. *@
     string TypeName(BookingSlotType t) => t switch {
         BookingSlotType.Maintenance   => "Huolto",
         BookingSlotType.Consulting    => "Konsultointi",
@@ -32,6 +54,7 @@
     };
 }
 
+@* Otsikkorivi + takaisin kalenteriin -linkki. *@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">
         <i class="bi bi-list-check me-2 text-primary"></i>Varausten hallinta
@@ -41,20 +64,25 @@
     </a>
 </div>
 
-@* ── Suodattimet ─────────────────────────────────────────────────── *@
+@* ── Suodatinlomake ──
+   method="get" = parametrit URL:iin, ei POST-bodyksi. *@
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-3">
         <form method="get" class="row g-2 align-items-end">
+            @* Tilasuodatin. *@
             <div class="col-auto">
                 <label class="form-label small fw-medium mb-1">Tila</label>
                 <select name="status" class="form-select form-select-sm">
                     <option value="">Kaikki tilat</option>
+                    @* Käydään kaikki BookingStatus-enumin arvot.
+                       selected="@(statusFilter == s)" = Tag Helper asettaa selected-attribuutin. *@
                     @foreach (BookingStatus s in Enum.GetValues<BookingStatus>())
                     {
                         <option value="@s" selected="@(statusFilter == s)">@StatusName(s)</option>
                     }
                 </select>
             </div>
+            @* Asiakassuodatin. *@
             <div class="col-auto">
                 <label class="form-label small fw-medium mb-1">Asiakas</label>
                 <select name="customerId" class="form-select form-select-sm" style="min-width:160px">
@@ -69,17 +97,19 @@
                 <button type="submit" class="btn btn-primary btn-sm">
                     <i class="bi bi-funnel me-1"></i>Suodata
                 </button>
+                @* Tyhjennä = linkki ilman parametreja nollaa suodattimet. *@
                 <a asp-action="ManageBookings" class="btn btn-outline-secondary btn-sm ms-1">Tyhjennä</a>
             </div>
         </form>
     </div>
 </div>
 
-@* ── Varaukset ───────────────────────────────────────────────────── *@
+@* ── Varaukset-taulukko ── *@
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         @if (!Model.Any())
         {
+            @* Tyhjä tila. *@
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-calendar-x display-4 d-block mb-2"></i>
                 <p>Ei varauksia valituilla suodattimilla.</p>
@@ -88,6 +118,7 @@
         else
         {
             <div class="table-responsive">
+                @* small = tiiviimpi taulukon teksti. align-middle = solujen sisältö pystysuunnassa keskellä. *@
                 <table class="table table-hover align-middle mb-0 small">
                     <thead class="table-light">
                         <tr>
@@ -103,9 +134,13 @@
                     <tbody>
                         @foreach (var b in Model)
                         {
+                            @* Peruutetut rivit himmennetään: table-secondary + opacity-65. *@
                             <tr class="@(b.Status == BookingStatus.Cancelled ? "table-secondary opacity-65" : "")">
+
+                                @* Ajankohta: päivä isolla + aikaväli pienellä. *@
                                 <td class="text-nowrap">
                                     <div class="fw-medium">
+                                        @* ?. null-ehdollinen: jos BookingSlot ei ole ladattu, ei kaadu. *@
                                         @b.BookingSlot?.StartTime.ToString("d.M.yyyy", fi)
                                     </div>
                                     <div class="text-muted">
@@ -113,50 +148,74 @@
                                         – @b.BookingSlot?.EndTime.ToString("HH:mm")
                                     </div>
                                 </td>
+
+                                @* Aikavälin nimi + tyyppi. *@
                                 <td>
                                     <div>@b.BookingSlot?.Title</div>
                                     <div class="text-muted">
+                                        @* is not null ? TypeName(...) : "" = tyyppi vain jos BookingSlot on ladattu. *@
                                         @(b.BookingSlot is not null ? TypeName(b.BookingSlot.SlotType) : "")
                                     </div>
                                 </td>
+
+                                @* Asiakkaan yritysnimi. ?? "–" = tyhjä merkki jos asiakas puuttuu. *@
                                 <td>@(b.Customer?.CompanyName ?? "–")</td>
+
+                                @* Käyttäjän nimi + sähköposti. *@
                                 <td>
                                     <div>@(b.User?.FullName ?? "–")</div>
+                                    @* Sähköposti harmaalla. *@
                                     <div class="text-muted">@b.User?.Email</div>
                                 </td>
+
+                                @* Lisätiedot (Notes) rajoitetulla leveydellä (text-truncate).
+                                   title-attribuutti näyttää koko tekstin hoverin yhteydessä. *@
                                 <td class="text-muted text-truncate" style="max-width:180px"
                                     title="@b.Notes">
+                                    @* Jos Notes on tyhjä, näytetään "–". *@
                                     @(string.IsNullOrWhiteSpace(b.Notes) ? "–" : b.Notes)
+                                    @* Peruutussyy näytetään kursiivilla. *@
                                     @if (!string.IsNullOrWhiteSpace(b.CancellationReason))
                                     {
                                         <div class="fst-italic">Syy: @b.CancellationReason</div>
                                     }
                                 </td>
+
+                                @* Tila-badge + luomisaika. *@
                                 <td>
+                                    @* text-bg-@StatusColor = Bootstrap 5.3: tausta + kontrastoiva teksti. *@
                                     <span class="badge text-bg-@StatusColor(b.Status)">
                                         @StatusName(b.Status)
                                     </span>
+                                    @* Luomisaika pienemmällä tekstillä UTC → paikallinen aika. *@
                                     <div class="text-muted" style="font-size:11px">
                                         @b.CreatedAt.ToLocalTime().ToString("d.M.yyyy HH:mm")
                                     </div>
                                 </td>
+
+                                @* Toiminnot oikealle. text-nowrap = ei rivitystä. *@
                                 <td class="text-end text-nowrap">
+                                    @* Vahvista-painike: vain Pending-tilassa.
+                                       Jokainen toiminto on erillinen <form> (POST). *@
                                     @if (b.Status == BookingStatus.Pending)
                                     {
                                         <form asp-action="ConfirmBooking" asp-route-id="@b.Id"
                                               method="post" class="d-inline">
                                             @Html.AntiForgeryToken()
+                                            @* btn-success = vihreä vahvistuspainike. *@
                                             <button type="submit" class="btn btn-success btn-sm me-1"
                                                     title="Vahvista">
                                                 <i class="bi bi-check-lg"></i>
                                             </button>
                                         </form>
                                     }
+                                    @* Peruuta-painike: vain ei-peruutetuissa varauksissa. *@
                                     @if (b.Status != BookingStatus.Cancelled)
                                     {
                                         <form asp-action="Cancel" asp-route-id="@b.Id"
                                               method="post" class="d-inline">
                                             @Html.AntiForgeryToken()
+                                            @* data-confirm = _Layout.cshtml:n event delegaatio pyytää vahvistuksen. *@
                                             <button type="submit" class="btn btn-outline-danger btn-sm"
                                                     data-confirm="Peruutetaanko varaus?"
                                                     title="Peruuta">

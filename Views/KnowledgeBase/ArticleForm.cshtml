@@ -1,71 +1,112 @@
 @*
-    KnowledgeBase/ArticleForm.cshtml — Adminin lomake artikkelin luomiseen
-    ja muokkaamiseen. Sama lomake palvelee molempia (Id = 0 = uusi).
-    HTML-sisältö editoidaan WYSIWYG-editorilla.
+    KnowledgeBase/ArticleForm.cshtml — Adminin lomake artikkelin luomiseen ja muokkaamiseen.
+
+    Sama lomake palvelee molempia toimintoja:
+      - Id == 0 → uusi artikkeli (CreateArticle, sininen otsikko, "Julkaise artikkeli")
+      - Id > 0  → muokkaus (EditArticle, harmaa otsikko, "Tallenna muutokset")
+
+    WYSIWYG-editori:
+      - Summernote (Bootstrap 5 -versio) ladataan CDN:stä @section Scripts -osiossa
+      - $('#kb-editor').summernote({...}) = jQuery-plugin joka korvaa <textarea>-elementin
+        rikkaalla editorilla
+      - Tallennuksessa $('form').on('submit', ...) kopioi editorin HTML textarea:han
+        jotta server-side model binding saa sisällön
+
+    Turvallisuus:
+      - Sisältö sanitoidaan palvelinpuolella ENNEN tietokantaan tallentamista
+        (KnowledgeBaseController käyttää HtmlSanitizer-kirjastoa)
+
+    Yhteys: KnowledgeBaseController.CreateArticle (GET + POST) ja EditArticle (GET + POST).
 *@
+
+@* KbArticleFormViewModel sisältää: Id, Title, CategoryId, CategoryOptions,
+   IsPublished, IsFeatured, Content. *@
 @model HakaTech.Portal.Models.ViewModels.KbArticleFormViewModel
+
 @{
+    @* isNew = onko kyse uuden artikkelin luomisesta. *@
     bool   isNew  = Model.Id == 0;
+    @* action = POST-reitti: "CreateArticle" tai "EditArticle". *@
     string action = isNew ? "CreateArticle" : "EditArticle";
+    @* Sivun otsikko vaihtelee toiminnon mukaan. *@
     ViewData["Title"] = (isNew ? L["KB.ArticleNew"] : L["KB.ArticleEdit"]).Value;
 }
 
+@* Takaisin hallintasivulle -linkki. *@
 <div class="mb-3">
     <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Takaisin hallintaan
     </a>
 </div>
 
+@* Lomake rajoitettu leveyttä (col-xl-9). *@
 <div class="row justify-content-center">
     <div class="col-xl-9">
         <div class="card border-0 shadow-sm">
+            @* Korttinotsikko: sininen uudelle, harmaa muokkaukselle.
+               Ternary-lauseke kolmella kerroksella: isNew → bg-primary/bg-secondary,
+               plus-lg/pencil -ikoni. *@
             <div class="card-header @(isNew ? "bg-primary" : "bg-secondary") text-white py-3">
                 <h5 class="mb-0">
                     <i class="bi bi-@(isNew ? "plus-lg" : "pencil") me-2"></i>@ViewData["Title"]
                 </h5>
             </div>
             <div class="card-body p-4">
+                @* asp-route-id: uudelle null (ei ID:tä URL:ssa), muokkaukselle artikkelin ID.
+                   null-to-string: isNew ? null : Model.Id.ToString() = null ei lisää id-parametria. *@
                 <form asp-action="@action" asp-route-id="@(isNew ? null : Model.Id.ToString())" method="post">
                     @Html.AntiForgeryToken()
+                    @* style="display:none" = piilotetaan aluksi, asiakaspuolen validointi
+                       näyttää sen tarvittaessa. *@
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3" style="display:none"></div>
 
-                    @* Otsikko *@
+                    @* Artikkelin otsikko. *@
                     <div class="mb-3">
                         <label asp-for="Title" class="form-label fw-medium"></label>
                         <input asp-for="Title" class="form-control" placeholder="Artikkelin otsikko" />
                         <span asp-validation-for="Title" class="text-danger small"></span>
                     </div>
 
-                    @* Kategoria + valinnat *@
+                    @* Kategoria + IsPublished + IsFeatured kolmessa sarakkeessa. *@
                     <div class="row g-3 mb-3">
                         <div class="col-md-5">
                             <label asp-for="CategoryId" class="form-label fw-medium"></label>
+                            @* asp-items = generoi <option>-elementit SelectList:sta.
+                               Ensin lisätään tyhjä "Valitse kategoria" -vaihtoehto. *@
                             <select asp-for="CategoryId" asp-items="Model.CategoryOptions" class="form-select">
                                 <option value="">– Valitse kategoria –</option>
                             </select>
                             <span asp-validation-for="CategoryId" class="text-danger small"></span>
                         </div>
+                        @* d-flex align-items-end pb-1 = valintaruutu tasataan tekstikentän kanssa. *@
                         <div class="col-md-3 d-flex align-items-end pb-1">
                             <div class="form-check">
                                 <input asp-for="IsPublished" class="form-check-input" type="checkbox" />
+                                @* Html.DisplayNameFor = lukee [Display(Name="...")] -attribuutin ViewModel:sta.
+                                   Vaihtoehto L["..."]:lle kun label on suoraan C#-attribuutissa. *@
                                 <label asp-for="IsPublished" class="form-check-label">@Html.DisplayNameFor(m => m.IsPublished)</label>
                             </div>
                         </div>
                         <div class="col-md-4 d-flex align-items-end pb-1">
                             <div class="form-check">
                                 <input asp-for="IsFeatured" class="form-check-input" type="checkbox" />
+                                @* IsFeatured = nostetaanko artikkeli etusivulle "Suositut"-osioon. *@
                                 <label asp-for="IsFeatured" class="form-check-label">@Html.DisplayNameFor(m => m.IsFeatured)</label>
                             </div>
                         </div>
                     </div>
 
-                    @* Sisältö – Summernote *@
+                    @* Sisältöeditori. id="kb-editor" = Summernote kiinnittyy tähän elementtiin. *@
                     <div class="mb-4">
                         <label asp-for="Content" class="form-label fw-medium"></label>
+                        @* asp-for="Content" generoi name="Content" — model binding ottaa arvon.
+                           Summernote korvaa tämän visuaalisella editorilla mutta säilyttää
+                           textarea:n piilotettuna (sisältöä päivitetään ennen submit). *@
                         <textarea asp-for="Content" id="kb-editor"></textarea>
                         <span asp-validation-for="Content" class="text-danger small"></span>
                     </div>
 
+                    @* Toimintopainikkeet. *@
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-floppy me-1"></i>@(isNew ? "Julkaise artikkeli" : "Tallenna muutokset")
@@ -78,31 +119,45 @@
     </div>
 </div>
 
+@* Scripts-osio: validointi + Summernote WYSIWYG -editori. *@
 @section Scripts {
+    @* Validointikirjastot (jquery.validate + unobtrusive). *@
     @await Html.PartialAsync("_ValidationScriptsPartial")
 
-    @* Summernote Bootstrap 5 *@
+    @* Summernote Bootstrap 5 -versio ladataan CDN:stä.
+       link = CSS tyylitiedosto, script = JavaScript-koodi.
+       @0.9.0 = tietty versio (ei "latest") takaa yhteensopivuuden. *@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/summernote@0.9.0/dist/summernote-bs5.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.9.0/dist/summernote-bs5.min.js"></script>
+
     <script>
+        @* Alustaa Summernote-editorin #kb-editor -textarea:lle.
+           $ = jQuery-objekti (jQuery ladattu _Layout.cshtml:ssä). *@
         $('#kb-editor').summernote({
-            lang: 'fi-FI',
-            height: 420,
+            lang: 'fi-FI',    // Käyttöliittymän kieli suomeksi
+            height: 420,       // Editorin korkeus pikseleinä
+            @* toolbar = editorin työkalupalkki. Kaksiulotteinen taulukko:
+               [['ryhmä', ['työkalu1', 'työkalu2']], ...] *@
             toolbar: [
-                ['style',   ['style']],
-                ['font',    ['bold', 'italic', 'underline', 'clear']],
-                ['para',    ['ul', 'ol', 'paragraph']],
-                ['insert',  ['link', 'hr']],
-                ['table',   ['table']],
-                ['misc',    ['codeview', 'fullscreen']]
+                ['style',   ['style']],                          // Otsikkotyyli (p, h2, h3, ...)
+                ['font',    ['bold', 'italic', 'underline', 'clear']],  // Tekstimuotoilu
+                ['para',    ['ul', 'ol', 'paragraph']],          // Listas + tasaus
+                ['insert',  ['link', 'hr']],                     // Linkki + vaakaviiva
+                ['table',   ['table']],                          // Taulukko
+                ['misc',    ['codeview', 'fullscreen']]          // HTML-koodi + kokoruutu
             ],
+            @* styleTags = mitä otsikkotasoja käyttäjä voi valita "Tyyli"-valikosta. *@
             styleTags: ['p', 'h2', 'h3', 'h4', 'blockquote', 'pre'],
             callbacks: {
-                // Summernote kirjoittaa suoraan textarea:an joten lomake toimii normaalisti
+                @* Summernote kirjoittaa suoraan textarea:han joten lomake toimii normaalisti —
+                   ei erillisiä callback-funktioita tarvita. *@
             }
         });
 
-        // Varmista että sisältö kopioituu submitissa
+        @* Varmistaa, että Summernoten sisältö kopioituu textarea:han lomaketta lähetettäessä.
+           Joissain tilanteissa Summernote ei päivitä textarea:ta automaattisesti,
+           joten tehdään se manuaalisesti 'submit'-tapahtumassa.
+           .summernote('code') = palauttaa editorin HTML-sisällön merkkijonona. *@
         $('form').on('submit', function () {
             $('#kb-editor').val($('#kb-editor').summernote('code'));
         });

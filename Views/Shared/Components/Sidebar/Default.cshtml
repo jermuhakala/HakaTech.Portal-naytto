@@ -1,14 +1,42 @@
 @*
-    Sidebar/Default.cshtml — Vasen sivupalkki, joka näkyy kaikilla sivuilla.
-    Sisältää brändin, navigaatiolinkit (rooliin perustuen), kielivalitsijan
-    ja teemanvaihtimen. Tukee kapeaa "rail"-tilaa kun käyttäjä haluaa lisää
-    leveyttä pääsisältöön.
+    Sidebar/Default.cshtml — Vasen sivupalkki, ViewComponent-näkymä.
+
+    Sivupalkki näkyy kaikilla sivuilla ja sisältää:
+      1. Brändi-logo + nimi (yläosa)
+      2. Tiivistyspainike (rail-tila: vain ikonit näkyvät)
+      3. Navigaatiolinkit rooliin perustuen:
+           - Kaikille kirjautuneille: Tiketit, Laskut, Palveluluettelo,
+             Etätyöpöytä, Tietopankki, Kalenteri
+           - Admineille lisäksi: Asiakkaat, Luo käyttäjä, Raportit,
+             Tiedotteet, Tietopankin hallinta, Auditloki
+           - CustomerAdmineille lisäksi: Käyttäjähallinta
+      4. Alatunniste: käyttäjätiedot + avatari + toimintopainikkeet
+         (teema, salasanan vaihto, kirjautuminen ulos)
+      5. Kielivalitsin: FI | SV | EN
+
+    ActiveIf-funktio korostaa nykyisen sivun linkin.
+    Rail-tila: sidebar kavennetaan pelkkiin ikoneihin (localStorage-tallennus).
+
+    ViewComponent sijaitsee: ViewComponents/SidebarViewComponent.cs
 *@
+
+@* SidebarVm sisältää:
+     - Controller (string): nykyinen controller-nimi (aktiivisen linkin tunnistukseen)
+     - Action (string): nykyinen action-nimi
+     - IsAuthenticated (bool): onko kirjautunut sisään
+     - IsAdmin (bool): onko Admin-roolissa
+     - IsCustomerAdmin (bool): onko CustomerAdmin
+     - UserName (string?): käyttäjän nimi avatarissa
+     - CurrentCulture (string?): nykyinen kielikoodi, esim. "fi-FI" *@
 @model HakaTech.Portal.ViewComponents.SidebarViewComponent.SidebarVm
+
 @{
-    // Apufunktio: palauttaa "active"-CSS-luokan jos nykyinen sivu osuu
-    // annettuun controlleriin (ja valinnaisesti actioniin) — korostaa
-    // valittua valikkokohtaa.
+    @* ActiveIf = apufunktio CSS-aktiivisuusluokan palauttamiseen.
+       Palauttaa "active" jos nykyinen sivu vastaa annettua controlleria
+       (ja valinnaista actionia). Muuten tyhjä merkkijono.
+
+       StringComparison.OrdinalIgnoreCase = kirjainkokoriippumaton vertailu:
+       "Ticket" == "ticket" == "TICKET" → tosi. *@
     string ActiveIf(string controller, string? action = null)
     {
         var ok = string.Equals(Model.Controller, controller, StringComparison.OrdinalIgnoreCase);
@@ -17,74 +45,124 @@
         return ok ? "active" : "";
     }
 }
+
+@* <aside> = HTML5:n sivupalkki-elementti.
+   sidebar = portaalin CSS-luokka joka asettaa kiinteän leveyden ja animaatiot.
+   id="sidebar" = JavaScript käyttää tätä rail-tilan vaihtamiseen. *@
 <aside class="sidebar" id="sidebar">
+
+    @* Sivupalkin yläosa: logo + nimi + tiivistyspainike. *@
     <div class="sidebar-head">
+        @* Brändi-linkki: klikattaessa navigoidaan etusivulle.
+           asp-controller / asp-action = Tag Helper URL:n generointiin.
+           text-decoration-none = poistetaan linkin alleviivaus. *@
         <a asp-controller="Home" asp-action="Index" class="sidebar-brand text-decoration-none">
+            @* SVG-logo vektorigrafiikkana — skaalautuu tarkasti kaikilla resoluutioilla. *@
             <img src="~/img/logo-mark.svg" alt="HakaTech Logo" class="brand-img" />
+            @* Yritysnimi; piiloutuu CSS:ssä kun sidebar on rail-tilassa. *@
             <span class="brand-text">HakaTech</span>
         </a>
+
+        @* Tiivistyspainike: vaihtaa rail-tilaa (kapea sidebar, vain ikonit).
+           L["UI.Nav.Collapse"] = lokalisoitu tooltip-teksti.
+           Klikkauksen JavaScript-logiikka on _Layout.cshtml:n IIFE:ssä. *@
         <button type="button" class="sidebar-rail-toggle" id="sidebarRailToggle"
                 title="@L["UI.Nav.Collapse"]" aria-label="@L["UI.Nav.Collapse"]">
             <i class="bi bi-layout-sidebar-inset"></i>
         </button>
     </div>
 
+    @* Navigaatiolinkit. <nav> = semanttinen navigaatio-elementti. *@
     <nav class="sidebar-nav">
+
+        @* Etusivu-linkki näkyy kaikille (myös kirjautumattomille). *@
         <a class="sidebar-link @ActiveIf("Home")" asp-controller="Home" asp-action="Index"
            data-tooltip="@L["Nav.Overview"]">
+            @* data-tooltip = JavaScript näyttää tämän tooltippina kun sidebar on kapea. *@
             <i class="bi bi-speedometer2"></i><span>@L["Nav.Overview"]</span>
         </a>
 
+        @* Kirjautuneille näkyvät linkit. *@
         @if (Model.IsAuthenticated)
         {
+            @* Tikettilinkki — näkyy kaikille kirjautuneille (asiakas + admin). *@
             <a class="sidebar-link @ActiveIf("Ticket")" asp-controller="Ticket" asp-action="Index"
                data-tooltip="@L["Nav.Tickets"]">
                 <i class="bi bi-ticket-detailed"></i><span>@L["Nav.Tickets"]</span>
             </a>
+
+            @* Laskut. *@
             <a class="sidebar-link @ActiveIf("Invoice")" asp-controller="Invoice" asp-action="Index"
                data-tooltip="@L["Nav.Invoices"]">
                 <i class="bi bi-receipt"></i><span>@L["Nav.Invoices"]</span>
             </a>
+
+            @* Palveluluettelo. *@
             <a class="sidebar-link @ActiveIf("ServiceCatalog")" asp-controller="ServiceCatalog" asp-action="Index"
                data-tooltip="@L["Nav.Services"]">
                 <i class="bi bi-grid"></i><span>@L["Nav.Services"]</span>
             </a>
+
+            @* Etätyöpöytä. *@
             <a class="sidebar-link @ActiveIf("RemoteDesktop")" asp-controller="RemoteDesktop" asp-action="Index"
                data-tooltip="@L["Nav.RemoteDesktop"]">
                 <i class="bi bi-display"></i><span>@L["Nav.RemoteDesktop"]</span>
             </a>
+
+            @* Tietopankki. *@
             <a class="sidebar-link @ActiveIf("KnowledgeBase")" asp-controller="KnowledgeBase" asp-action="Index"
                data-tooltip="@L["Nav.KnowledgeBase"]">
                 <i class="bi bi-book"></i><span>@L["Nav.KnowledgeBase"]</span>
             </a>
+
+            @* Varauskalenteri. *@
             <a class="sidebar-link @ActiveIf("Booking")" asp-controller="Booking" asp-action="Index"
                data-tooltip="@L["Nav.Calendar"]">
                 <i class="bi bi-calendar3"></i><span>@L["Nav.Calendar"]</span>
             </a>
 
+            @* Admin-linkit: erotinrivi + hallintaosio. *@
             @if (Model.IsAdmin)
             {
+                @* Osion otsikko ("Hallinta") — pelkkä teksti, ei linkki.
+                   mt-3 = margin-top (tila edellisen osion alapuolelle). *@
                 <span class="nav-section-label mt-3">@L["Nav.Management"]</span>
+
+                @* Asiakkaat-sivu. *@
                 <a class="sidebar-link @ActiveIf("Customer")" asp-controller="Customer" asp-action="Index"
                    data-tooltip="@L["Nav.Customers"]">
                     <i class="bi bi-building"></i><span>@L["Nav.Customers"]</span>
                 </a>
+
+                @* Luo käyttäjä -sivu. ActiveIf tarkistaa myös actionin ("Register"),
+                   koska Account-controllerissa on myös Login, Logout jne. *@
                 <a class="sidebar-link @ActiveIf("Account", "Register")" asp-controller="Account" asp-action="Register"
                    data-tooltip="@L["Nav.CreateUser"]">
                     <i class="bi bi-person-plus"></i><span>@L["Nav.CreateUser"]</span>
                 </a>
+
+                @* Raportit. *@
                 <a class="sidebar-link @ActiveIf("Report")" asp-controller="Report" asp-action="Index"
                    data-tooltip="@L["Nav.Reports"]">
                     <i class="bi bi-bar-chart-line"></i><span>@L["Nav.Reports"]</span>
                 </a>
+
+                @* Tiedotteet. *@
                 <a class="sidebar-link @ActiveIf("Announcement")" asp-controller="Announcement" asp-action="Index"
                    data-tooltip="@L["Nav.Announcements"]">
                     <i class="bi bi-megaphone"></i><span>@L["Nav.Announcements"]</span>
                 </a>
+
+                @* Tietopankin hallinta (erillinen admin-toiminto kuin asiakkaan selaus).
+                   ActiveIf("KnowledgeBase", "Manage") = korostuu vain Manage-sivulla,
+                   ei tavallisessa tietopankissa (jotta molemmat voivat olla aktiivisia
+                   oikeissa tilanteissa). *@
                 <a class="sidebar-link @ActiveIf("KnowledgeBase", "Manage")" asp-controller="KnowledgeBase" asp-action="Manage"
                    data-tooltip="@L["Nav.KBManage"]">
                     <i class="bi bi-book-half"></i><span>@L["Nav.KBManage"]</span>
                 </a>
+
+                @* Auditloki (turvallisuusjälki). *@
                 <a class="sidebar-link @ActiveIf("AuditLog")" asp-controller="AuditLog" asp-action="Index"
                    data-tooltip="@L["Nav.AuditLog"]">
                     <i class="bi bi-journal-text"></i><span>@L["Nav.AuditLog"]</span>
@@ -92,6 +170,8 @@
             }
             else if (Model.IsCustomerAdmin)
             {
+                @* CustomerAdmin: asiakasyrityksen pääkäyttäjä.
+                   Näkee vain oman yrityksensä käyttäjähallintaan. *@
                 <span class="nav-section-label mt-3">@L["Nav.Management"]</span>
                 <a class="sidebar-link @ActiveIf("CustomerUser")" asp-controller="CustomerUser" asp-action="Index"
                    data-tooltip="@L["Nav.Users"]">
@@ -101,44 +181,85 @@
         }
     </nav>
 
+    @* Alatunniste: käyttäjätiedot + toimintopainikkeet. *@
     <div class="sidebar-footer">
+
         @if (Model.IsAuthenticated)
         {
+            @* Käyttäjätiedot: avatar-ympyrä + nimi + rooli. *@
             <div class="user-info">
+                @* Avatar-ympyrä jossa käyttäjänimen ensimmäinen kirjain isolla.
+                   ?. = null-ehdollinen operaattori: null jos UserName on null.
+                   Substring(0, 1) = otetaan ensimmäinen merkki.
+                   ToUpper() = muutetaan isoksi kirjaimeksi.
+                   ?? "?" = jos UserName on null, käytetään kysymysmerkkiä. *@
                 <div class="user-avatar">
                     @(Model.UserName?.Substring(0, 1).ToUpper() ?? "?")
                 </div>
                 <div class="user-details">
+                    @* Käyttäjän koko nimi tai sähköposti. *@
                     <span class="user-name">@Model.UserName</span>
+                    @* Rooli: "Ylläpitäjä" tai "Asiakas" riippuen IsAdmin-lipusta. *@
                     <span class="user-role">@(Model.IsAdmin ? L["Role.Admin"] : L["Role.Customer"])</span>
                 </div>
             </div>
+
+            @* Toimintopainikkeet alatunnisteessa. *@
             <div class="sidebar-actions">
+
+                @* Teemavaihtimen painike — onclick kutsuu _Layout.cshtml:ssä
+                   määriteltyä toggleTheme()-funktiota. *@
                 <button id="themeToggle" class="sidebar-action-link" title="@L["Nav.ToggleTheme"]" onclick="toggleTheme()">
+                    @* Kuupainike-ikoni, joka vaihtuu aurinkoikoniksi JavaScriptin avulla. *@
                     <i class="bi bi-moon-stars" id="themeIcon"></i>
                 </button>
+
+                @* Salasanan vaihto-linkki. *@
                 <a asp-controller="Account" asp-action="ChangePassword" class="sidebar-action-link" title="@L["Nav.ChangePassword"]">
                     <i class="bi bi-key"></i>
                 </a>
+
+                @* Uloskirjautuminen. TÄYTYY olla POST-pyyntö turvallisuuden vuoksi:
+                   GET-kirjautuminen ulos olisi altis CSRF-hyökkäyksille
+                   (hyökkääjä voisi upottaa kuvan joka kirjaa ulos ilman käyttäjän tietoa).
+                   d-inline = ei rivi jota lomakkeelle näytetään (inline-elementti). *@
                 <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
                     <button type="submit" class="sidebar-action-link" title="@L["Nav.SignOut"]">
                         <i class="bi bi-box-arrow-right"></i>
                     </button>
                 </form>
             </div>
+
+            @* Kielivalitsin: FI | SV | EN.
+               Jokainen kieli on oma POST-lomakkeensa (ei GET),
+               koska kielen vaihtaminen muuttaa palvelinpuolen tilaa
+               (kirjoitetaan culture-evästeseen). *@
             <div class="lang-switcher mt-2">
+
+                @* Suomi-lomake. *@
                 <form asp-controller="Account" asp-action="SetLanguage" method="post" class="d-inline">
+                    @* CSRF-suojaus: lomake tarvitsee antiforgery-tokenin vaikka ei ole normaalinen
+                       datanyöyttö — muuten hyökkääjä voisi vaihtaa kielen ulkoiselta sivulta. *@
                     @Html.AntiForgeryToken()
+                    @* Piilokenttä: kielikoodi joka lähetetään AccountController.SetLanguage-metodille. *@
                     <input type="hidden" name="culture" value="fi-FI" />
+                    @* returnUrl = nykyinen URL, jotta käyttäjä palautetaan samalle sivulle
+                       kielen vaihdon jälkeen. @Context.Request.Path + QueryString = koko URL. *@
                     <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+                    @* active = CSS-korostusluokka nykyiselle kielelle.
+                       StartsWith("fi") = riittää tunnistamaan "fi-FI":n. *@
                     <button type="submit" class="lang-btn @(Model.CurrentCulture?.StartsWith("fi") == true ? "active" : "")">FI</button>
                 </form>
+
+                @* Ruotsi-lomake (sama rakenne kuin suomi). *@
                 <form asp-controller="Account" asp-action="SetLanguage" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="culture" value="sv-SE" />
                     <input type="hidden" name="returnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
                     <button type="submit" class="lang-btn @(Model.CurrentCulture?.StartsWith("sv") == true ? "active" : "")">SV</button>
                 </form>
+
+                @* Englanti-lomake (sama rakenne). *@
                 <form asp-controller="Account" asp-action="SetLanguage" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="culture" value="en-US" />
@@ -149,11 +270,14 @@
         }
         else
         {
+            @* Kirjautumaton käyttäjä: näytetään vain teemavaihtopainike
+               ja kirjautumislinkki. *@
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <button id="themeToggle" class="sidebar-action-link" title="@L["Nav.ToggleTheme"]" onclick="toggleTheme()">
                     <i class="bi bi-moon-stars" id="themeIcon"></i>
                 </button>
             </div>
+            @* btn-sidebar-login = CSS-luokka joka tekee linkistä painikemaisen. *@
             <a asp-controller="Account" asp-action="Login" class="btn-sidebar-login">
                 <i class="bi bi-box-arrow-in-right"></i> @L["Nav.SignIn"]
             </a>

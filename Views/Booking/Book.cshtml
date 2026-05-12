@@ -1,25 +1,52 @@
 @*
     Booking/Book.cshtml — Asiakkaan varauslomake yhteen aikaikkunaan.
-    Näyttää slotin tiedot ja pyytää valinnaisesti lisätietoja.
+
+    Näyttää valitun aikavälin tiedot (aika, tyyppi, kuvaus, vapaat paikat)
+    ja pyytää valinnaisesti lisätietoja (Notes-kenttä).
+
+    Varauksen tila on aluksi "Odottaa vahvistusta" (Pending).
+    Admin vahvistaa varauksen ManageBookings-sivulta.
+
+    Yhteys: BookingController.Book (GET = lomake, POST = tallennetaan).
 *@
+
+@* Malli: BookingFormViewModel sisältää BookingSlotId (piilokenttänä) ja Notes. *@
 @model HakaTech.Portal.Models.ViewModels.BookingFormViewModel
+
+@* Tuodaan domainnimitila BookingSlotType-enumin tunnistamiseksi. *@
 @using HakaTech.Portal.Models.Domain
+
 @{
+    @* slot = varattava aikaikkuna. Kontrolleri asettaa tämän ViewBag.Slot-kenttään.
+       as BookingSlot = turvallinen tyyppimuunnos; null jos ei löydy. *@
     var slot = ViewBag.Slot as BookingSlot;
+
+    @* Sivun otsikko selaimen välilehdelle. *@
     ViewData["Title"] = L["Booking.BookTitle"].Value;
+
+    @* Murupolku: Kalenteri → Tee varaus. *@
     ViewData["Breadcrumbs"] = new List<(string, string?)>
     {
         (L["Nav.Calendar"].Value, Url.Action("Index", "Booking")),
         (L["Booking.BookTitle"].Value, null)
     };
+
+    @* fi = fi-FI kulttuuriasetus suomenkieliseen päivämäärämuotoon.
+       Käytetään .ToString("d.M.yyyy", fi) ja .ToString("dddd ...", fi) -kutsuissa. *@
     var fi = new System.Globalization.CultureInfo("fi-FI");
 
+    @* TypeColor: palauttaa Bootstrap-värinimen aikavälin tyypin mukaan.
+       Käytetään sekä badge-luokassa että vasemman reunan värissä. *@
     string TypeColor(BookingSlotType t) => t switch {
-        BookingSlotType.Maintenance   => "warning",
-        BookingSlotType.Consulting    => "primary",
-        BookingSlotType.RemoteSupport => "success",
-        _                             => "secondary"
+        BookingSlotType.Maintenance   => "warning",   // keltainen — huolto
+        BookingSlotType.Consulting    => "primary",   // sininen — konsultointi
+        BookingSlotType.RemoteSupport => "success",   // vihreä — etätuki
+        _                             => "secondary"  // harmaa — tuntematon
     };
+
+    @* TypeName: palauttaa suomenkielisen nimen aikavälin tyypille.
+       _ => t.ToString() = varaventtiili: käytetään C#:n oletusmuunnosta jos
+       tyyppi lisätään myöhemmin eikä tähän funktioon päivitetä. *@
     string TypeName(BookingSlotType t) => t switch {
         BookingSlotType.Maintenance   => "Huolto",
         BookingSlotType.Consulting    => "Konsultointi",
@@ -28,6 +55,9 @@
     };
 }
 
+@* Murupolku.
+   asp-route-year ja asp-route-month = palautetaan kalenteriin samaan kuukauteen
+   jossa kyseinen aikaväli sijaitsee (ei palata kuukauden alkuun). *@
 <nav aria-label="breadcrumb" class="mb-4">
     <ol class="breadcrumb">
         <li class="breadcrumb-item">
@@ -39,34 +69,55 @@
     </ol>
 </nav>
 
+@* Sivun sisältö rajoitettu leveyttä (col-lg-6) ja keskitetty (justify-content-center). *@
 <div class="row justify-content-center">
     <div class="col-lg-6">
 
-        @* Aikavälin tiedot *@
+        @* Aikavälin infokortti — näytetään vain jos slot on olemassa. *@
         @if (slot is not null)
         {
+            @* border-0 = ei oletusraja. shadow-sm = kevyt varjo.
+               border-start border-@TypeColor(slot.SlotType) border-4 =
+               vasemmalle reunalle 4px väriviiva (Bootstrap utility).
+               Väri tulee TypeColor()-funktiosta (esim. warning = keltainen). *@
             <div class="card border-0 shadow-sm mb-3 border-start border-@TypeColor(slot.SlotType) border-4">
                 <div class="card-body">
+                    @* d-flex gap-3 = vierekkäin, 16px rako.
+                       align-items-start = ylös tasattu (ei venytä). *@
                     <div class="d-flex align-items-start gap-3">
+                        @* Vasemman pylvään aika + päivä. *@
                         <div class="text-center" style="min-width:56px">
+                            @* fs-4 = iso fontti aikavisualisoinnille (1.5rem).
+                               lh-1 = rivin korkeus 1 (tiivis rivitys). *@
                             <div class="fw-bold fs-4 lh-1">@slot.StartTime.ToString("HH:mm")</div>
+                            @* "d.M.yyyy" + fi-kulttuuri = esim. "5.5.2025" (suomalainen muoto). *@
                             <div class="text-muted small">@slot.StartTime.ToString("d.M.yyyy", fi)</div>
                         </div>
                         <div>
+                            @* Palvelutyypin badge. text-bg-@TypeColor = Bootstrap 5.3 -luokka
+                               joka asettaa sekä taustavärin että kontrastoivan tekstivärin. *@
                             <span class="badge text-bg-@TypeColor(slot.SlotType) mb-1">
                                 @TypeName(slot.SlotType)
                             </span>
+                            @* Aikavälin otsikko. *@
                             <h5 class="mb-1">@slot.Title</h5>
                             <div class="text-muted small">
+                                @* bi-clock = kellon ikoni.
+                                   "dddd d.M.yyyy HH:mm" + fi-kulttuuri = esim. "maanantai 5.5.2025 09:00". *@
                                 <i class="bi bi-clock me-1"></i>
                                 @slot.StartTime.ToString("dddd d.M.yyyy HH:mm", fi)
+                                @* – EndTime vain kellonaikana (päivä selvä alku-ajasta). *@
                                 – @slot.EndTime.ToString("HH:mm")
                                 (@slot.DurationMinutes min)
                             </div>
+                            @* Kuvaus näytetään vain jos se on asetettu.
+                               IsNullOrWhiteSpace = tarkistaa myös pelkät välilyönnit. *@
                             @if (!string.IsNullOrWhiteSpace(slot.Description))
                             {
                                 <div class="text-muted small mt-1">@slot.Description</div>
                             }
+                            @* Vapaiden paikkojen indikaattori.
+                               AvailableSpots = MaxCapacity – ActiveBookingsCount (laskennallinen). *@
                             <div class="mt-2 small">
                                 <i class="bi bi-people me-1 text-success"></i>
                                 <span class="text-success">@slot.AvailableSpots paikkaa jäljellä</span>
@@ -77,27 +128,40 @@
             </div>
         }
 
-        @* Varauslomake *@
+        @* Varauslomakekortti. *@
         <div class="card border-0 shadow-sm">
             <div class="card-header">
+                @* bi-calendar-check = kalenterimerkki rastilla. *@
                 <i class="bi bi-calendar-check me-2"></i>Vahvista varaus
             </div>
             <div class="card-body p-4">
+                @* asp-action="Book" → POST /Booking/Book. *@
                 <form asp-action="Book" method="post">
                     @Html.AntiForgeryToken()
+
+                    @* BookingSlotId piilokenttänä — kertoo kontrollerin minkä
+                       aikavälin varaus tämä on. Käyttäjä ei voi vaihtaa tätä
+                       (ei kenttää lomakkeessa), joten kontrolleri validoi
+                       ettei slot ole täynnä tai jo mennyt. *@
                     <input type="hidden" asp-for="BookingSlotId" />
 
+                    @* Palvelinpuolen virheet (esim. "Aikaväli on jo täynnä"). *@
                     <div asp-validation-summary="ModelOnly"
                          class="alert alert-danger" role="alert"></div>
 
+                    @* Lisätietokenttä. *@
                     <div class="mb-4">
                         <label asp-for="Notes" class="form-label fw-medium"></label>
+                        @* rows="3" = kolmirivinen tekstialue. *@
                         <textarea asp-for="Notes" class="form-control" rows="3"
                                   placeholder="Esim. erityistoiveet, yhteystiedot tai lisätiedot huollolle…"></textarea>
                         <span asp-validation-for="Notes" class="text-danger small"></span>
+                        @* form-text = harmaa ohjeteksti — kenttä on vapaaehtoinen. *@
                         <div class="form-text">Vapaaehtoinen.</div>
                     </div>
 
+                    @* Infopalkki: muistuttaa että varaus ei vahvistu heti.
+                       alert-info = sininen tiedote. *@
                     <div class="alert alert-info small mb-4">
                         <i class="bi bi-info-circle me-2"></i>
                         Varaus on aluksi <strong>odottaa vahvistusta</strong> -tilassa.
@@ -108,6 +172,8 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-calendar-check me-1"></i>Vahvista varaus
                         </button>
+                        @* Peruuta: palaa samaan kuukauteen kalenterissa
+                           jossa aikaväli on (slot?.StartTime = null-ehdollinen). *@
                         <a asp-action="Index"
                            asp-route-year="@slot?.StartTime.Year"
                            asp-route-month="@slot?.StartTime.Month"
@@ -120,6 +186,7 @@
     </div>
 </div>
 
+@* Ladataan validointikirjastot asiakaspuolen kenttävalidointia varten. *@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }

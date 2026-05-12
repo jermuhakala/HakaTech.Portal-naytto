@@ -1,57 +1,116 @@
 @*
-    Login.cshtml — Kirjautumissivu. Käyttää _AuthLayoutia (yksinkertainen
-    keskitetty kortti, ei sidebariä). ReturnUrl välitetään lomakkeessa
-    jotta käyttäjä palautetaan oikeaan sivuun kirjautumisen jälkeen.
+    Login.cshtml — Kirjautumissivu.
+
+    Käyttää _AuthLayout.cshtml-pohjarakennetta — ei sivupalkkia eikä
+    topbaria, vaan pelkkä keskitetty valkoinen kortti tyhjällä taustalla.
+
+    ReturnUrl = URL johon käyttäjä ohjataan kirjautumisen jälkeen.
+    Esim. jos käyttäjä yritti avata /Invoice suoraan, mutta piti kirjautua,
+    kirjautumisen jälkeen palataan /Invoice-sivulle.
+
+    Lomake lähettää POST-pyynnön AccountController.Login-metodille.
 *@
+
+@* Tämä näkymä saa parametrina LoginViewModel-olion.
+   Kenttinä: Email, Password, RememberMe (bool), ReturnUrl (string?). *@
 @model HakaTech.Portal.Models.ViewModels.LoginViewModel
+
 @{
+    @* Sivun otsikko selaimen välilehdellä.
+       L["Auth.Login.Title"].Value = lokalisoitu merkkijono, esim. "Kirjaudu sisään". *@
     ViewData["Title"] = L["Auth.Login.Title"].Value;
+
+    @* Ohitetaan pääpohja ja käytetään pelkistettyä kirjautumispohjaa.
+       Tämä asettaa Layout-muuttujan — Razor hakee ko. tiedoston. *@
     Layout = "~/Views/Shared/_AuthLayout.cshtml";
 }
 
+@* auth-card = CSS-luokka joka muotoilee lomakkeen kortiksi.
+   Tyypillisesti: valkoinen tausta, pyöristetyt kulmat, varjo.
+   Rajoitettu leveys (esim. 400px) ja auto-marginaalit (keskitetty). *@
 <div class="auth-card">
+
+    @* Logon ja sovelluksen nimen osio yläreunassa. *@
     <div class="auth-logo">
+        @* SVG-logo — terävä kaikilla näytöillä (vektorigrafiikka ei pikseloidu). *@
         <img src="~/img/logo-mark.svg" alt="HakaTech Logo" style="height: 48px; width: 48px;" />
         <span>HakaTech Portal</span>
     </div>
+
+    @* Sivun pääotsikko. L["..."] = lokalisoitu teksti. *@
     <h1 class="auth-title">@L["Auth.Login.Title"]</h1>
+
+    @* Alaotsikko / tervehdys. *@
     <p class="auth-sub">@L["Auth.Login.Subtitle"]</p>
 
+    @* Kirjautumislomake.
+       asp-action="Login" = lähetetään AccountController.Login(POST)-metodille.
+       method="post" = HTTP POST -pyyntö (ei GET, koska salasana ei saa näkyä URL:ssa). *@
     <form asp-action="Login" method="post">
+
+        @* ReturnUrl välitetään piilokenttänä lomakkeen mukana.
+           asp-for="ReturnUrl" = sidotaan LoginViewModel.ReturnUrl-kenttään.
+           type="hidden" = käyttäjä ei näe kentää, mutta se lähetetään palvelimelle. *@
         <input type="hidden" asp-for="ReturnUrl" />
+
+        @* Koko lomakkeen virheyhteenveto (esim. "Virheellinen sähköposti tai salasana").
+           asp-validation-summary="ModelOnly" = näyttää vain mallitason virheet,
+           ei yksittäisten kenttien virheitä (ne näkyvät kenttien alla).
+           role="alert" = ruudunlukijat ilmoittavat virheistä ääneen. *@
         <div asp-validation-summary="ModelOnly" class="alert-auth-error" role="alert"></div>
 
+        @* Sähköpostiosoite-kenttä. *@
         <div class="auth-field">
+            @* asp-for="Email" = kytkee labelin Email-kenttään.
+               Näyttää automaattisesti [Display(Name="...")] -attribuutin arvon.
+               class="auth-label" = portaalin oma tyylitys. *@
             <label asp-for="Email" class="auth-label"></label>
             <div class="auth-input-wrap">
+                @* Kirjekuori-ikoni kentän vasemmalle. *@
                 <i class="bi bi-envelope auth-input-icon"></i>
+                @* asp-for="Email" = sitoo kentän LoginViewModel.Email-ominaisuuteen.
+                   Lisää automaattisesti: type="email", name="Email", id="Email",
+                   data-val-required ja data-val-email validointiattribuutit.
+                   autocomplete="username" = selain ehdottaa tallennettua sähköpostia. *@
                 <input asp-for="Email" class="auth-input" placeholder="@L["Auth.Login.EmailPlaceholder"]"
                        id="login-email" autocomplete="username" />
             </div>
+            @* Kenttäkohtainen validointivirhe (esim. "Sähköposti on pakollinen."). *@
             <span asp-validation-for="Email" class="field-validation-error"></span>
         </div>
 
+        @* Salasana-kenttä. *@
         <div class="auth-field">
             <label asp-for="Password" class="auth-label"></label>
             <div class="auth-input-wrap">
                 <i class="bi bi-lock auth-input-icon"></i>
+                @* asp-for="Password" = lisää automaattisesti type="password",
+                   jolloin syötetyt merkit peittyvät pisteinä.
+                   autocomplete="current-password" = selain ehdottaa tallennettua salasanaa. *@
                 <input asp-for="Password" class="auth-input" placeholder="••••••••"
                        id="login-password" autocomplete="current-password" />
             </div>
             <span asp-validation-for="Password" class="field-validation-error"></span>
         </div>
 
+        @* "Muista minut" -valintaruutu.
+           RememberMe=true → pitkäkestoinen eväste (kirjautunut useamman päivän). *@
         <div class="auth-check">
+            @* asp-for="RememberMe" = lisää type="checkbox" automaattisesti. *@
             <input asp-for="RememberMe" class="auth-checkbox" id="login-remember" />
             <label asp-for="RememberMe" class="auth-check-label">@L["Auth.Login.RememberMe"]</label>
         </div>
 
+        @* Kirjaudu-painike. type="submit" = lähettää lomakkeen. *@
         <button type="submit" id="login-submit" class="auth-btn">
+            @* Sisäänkirjautumis-ikoni. me-2 = margin-end (väli kuvakkeen ja tekstin välillä). *@
             <i class="bi bi-box-arrow-in-right me-2"></i>@L["Auth.Login.Submit"]
         </button>
     </form>
 </div>
 
+@* Scripts-osio: lisätään sivun loppuun (_AuthLayout renderöi tämän).
+   jQuery Validation tekee kenttävalidoinnin selaimessa ennen lomakkeen lähetystä. *@
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }

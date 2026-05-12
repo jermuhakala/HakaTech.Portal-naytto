@@ -1,44 +1,92 @@
 @*
-    Ticket/Index.cshtml — Tikettilista. Suodatettavissa tilan, prioriteetin
-    ja asiakkaan mukaan + vapaa tekstihaku. Asiakas näkee vain oman
-    yrityksensä tiketit, admin näkee kaikki.
+    Ticket/Index.cshtml — Tikettilista.
+
+    Rakenne:
+      - Otsikkorivi + "Uusi tiketti"-painike
+      - GET-suodatinlomake: vapaa tekstihaku + tila + prioriteetti + suodata/tyhjennä
+      - Tyhjä tila: kutsukortti kun ei tikettejä
+      - Taulukko: #, Otsikko (linkki), [Asiakas vain adminille], Kategoria,
+        Prioriteetti (badge), Tila (badge), Luotu, Vastuuhenkilö, Katso-painike
+
+    Tietoturva:
+      - Asiakas näkee VAIN oman yrityksensä tiketit (suodatus kontrollerissa).
+      - Admin näkee kaikki tiketit + Asiakas-sarakkeen.
+      - isAdmin-tieto tulee ViewBagista (kontrolleri asettaa sen kirjautuneen
+        käyttäjän roolin perusteella).
+
+    Lokalisointi:
+      - Kaikki tekstit haetaan L["avain"]-lokalisoijalta.
+      - Enumien näyttönimet: L["TicketStatus.Open"] → "Avoin" jne.
+
+    Yhteys: TicketController.Index (GET, suodattimet querystring-parametreina).
 *@
+
+@* Malli = lista Ticket-olioista (navigaatiot Customer, AssignedToUser ladattu). *@
 @model IEnumerable<HakaTech.Portal.Models.Domain.Ticket>
 @using HakaTech.Portal.Models.Domain
+
 @{
     ViewData["Title"] = L["Ticket.Index.Title"].Value;
+
+    @* isAdmin: kontrolleri asettaa ViewBag.IsAdmin = true/false.
+       ?? false = null-coalescing: jos ViewBag.IsAdmin on null, käytetään false.
+       (bool) = tyyppimuunnos object-tyypistä booleaniksi. *@
     bool isAdmin      = (bool)(ViewBag.IsAdmin ?? false);
+
+    @* Suodatinarvot ViewBagista — kontrolleri asettaa nämä jos parametrit on annettu.
+       as TicketStatus? = null-safe tyyppimuunnos nullable enumiksi (null = ei suodatinta). *@
     var statusFilter  = ViewBag.StatusFilter  as TicketStatus?;
     var priorityFilter= ViewBag.PriorityFilter as TicketPriority?;
+    @* ViewBag.Search = haettu hakutermi (null jos ei haettu). *@
     string? search    = ViewBag.Search;
 
-    string StatusLabel(TicketStatus s)   => L[$"TicketStatus.{s}"].Value;
-    string PriorityLabel(TicketPriority p) => L[$"TicketPriority.{p}"].Value;
-    string CategoryLabel(TicketCategory c) => L[$"TicketCategory.{c}"].Value;
+    @* Paikalliset apufunktiot lokalisoituihin nimiin.
+       $"TicketStatus.{s}" = avain resurssitiedostossa (esim. "TicketStatus.Open" → "Avoin").
+       Sama periaate kuin Create.cshtml:ssä. *@
+    string StatusLabel(TicketStatus s)      => L[$"TicketStatus.{s}"].Value;
+    string PriorityLabel(TicketPriority p)  => L[$"TicketPriority.{p}"].Value;
+    string CategoryLabel(TicketCategory c)  => L[$"TicketCategory.{c}"].Value;
 }
 
+@* Otsikkorivi: otsikko vasemmalla, "Uusi tiketti" -painike oikealla. *@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0"><i class="bi bi-ticket-perforated me-2"></i>@L["Ticket.Index.Title"]</h2>
+    @* Navigoi Create-actioniin. id="btn-ticket-create" = UI-testit voivat viitata tähän. *@
     <a asp-action="Create" id="btn-ticket-create" class="btn btn-primary">
         <i class="bi bi-plus-lg me-1"></i>@L["Ticket.Index.New"]
     </a>
 </div>
 
+@* ── Suodatinlomake ──────────────────────────────────────────────────
+   method="get" = suodattimet lähetetään URL:ssa (querystring), ei POST-pyynnöllä.
+   Tämä mahdollistaa suodatettua URL:a jakaa tai lisätä kirjanmerkkeihin.
+   align-items-end = kaikki sarakkeet tasataan alapuoleltaan (painike linjassa). *@
 <form asp-action="Index" method="get" class="row g-2 mb-3 align-items-end">
+
+    @* Vapaa tekstihaku — name="search" = URL:ssa ?search=arvo.
+       value="@search" = säilyttää hakutermin kun sivu ladataan uudelleen. *@
     <div class="col-md-4">
         <input type="text" name="search" value="@search"
                class="form-control" id="ticket-search"
                placeholder="@L["Ticket.Index.SearchPlaceholder"]" />
     </div>
+
+    @* Tilasuodatin — name="status" = URL:ssa ?status=Open.
+       Generoidaan kaikki TicketStatus-arvot optioniksi. *@
     <div class="col-md-2">
         <select name="status" id="ticket-status" class="form-select">
+            @* Tyhjä arvo = "Kaikki tilat" (ei suodatinta). *@
             <option value="">@L["Ticket.Index.AllStatuses"]</option>
             @foreach (var s in Enum.GetValues<TicketStatus>())
             {
+                @* selected="@(statusFilter == s)" = Razor-ternaari, asettaa selected-attribuutin
+                   jos tämä tila on valittuna. Kun true = selected="True" (HTML:ssä toimii). *@
                 <option value="@s" selected="@(statusFilter == s)">@StatusLabel(s)</option>
             }
         </select>
     </div>
+
+    @* Prioriteettisuodatin — name="priority" = URL:ssa ?priority=High. *@
     <div class="col-md-2">
         <select name="priority" id="ticket-priority" class="form-select">
             <option value="">@L["Ticket.Index.AllPriorities"]</option>
@@ -48,20 +96,31 @@
             }
         </select>
     </div>
+
+    @* Painikkeet: Suodata + Tyhjennä. col-md-auto = sarake vain sisällön tarvitseman tilan.  *@
     <div class="col-md-auto">
+        @* Suodata-painike lähettää lomakkeen (type="submit"). *@
         <button type="submit" class="btn btn-outline-secondary">
             <i class="bi bi-funnel"></i> @L["Common.Filter"]
         </button>
+        @* Tyhjennä: navigoi Index-actioniin ILMAN parametreja → poistaa kaikki suodattimet.
+           btn-outline-danger = punainen reunus (varoittava väri tyhjennystoiminnolle).
+           ms-1 = pieni vasen marginaali Suodata-painikkeesta. *@
         <a asp-action="Index" class="btn btn-outline-danger ms-1" title="@L["Common.ClearFilter"]">
             <i class="bi bi-x-lg"></i>
         </a>
     </div>
 </form>
 
+@* ── Tyhjä tila ──────────────────────────────────────────────────────
+   Näytetään jos lista on tyhjä (ei tikettejä tai suodatin ei löydä osumia). *@
 @if (!Model.Any())
 {
+    @* Kutsukortti: iso ikoni + teksti + "Luo ensimmäinen tiketti"-linkki.
+       text-center py-5 = teksti keskitetty, isot pystymarginaalit. *@
     <div class="card border-0 shadow-sm text-center py-5">
         <div class="card-body">
+            @* Iso, harmaa tiketti-ikoni tunnelmaa luomassa. *@
             <i class="bi bi-ticket-perforated text-muted" style="font-size:3rem"></i>
             <p class="mt-3 mb-1 fw-semibold text-muted">@L["Ticket.Index.Empty.Title"]</p>
             <p class="text-muted small mb-3">@L["Ticket.Index.Empty.Sub"]</p>
@@ -73,46 +132,68 @@
 }
 else
 {
+    @* ── Tikettitaulukko ─────────────────────────────────────────────
+       table-responsive = vaakasuuntainen vieritys kapeilla näytöillä.
+       align-middle = solujen sisältö pystysuunnassa keskelle. *@
     <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
+                    @* style="width:60px" = kapea sarake ID-numerolle. *@
                     <th style="width:60px">#</th>
                     <th>@L["Dash.Col.Title"]</th>
+                    @* Asiakas-sarake vain adminille — asiakas näkee vain omat tikettinsä. *@
                     @if (isAdmin) { <th>@L["Dash.Col.Customer"]</th> }
                     <th>@L["Ticket.Col.Category"]</th>
                     <th>@L["Dash.Col.Priority"]</th>
                     <th>@L["Dash.Col.Status"]</th>
                     <th>@L["Dash.Col.Created"]</th>
                     <th>@L["Ticket.Col.AssignedTo"]</th>
-                    <th></th>
+                    <th></th>  @* Katso-painike, ei otsikkoa *@
                 </tr>
             </thead>
             <tbody>
                 @foreach (var t in Model)
                 {
                     <tr>
+                        @* Tiketin ID harmaalla pienellä. #-merkki on visuaalinen tunniste. *@
                         <td class="text-muted small">#@t.Id</td>
+
+                        @* Tiketin otsikko linkkinä Details-sivulle. *@
                         <td>
                             <a asp-action="Details" asp-route-id="@t.Id"
                                class="fw-semibold text-decoration-none">@t.Title</a>
                         </td>
+
+                        @* Asiakas-sarake näkyy vain adminille.
+                           t.Customer?.CompanyName = null-safe navigaatio. *@
                         @if (isAdmin)
                         {
                             <td class="small text-muted">@(t.Customer?.CompanyName ?? "—")</td>
                         }
+
+                        @* Kategoria lokalisoituna. *@
                         <td class="small text-muted">@CategoryLabel(t.Category)</td>
+
+                        @* Prioriteetti-badge: väri riippuu prioriteettitasosta.
+                           switch expression (C# 8): palauttaa Bootstrap-CSS-luokan.
+                           bg-danger = punainen (kriittinen), bg-warning = keltainen,
+                           bg-primary = sininen (normaali), bg-secondary = harmaa (matala). *@
                         <td>
                             @{
                                 var pBadge = t.Priority switch {
                                     TicketPriority.Critical => "bg-danger",
                                     TicketPriority.High     => "bg-warning text-dark",
                                     TicketPriority.Normal   => "bg-primary",
-                                    _                       => "bg-secondary"
+                                    _                       => "bg-secondary"   @* Low *@
                                 };
                             }
                             <span class="badge @pBadge">@PriorityLabel(t.Priority)</span>
                         </td>
+
+                        @* Tila-badge: väri riippuu tilatyypistä.
+                           Open = sininen, InProgress = sinivihreä, WaitingCustomer = keltainen,
+                           Resolved = vihreä, Closed = harmaa. *@
                         <td>
                             @{
                                 var sBadge = t.Status switch {
@@ -126,8 +207,16 @@ else
                             }
                             <span class="badge @sBadge">@StatusLabel(t.Status)</span>
                         </td>
+
+                        @* Luontipäivämäärä lyhyessä muodossa (dd.MM.yy = kaksinumeroinen vuosi).
+                           Taulukossa tilaa säästellään lyhyemmällä muodolla. *@
                         <td class="small text-muted">@t.CreatedAt.ToString("dd.MM.yy")</td>
+
+                        @* Vastuuhenkilö — null-safe navigaatio.
+                           ?? "—" = jos ei ole määritetty, näytetään ajatusviiva. *@
                         <td class="small text-muted">@(t.AssignedToUser?.FullName ?? "—")</td>
+
+                        @* Katso-painike → tiketin Details-sivu. *@
                         <td>
                             <a asp-action="Details" asp-route-id="@t.Id"
                                class="btn btn-sm btn-outline-primary">
@@ -139,5 +228,9 @@ else
             </tbody>
         </table>
     </div>
+
+    @* Yhteensä-laskuri taulukon alla.
+       string.Format = muotoilee lokalisoitu merkkijono (esim. "Yhteensä {0} tiketttiä").
+       Model.Count() = LINQ: laskee listan alkioiden määrän. *@
     <p class="text-muted small">@string.Format(L["Ticket.Total"].Value, Model.Count())</p>
 }

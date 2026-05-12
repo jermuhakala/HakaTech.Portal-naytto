@@ -1,17 +1,46 @@
 @*
-    _ToastHost.cshtml — Toast-ilmoituksien isäntä. Lukee TempDatasta
-    palautteet (esim. "SuccessMessage") ja syöttää ne JavaScriptille,
-    joka näyttää ne pieninä popup-ilmoituksina sivun reunassa.
+    _ToastHost.cshtml — Toast-ilmoituksien isäntä-elementti.
+
+    "Toast" = pieni ponnahdusikkuna sivun kulmassa, joka ilmestyy lyhyeksi
+    ajaksi ja katoaa automaattisesti. Käytetään palauteviesteille:
+      - Onnistumiset (vihreä): "Tiketti luotu onnistuneesti."
+      - Virheet (punainen): "Et voi poistaa omaa tiliäsi."
+      - Varoitukset (keltainen): "Sessiosi vanhenee pian."
+      - Tiedotteet (sininen): "Muistutus: laskusi erääntyy huomenna."
+
+    Toimintaperiaate:
+      1. Kontrolleri asettaa viestin TempData-sanakirjaan:
+           TempData["SuccessMessage"] = "Tallennettu!";
+      2. Razor-koodi (tässä partialissa) lukee TempDatan, kokoaa listan
+         { tone, msg } -objekteista ja serialisoi ne JSON:iin.
+      3. JavaScript-globaali window.__toasts = [...] sisältää toastit.
+      4. site.js lukee window.__toasts ja näyttää ne Bootstrap Toastina.
+
+    Tuetaan sekä uutta lyhyttä avainmuotoa (Success/Error/...) että
+    vanhempaa controllerien käytäntöä (SuccessMessage/ErrorMessage/...) —
+    molemmat toimivat rinnakkain.
 *@
+
+@* System.Text.Json = .NET:n sisäänrakennettu JSON-kirjasto.
+   Käytetään listan serialisointiin JavaScript-muotoon. *@
 @using System.Text.Json
+
 @{
+    @* seed = lista olioista jotka lähetetään JavaScriptille.
+       Jokainen olio sisältää tone (viestin väri/tyyli) ja msg (teksti). *@
     var seed = new List<object>();
-    // Tuetaan sekä uutta lyhyttä avainmuotoa (Success/Error/...) että
-    // vanhempaa controllerien käytäntöä (SuccessMessage/ErrorMessage/...).
+
+    @* keyMap = taulukko jossa jokaiselle TempData-avaimelle on
+       "tone"-tyyli. Tuple-taulukko: (avain, sävy).
+       Näin yksi foreach-silmukka käsittelee kaikki avaimet.
+       "success" = vihreä onnistumisviesti.
+       "danger"  = punainen virheviesti.
+       "warning" = keltainen varoitus.
+       "info"    = sininen tiedoteviesti. *@
     var keyMap = new (string key, string tone)[]
     {
-        ("Success",        "success"),
-        ("SuccessMessage", "success"),
+        ("Success",        "success"),  // Lyhyt muoto: TempData["Success"]
+        ("SuccessMessage", "success"),  // Pitkä muoto:  TempData["SuccessMessage"]
         ("Error",          "danger"),
         ("ErrorMessage",   "danger"),
         ("Warning",        "warning"),
@@ -19,17 +48,44 @@
         ("Info",           "info"),
         ("InfoMessage",    "info")
     };
+
+    @* Käydään läpi kaikki avaimet ja kerätään löydetyt viestit.
+       foreach + tuple-dekonstruktio: (key, tone) puretaan suoraan. *@
     foreach (var (key, tone) in keyMap)
     {
+        @* TempData[key] is string msg = tarkistetaan onko kyseinen avain
+           olemassa JA onko se merkkijono — tallennetaan samalla muuttujaan msg.
+           "is string msg" = C#:n tyyppitarkistava sijoituslause (pattern matching).
+           !string.IsNullOrWhiteSpace(msg) = hylätään tyhjät ja välilyöntiset viestit. *@
         if (TempData[key] is string msg && !string.IsNullOrWhiteSpace(msg))
         {
+            @* Lisätään anonyymikokoelmaan: { tone = "success", msg = "Tiketti luotu!" } *@
             seed.Add(new { tone, msg });
+
+            @* Poistetaan avain TempDatasta, ettei sama viesti näy kahdesti
+               jos käydään saman koodin läpi uudelleen (esim. partial renderöidään
+               kahdesti). TempData poistetaan automaattisesti seuraavalla
+               pyynnöllä, mutta tämä tekee sen heti. *@
             TempData.Remove(key);
         }
     }
+
+    @* Serialisoidaan lista JSON-muotoon.
+       Tulos: [{"tone":"success","msg":"Tiketti luotu!"},{"tone":"danger","msg":"Virhe"}]
+       Tämä lähetetään JavaScriptille sivun latauksen yhteydessä. *@
     var json = JsonSerializer.Serialize(seed);
 }
+
+@* aria-live="polite" = ruudunlukija ilmoittaa uudet toastit ääneen
+   kun käyttäjä ei ole kesken muuta toimintaa (polite = ystävällinen).
+   aria-atomic="true" = ruudunlukija lukee koko elementin kerralla,
+   ei vain muuttunutta osaa. *@
 <div id="toastHost" aria-live="polite" aria-atomic="true"></div>
+
+@* Asetetaan JavaScript-globaali window.__toasts jossa toastilista.
+   Html.Raw(json) = lisätään JSON sellaisenaan ilman HTML-enkoodausta,
+   jotta lainausmerkit ja erikoismerkit eivät muutu &quot; -muotoon.
+   site.js lukee tämän muuttujan sivun latauksen jälkeen ja näyttää toastit. *@
 <script>
     window.__toasts = @Html.Raw(json);
 </script>

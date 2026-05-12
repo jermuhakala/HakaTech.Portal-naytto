@@ -1,25 +1,50 @@
 @*
-    Register.cshtml — Adminin lomake uuden käyttäjän luomiseen.
-    Asiakaskäyttäjälle valitaan myös yritys (CustomerId).
+    Register.cshtml — Uuden käyttäjän luontilomake (vain admineille).
+
+    Admin luo täällä uusia käyttäjiä portaaliin. Lomake ei ole julkinen
+    rekisteröitymissivu — pääsy on rajoitettu Admin-roolilla.
+
+    Erityispiirre: Rooli-valinta vaikuttaa lomakkeen kenttiin.
+      - Jos rooli = "Customer" → Yritys-pudotusvalikko näkyy (pakollinen).
+      - Jos rooli = "Admin"    → Yritys piilotetaan (admineilla ei yritystä).
+    Tämä toteutetaan JavaScriptilla (toggleCustomerField-funktio).
+
+    Yhteys: AccountController.Register (GET + POST).
 *@
+
+@* RegisterViewModel sisältää:
+     - FullName, Email, Password, ConfirmPassword (merkkijonoja)
+     - Role (string: "Customer" tai "Admin")
+     - CustomerId (int?): valitun yrityksen ID
+     - CustomerOptions (SelectList): lista yrityksistä pudotusvalikkoon *@
 @model HakaTech.Portal.Models.ViewModels.RegisterViewModel
+
 @{
+    @* Sivun otsikko. *@
     ViewData["Title"] = L["Auth.Register.Title"].Value;
 }
 
+@* Sivutus: yksi sarake, max. leveys 6/12, keskitetty, ylämarginaali. *@
 <div class="row justify-content-center">
     <div class="col-md-6">
+
         <div class="card shadow-sm mt-4">
+            @* Otsikkorivi: logo + otsikko. *@
             <div class="card-header text-center py-3">
                 <img src="~/img/logo-mark.svg" alt="HakaTech Logo"
                      style="height: 36px; width: 36px;" class="mb-2" />
+                @* bi-person-plus = henkilö-plus-ikoni. *@
                 <h4 class="mb-0"><i class="bi bi-person-plus me-2"></i>@L["Auth.Register.Heading"]</h4>
             </div>
             <div class="card-body p-4">
 
+                @* Lomake lähettää POST:in AccountController.Register-metodille. *@
                 <form asp-action="Register" method="post">
+
+                    @* Virheyhteenveto koko lomakkeelle. *@
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
+                    @* Koko nimi. *@
                     <div class="mb-3">
                         <label asp-for="FullName" class="form-label fw-semibold"></label>
                         <input asp-for="FullName" class="form-control" placeholder="@L["Auth.Register.FullNamePlaceholder"]"
@@ -27,6 +52,7 @@
                         <span asp-validation-for="FullName" class="text-danger small"></span>
                     </div>
 
+                    @* Sähköpostiosoite. *@
                     <div class="mb-3">
                         <label asp-for="Email" class="form-label fw-semibold"></label>
                         <input asp-for="Email" class="form-control" placeholder="@L["Auth.Login.EmailPlaceholder"]"
@@ -34,6 +60,7 @@
                         <span asp-validation-for="Email" class="text-danger small"></span>
                     </div>
 
+                    @* Salasana. *@
                     <div class="mb-3">
                         <label asp-for="Password" class="form-label fw-semibold"></label>
                         <input asp-for="Password" class="form-control" placeholder="@L["Auth.Register.PasswordPlaceholder"]"
@@ -41,6 +68,7 @@
                         <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>
 
+                    @* Salasanan vahvistus. *@
                     <div class="mb-3">
                         <label asp-for="ConfirmPassword" class="form-label fw-semibold"></label>
                         <input asp-for="ConfirmPassword" class="form-control" placeholder="@L["Auth.Register.ConfirmPlaceholder"]"
@@ -48,25 +76,38 @@
                         <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
                     </div>
 
+                    @* Roolinvalinta: Customer tai Admin.
+                       onchange="toggleCustomerField(this.value)" = kutsutaan JS-funktiota
+                       kun roolia vaihdetaan, jotta yrityskenttä piilotetaan/näytetään. *@
                     <div class="mb-3">
                         <label asp-for="Role" class="form-label fw-semibold"></label>
                         <select asp-for="Role" id="register-role" class="form-select"
                                 onchange="toggleCustomerField(this.value)">
+                            @* Vakioarvot pudotusvalikkoon — ei tule ModelBinder-apuna
+                               koska Role on vain string (ei enum), joten listataan manuaalisesti. *@
                             <option value="Customer">@L["Auth.Register.RoleCustomer"]</option>
                             <option value="Admin">@L["Auth.Register.RoleAdmin"]</option>
                         </select>
                     </div>
 
+                    @* Yritys-pudotusvalikko: näkyy vain Customer-roolille.
+                       id="customer-field" = JavaScript kohdistaa tähän toggleCustomerField:ssä.
+                       Alkutila: piilotetaan jos rooli on "Admin" jo palvelimella (esim.
+                       validointivirhe palautti Admin-valinnan). *@
                     <div class="mb-4" id="customer-field"
                          style="@(Model.Role == "Admin" ? "display:none" : "")">
                         <label asp-for="CustomerId" class="form-label fw-semibold"></label>
+                        @* asp-items="Model.CustomerOptions" = Razor luo <option>-elementit
+                           listasta automaattisesti. Jokainen SelectListItem on yksi yritys. *@
                         <select asp-for="CustomerId" asp-items="Model.CustomerOptions"
                                 id="register-customer" class="form-select">
+                            @* Tyhjä oletusasetus joka pakottaa valitsemaan yrityksen. *@
                             <option value="">@L["Auth.Register.SelectCompany"]</option>
                         </select>
                         <span asp-validation-for="CustomerId" class="text-danger small"></span>
                     </div>
 
+                    @* Luo käyttäjä -painike. d-grid = koko leveys. btn-success = vihreä. *@
                     <div class="d-grid">
                         <button type="submit" id="register-submit" class="btn btn-success btn-lg">
                             <i class="bi bi-person-check me-1"></i>@L["Auth.Register.Submit"]
@@ -80,8 +121,13 @@
 </div>
 
 @section Scripts {
+    @* jQuery Validation lomakkeelle. *@
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
     <script>
+    @* toggleCustomerField = näyttää tai piilottaa yritys-kentän roolin mukaan.
+       Parametri: role = valittu rooli ("Customer" tai "Admin").
+       customer-field-elementin display-tyyli vaihdetaan: "" = näkyvissä, "none" = piilossa. *@
     function toggleCustomerField(role) {
         document.getElementById('customer-field').style.display =
             role === 'Admin' ? 'none' : '';

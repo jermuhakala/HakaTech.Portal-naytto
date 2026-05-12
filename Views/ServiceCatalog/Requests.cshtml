@@ -1,33 +1,74 @@
 @*
-    ServiceCatalog/Requests.cshtml — Adminin lista saapuneista
-    tarjouspyynnöistä. Suodatettavissa tilan mukaan.
+    ServiceCatalog/Requests.cshtml — Adminin lista saapuneista tarjouspyynnöistä.
+
+    Rakenne:
+      - Otsikkorivi + takaisin "Palvelut"-linkki
+      - Tilaan perustuva suodatin: "Kaikki" + yksi painike per enum-arvo
+        (Pending, InProgress, Sent, Accepted, Declined)
+      - Tarjouspyynnöt taulukkona: #, Palvelu, Asiakas, Pyytäjä, Tila (badge), Päivämäärä, Katso
+      - @functions-lohko: StatusLabel ja BadgeClass -apufunktiot
+
+    @functions-lohko:
+      Razor tukee @functions { ... } -lohkoa, johon voi kirjoittaa C#-metodeja
+      joita käytetään VAIN tässä näkymässä. Ne ovat static eli eivät tarvitse
+      olioinstanssia. Yksinkertaisempi vaihtoehto kuin HtmlHelper-laajennukset.
+
+    Yhteys: ServiceCatalogController.Requests (GET).
 *@
+
+@* Malli = lista QuoteRequest-olioista (navigaatiot Service, Customer, CreatedByUser ladattu).
+   Kontrolleri suodattaa listan statusFilter-parametrin mukaan. *@
 @model IEnumerable<HakaTech.Portal.Models.Domain.QuoteRequest>
 @using HakaTech.Portal.Models.Domain
+
 @{
     ViewData["Title"] = L["Service.Requests"].Value;
+
+    @* statusFilter = kontrolleri välittää nykyisen suodatintilan ViewBagissa.
+       as QuoteRequestStatus? = cast nullable enumiksi:
+         - Jos ViewBag.StatusFilter on asetettu (esim. Pending), se muutetaan nullable enumiksi.
+         - Jos ei ole asetettu (kaikki-näkymä), statusFilter = null. *@
     var statusFilter = ViewBag.StatusFilter as QuoteRequestStatus?;
 }
 
+@* Otsikkorivi: vasemmalla otsikko, oikealla takaisin palvelulistaan.
+   justify-content-between = reunat vastatusten. *@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0"><i class="bi bi-envelope-open me-2"></i>Tarjouspyynnöt</h2>
+    @* Takaisin Manage-sivulle (palveluiden hallinta). *@
     <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-grid me-1"></i>Palvelut
     </a>
 </div>
 
-@* Suodattimet *@
+@* Tilasuodattimet — painikepalkki.
+   flex-wrap = painikkeet rivittyvät jos ei mahdu yhteen riviin.
+   gap-2 = 0.5rem väli painikkeiden välillä. *@
 <div class="d-flex flex-wrap gap-2 mb-3">
+    @* "Kaikki"-painike — ei asp-route-status, joten URL ei sisällä status-parametria.
+       Ternaari: jos statusFilter == null (= kaikki valittuna) → tumma (btn-dark)
+                 muuten → haalistunut reunapainike (btn-outline-secondary). *@
     <a asp-action="Requests" class="btn btn-sm @(statusFilter == null ? "btn-dark" : "btn-outline-secondary")">Kaikki</a>
+
+    @* Generoidaan yksi painike per QuoteRequestStatus-enumin arvo.
+       Enum.GetValues<QuoteRequestStatus>() = palauttaa kaikki enumin arvot listana
+       (Pending, InProgress, Sent, Accepted, Declined).
+       foreach iteroi ne yksi kerrallaan. *@
     @foreach (QuoteRequestStatus s in Enum.GetValues<QuoteRequestStatus>())
     {
+        @* asp-route-status="@s" = lisää ?status=Pending URL:iin.
+           Kontrolleri vastaanottaa tämän parametrina ja suodattaa sen mukaan.
+           Ternaari: valittu tila → btn-dark, muu tila → btn-outline-secondary. *@
         <a asp-action="Requests" asp-route-status="@s"
            class="btn btn-sm @(statusFilter == s ? "btn-dark" : "btn-outline-secondary")">
+            @* StatusLabel(s) = @functions-lohkon metodi, joka muuntaa enum-arvon
+               suomenkieliseksi tekstiksi (Pending → "Odottaa" jne.). *@
             @StatusLabel(s)
         </a>
     }
 </div>
 
+@* Tyhjä tila — näytetään jos valituilla suodattimilla ei löydy tarjouspyyntöjä. *@
 @if (!Model.Any())
 {
     <div class="alert alert-info">
@@ -36,33 +77,56 @@
 }
 else
 {
+    @* Tarjouspyyntötaulukko. table-hover = rivi korostuu hiirellä.
+       align-middle = solujen sisältö pystysuunnassa keskelle. *@
     <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>#</th>
+                    <th>#</th>          @* Tarjouspyynnön ID *@
                     <th>Palvelu</th>
                     <th>Asiakas</th>
-                    <th>Pyytäjä</th>
+                    <th>Pyytäjä</th>   @* Käyttäjä joka lähetti pyynnön *@
                     <th>Tila</th>
                     <th>Päivämäärä</th>
-                    <th></th>
+                    <th></th>           @* Katso-painike, ei otsikkoa *@
                 </tr>
             </thead>
             <tbody>
                 @foreach (var q in Model)
                 {
                     <tr>
+                        @* Tarjouspyynnön tietokannan ID-numero. *@
                         <td>@q.Id</td>
+
+                        @* Palvelun nimi navigaatio-ominaisuuden kautta.
+                           q.Service?.Name = null-safe property access (?.):
+                           jos Service on null (poistettu palvelu), palautetaan null.
+                           ?? "—" = null-coalescing: null → ajatusviiva. *@
                         <td class="fw-semibold">@(q.Service?.Name ?? "—")</td>
+
+                        @* Asiakkaan yritysnimi. *@
                         <td>@(q.Customer?.CompanyName ?? "—")</td>
+
+                        @* Pyytäjän nimi tai sähköposti.
+                           Ternaari: jos FullName on asetettu ja ei-tyhjä → näytetään FullName
+                                     muuten → Email (tai "—" jos sekin on null). *@
                         <td class="small text-muted">
                             @(q.CreatedByUser?.FullName.Length > 0 ? q.CreatedByUser.FullName : q.CreatedByUser?.Email ?? "—")
                         </td>
+
+                        @* Tilamerkki (badge).
+                           BadgeClass(q.Status) = palauttaa Bootstrap-luokat tilan väriä varten.
+                           StatusLabel(q.Status) = palauttaa suomenkielisen tilanimen. *@
                         <td>
                             <span class="badge @BadgeClass(q.Status)">@StatusLabel(q.Status)</span>
                         </td>
+
+                        @* Luontipäivämäärä suomalaisessa muodossa (dd.MM.yyyy = 12.05.2026).
+                           text-nowrap = ei rivitetä päivämäärää keskelle (pysyy yhdellä rivillä). *@
                         <td class="small text-nowrap">@q.CreatedAt.ToString("dd.MM.yyyy")</td>
+
+                        @* Katso-painike → siirtyy RequestDetails-sivulle. *@
                         <td>
                             <a asp-action="RequestDetails" asp-route-id="@q.Id"
                                class="btn btn-sm btn-outline-primary">
@@ -74,10 +138,29 @@ else
             </tbody>
         </table>
     </div>
+
+    @* Yhteensä-laskuri taulukon alla.
+       Model.Count() = LINQ-metodi, laskee listan alkioiden määrän. *@
     <p class="text-muted small">Yhteensä @Model.Count() tarjouspyyntöä.</p>
 }
 
+@* ── @functions-lohko ──
+   Razor-syntaksin erityisominaisuus: @functions { ... } mahdollistaa C#-metodien
+   kirjoittamisen suoraan .cshtml-tiedostoon. Nämä metodit ovat käytettävissä
+   vain tässä näkymässä (ei muissa tiedostoissa).
+
+   static = metodit eivät tarvitse this-viitettä (ei instanssimuuttujia).
+   => = nuolisyntaksi (expression body): metodi palauttaa suoraan switch-lauseen arvon. *@
 @functions {
+    @* StatusLabel: muuntaa QuoteRequestStatus-enum-arvon suomenkieliseksi merkinnäksi.
+       switch-lauseke (switch expression, C# 8+):
+         - QuoteRequestStatus.Pending    → "Odottaa"
+         - QuoteRequestStatus.InProgress → "Käsittelyssä"
+         - QuoteRequestStatus.Sent       → "Lähetetty"
+         - QuoteRequestStatus.Accepted   → "Hyväksytty"
+         - QuoteRequestStatus.Declined   → "Hylätty"
+         - _                             → s.ToString() (fallback: englanninkielinen enumin nimi)
+    *@
     static string StatusLabel(QuoteRequestStatus s) => s switch
     {
         QuoteRequestStatus.Pending    => "Odottaa",
@@ -88,6 +171,12 @@ else
         _                             => s.ToString()
     };
 
+    @* BadgeClass: palauttaa Bootstrap-CSS-luokat tilan mukaista väritystä varten.
+       "bg-warning text-dark" = keltainen tausta, musta teksti (keltaisella tarvitaan tumma teksti).
+       "bg-primary"           = sininen.
+       "bg-info text-dark"    = sinivihreä + tumma teksti.
+       "bg-success"           = vihreä.
+       "bg-secondary"         = harmaa. *@
     static string BadgeClass(QuoteRequestStatus s) => s switch
     {
         QuoteRequestStatus.Pending    => "bg-warning text-dark",

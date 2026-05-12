@@ -1,22 +1,47 @@
 @*
-    CustomerUser/Index.cshtml — Asiakasyrityksen käyttäjälista. Customer-admin
-    näkee oman yrityksensä käyttäjät, admin näkee minkä tahansa yrityksen.
+    CustomerUser/Index.cshtml — Asiakasyrityksen käyttäjälista.
+
+    Pääsy hierarkkinen:
+      - Admin: voi katsella minkä tahansa yrityksen käyttäjiä URL-parametrilla.
+      - CustomerAdmin: näkee vain oman yrityksensä käyttäjät.
+      - Tavallinen asiakas: kielletty pääsy (kontrolleri palauttaa Forbid()).
+
+    Sivulla voi:
+      - Lisätä uuden käyttäjän yritykseen (Create)
+      - Muokata käyttäjää (Edit)
+      - Poistaa käyttäjän (Delete) — ei voi poistaa itseään
+
+    Yhteys: CustomerUserController.Index.
 *@
+
+@* Lista yrityksen ApplicationUser-käyttäjistä. *@
 @model IEnumerable<HakaTech.Portal.Models.Domain.ApplicationUser>
+
 @{
+    @* Haetaan yrityksen tiedot ViewBag:sta (kontrolleri asetti sen FindAsync:lla).
+       as Customer = turvallinen tyyppimuunnos; null jos ei löydy. *@
     var customer  = ViewBag.Customer as HakaTech.Portal.Models.Domain.Customer;
+
+    @* isAdmin = onko kirjautunut käyttäjä järjestelmäadmin?
+       == true tarkistaa erikseen null-tapauksen (ViewBag palauttaa object). *@
     bool isAdmin  = ViewBag.IsAdmin == true;
+
+    @* Sivun otsikko: "Käyttäjät – YritysNimi". *@
     ViewData["Title"] = string.Format(L["CustomerUser.IndexTitle"].Value, customer?.CompanyName);
 }
 
+@* Otsikkorivi: vasemmalla otsikko + yrityksen nimi, oikealla painikkeet. *@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="mb-0">
             <i class="bi bi-people me-2 text-primary"></i>Käyttäjät
         </h2>
+        @* Yrityksen nimi alaotsikkona. *@
         <small class="text-muted">@customer?.CompanyName</small>
     </div>
     <div class="d-flex gap-2">
+        @* Takaisin yrityksen tietosivulle — vain admin näkee tämän,
+           CustomerAdmin ei pääse Customer/Details-sivulle. *@
         @if (isAdmin)
         {
             <a asp-controller="Customer" asp-action="Details" asp-route-id="@customer?.Id"
@@ -24,6 +49,7 @@
                 <i class="bi bi-arrow-left me-1"></i>Takaisin
             </a>
         }
+        @* Lisää käyttäjä -linkki. asp-route-customerId välittää yrityksen ID:n. *@
         <a asp-action="Create" asp-route-customerId="@customer?.Id"
            class="btn btn-primary btn-sm">
             <i class="bi bi-person-plus me-1"></i>Lisää käyttäjä
@@ -31,13 +57,17 @@
     </div>
 </div>
 
+@* Käyttäjätaulukko kortissa. *@
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
+
+        @* Tyhjä tila: ei käyttäjiä vielä. *@
         @if (!Model.Any())
         {
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-people display-4 d-block mb-3"></i>
                 <p>Ei käyttäjiä.</p>
+                @* Kutsutaan luomaan ensimmäinen käyttäjä. *@
                 <a asp-action="Create" asp-route-customerId="@customer?.Id" class="btn btn-primary">
                     <i class="bi bi-person-plus me-1"></i>Lisää ensimmäinen käyttäjä
                 </a>
@@ -59,8 +89,13 @@
                         @foreach (var u in Model)
                         {
                             <tr>
+                                @* Avatar-ympyrä + nimi. *@
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
+                                        @* Pieni ympyrä käyttäjän nimen ensimmäisellä kirjaimella.
+                                           Inline-tyyli: kiinteä 36x36px ympyrä sinisellä pohjalla.
+                                           u.FullName?.Length > 0 = null-turvallinen pituustarkistus.
+                                           [0] = ensimmäinen merkki, ToUpper() = iso kirjain. *@
                                         <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
                                              style="width:36px;height:36px;font-size:14px;flex-shrink:0">
                                             @(u.FullName?.Length > 0 ? u.FullName[0].ToString().ToUpper() : "?")
@@ -68,10 +103,15 @@
                                         <span class="fw-medium">@u.FullName</span>
                                     </div>
                                 </td>
+
+                                @* Sähköposti harmaalla pienellä. *@
                                 <td class="text-muted small">@u.Email</td>
+
+                                @* Rooli-merkki: Pääkäyttäjä (keltainen) tai Käyttäjä (harmaa). *@
                                 <td>
                                     @if (u.IsCustomerAdmin)
                                     {
+                                        @* bi-shield-check = kilpimerkin ikoni. *@
                                         <span class="badge bg-warning text-dark">
                                             <i class="bi bi-shield-check me-1"></i>Pääkäyttäjä
                                         </span>
@@ -81,11 +121,19 @@
                                         <span class="badge bg-secondary">Käyttäjä</span>
                                     }
                                 </td>
+
+                                @* Toimintopainikkeet: Muokkaa + Poista. *@
                                 <td class="text-end">
+                                    @* Muokkaa. *@
                                     <a asp-action="Edit" asp-route-id="@u.Id"
                                        class="btn btn-outline-secondary btn-sm me-1">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+
+                                    @* Poisto-lomake.
+                                       data-confirm = _Layout.cshtml:n event delegaatio lukee tämän
+                                       ja näyttää confirm()-dialogin ENNEN lomakkeen lähetystä.
+                                       Tämä on vaihtoehto onsubmit="return confirm(...)" -tavolle. *@
                                     <form asp-action="Delete" asp-route-id="@u.Id"
                                           method="post" class="d-inline">
                                         @Html.AntiForgeryToken()

@@ -1,30 +1,68 @@
 @*
-    Invoice/Details.cshtml — Laskun detaljisivu. Näyttää laskurivit,
-    summat (sis. ALV), liitteet ja PDF-latauspainikkeen. Adminilla on
-    myös tilanvaihtopainikkeet (esim. "Merkitse maksetuksi").
+    Invoice/Details.cshtml — Laskun detaljisivu.
+
+    Näyttää:
+      - Laskun perustiedot (numero, päivät, tila, ALV-prosentti)
+      - Laskurivit taulukossa (kuvaus, määrä, yksikköhinta, rivin summa)
+      - tfoot-yhteenveto: veroton / ALV / yhteensä
+      - Liitelista (kaikilla) + latauslinkki + poisto (admin)
+      - Liitteen latauslomake (admin)
+      - Yhteenvetokortti sivupalkissa (veroton / ALV / maksettava)
+      - Tilanvaihtolomake sivupalkissa (vain admin)
+      - Asiakashistoria: saman asiakkaan muut laskut (admin)
+
+    Yhteys: InvoiceController.Details.
 *@
+
+@* Malli = yksittäinen Invoice-olio navigaatio-ominaisuuksineen
+   (Customer, Lines, Attachments). *@
 @model HakaTech.Portal.Models.Domain.Invoice
+
+@* Tuodaan domainnimitila jotta InvoiceStatus-enum löytyy ilman täydellistä polkua. *@
 @using HakaTech.Portal.Models.Domain
+@* Tuodaan ViewModels jotta InvoiceStatusViewModel löytyy. *@
 @using HakaTech.Portal.Models.ViewModels
+
 @{
+    @* Sivun otsikko selaimelle = laskunumero (esim. "INV-0042"). *@
     ViewData["Title"] = Model.InvoiceNumber;
+
+    @* Murupolku: Laskut → laskunumero (viimeinen ilman linkkiä). *@
     ViewData["Breadcrumbs"] = new List<(string, string?)>
     {
         (L["Invoice.Index.Title"].Value, Url.Action("Index", "Invoice")),
         (Model.InvoiceNumber, null)
     };
-    bool isAdmin       = (bool)(ViewBag.IsAdmin ?? false);
-    var statusModel    = ViewBag.StatusModel as InvoiceStatusViewModel;
-    var history        = ViewBag.CustomerHistory as List<Invoice> ?? new List<Invoice>();
 
+    @* isAdmin = onko kirjautunut käyttäjä järjestelmäadmin? *@
+    bool isAdmin = (bool)(ViewBag.IsAdmin ?? false);
+
+    @* statusModel = adminin tilanvaihtolomaketta varten: Id, Status, PaidAt.
+       as InvoiceStatusViewModel = turvallinen tyyppimuunnos; null jos kontrolleri
+       ei asettanut sitä (eli käyttäjä on asiakas). *@
+    var statusModel = ViewBag.StatusModel as InvoiceStatusViewModel;
+
+    @* history = saman asiakkaan muut laskut (poislukien nykyinen).
+       ?? new List<Invoice>() = jos ViewBag.CustomerHistory ei ole asetettu tai on null,
+       käytetään tyhjää listaa (ei kaadu). *@
+    var history = ViewBag.CustomerHistory as List<Invoice> ?? new List<Invoice>();
+
+    @* Apufunktio: palauttaa tilan lokalisoidun nimen (esim. "Maksettu").
+       $"InvoiceStatus.{s}" = interpoloitu lokalisointiavain esim. "InvoiceStatus.Paid". *@
     string StatusLabel(InvoiceStatus s) => L[$"InvoiceStatus.{s}"].Value;
+
+    @* BadgeCss: palauttaa Bootstrap-badgen CSS-luokan tilan mukaan.
+       static = apufunktio ei tarvitse instanssitietoja (voi olla jaettu). *@
     static string BadgeCss(InvoiceStatus s) => s switch {
-        InvoiceStatus.Paid    => "bg-success",
-        InvoiceStatus.Overdue => "bg-danger",
-        InvoiceStatus.Sent    => "bg-primary",
-        InvoiceStatus.Unpaid  => "bg-warning text-dark",
-        _                     => "bg-secondary"
+        InvoiceStatus.Paid    => "bg-success",           // vihreä — maksettu
+        InvoiceStatus.Overdue => "bg-danger",            // punainen — erääntynyt
+        InvoiceStatus.Sent    => "bg-primary",           // sininen — lähetetty
+        InvoiceStatus.Unpaid  => "bg-warning text-dark", // keltainen — maksamatta
+        _                     => "bg-secondary"          // harmaa — muut
     };
+
+    @* HistoryCss: palauttaa tekstiväriluokan historialistausta varten.
+       Kevyempi tyyli kuin BadgeCss (teksti eikä taustaväri). *@
     static string HistoryCss(InvoiceStatus s) => s switch {
         InvoiceStatus.Paid    => "text-success",
         InvoiceStatus.Overdue => "text-danger",
@@ -34,52 +72,87 @@
     };
 }
 
+@* Murupolku manuaalisesti — tämä sivu ei käytä ViewComponent-breadcrumbia
+   vaan rakentaa sen suoraan Bootstrap breadcrumb -HTML:llä. *@
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
+        @* Laskut-linkki. *@
         <li class="breadcrumb-item"><a asp-action="Index">@L["Invoice.Index.Title"]</a></li>
+        @* Admin näkee myös linkin asiakkaan tietosivulle.
+           Model.Customer is not null = tarkistaa ettei navigaatio-ominaisuus ole null
+           (asiakas on ladattu Include():lla kontrollerin kyselyssä). *@
         @if (isAdmin && Model.Customer is not null)
         {
             <li class="breadcrumb-item">
+                @* asp-route-id = asiakkaan ID URL-parametrina. *@
                 <a asp-controller="Customer" asp-action="Details" asp-route-id="@Model.CustomerId">
                     @Model.Customer.CompanyName
                 </a>
             </li>
         }
+        @* active = nykyinen sivu (ei linkkiä). *@
         <li class="breadcrumb-item active">@Model.InvoiceNumber</li>
     </ol>
 </nav>
 
+@* Kaksipalstainen asettelu: col-md-8 = pääsisältö, col-md-4 = sivupalkki.
+   g-3 = 16px rako sarakkeiden välillä. *@
 <div class="row g-3">
+
+    @* ── VASEN SARAKE (8/12): lasku + liitteet ── *@
     <div class="col-md-8">
+
+        @* Laskukortti. shadow-sm = lievä varjo. *@
         <div class="card shadow-sm">
+
+            @* Korttinotsikko: laskunumero + tila + PDF-lataus. *@
             <div class="card-header d-flex justify-content-between align-items-center py-3">
                 <div>
                     <h5 class="mb-0">
                         <i class="bi bi-receipt me-2"></i>@Model.InvoiceNumber
                     </h5>
+                    @* ?. null-ehdollinen: jos Customer on null, tulostaa tyhjää eikä kaadu. *@
                     <small class="text-muted">@(Model.Customer?.CompanyName)</small>
                 </div>
                 <div class="d-flex align-items-center gap-3">
+                    @* fs-6 = Bootstrap font-size utility: normaali tekstikoko (1rem)
+                       — tekee badge-merkistä hieman suuremman kuin oletuksena. *@
                     <span class="badge @BadgeCss(Model.Status) fs-6">@StatusLabel(Model.Status)</span>
+                    @* PDF-latauspainike. asp-action="DownloadPdf" + asp-route-id
+                       → GET /Invoice/DownloadPdf/{id}.
+                       rounded-pill = pyöristetyt reunat (pillerimäinen painike). *@
                     <a asp-action="DownloadPdf" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary rounded-pill">
                         <i class="bi bi-file-earmark-pdf me-1"></i> @L["Invoice.Details.DownloadPdf"]
                     </a>
                 </div>
             </div>
+
             <div class="card-body">
 
+                @* Metatiedot kahdessa sarakkeessa (col-sm-6 = 50% leveillä näytöillä).
+                   dl.row = Bootstrap definition list -taulukko: dt = label, dd = arvo. *@
                 <div class="row mb-3">
                     <div class="col-sm-6">
                         <dl class="row mb-0 small">
                             <dt class="col-5">@L["Invoice.Details.InvoiceDate"]</dt>
                             <dd class="col-7">@Model.InvoiceDate.ToString("dd.MM.yyyy")</dd>
+
                             <dt class="col-5">@L["Invoice.Col.DueDate"]</dt>
+                            @* Eräpäivä punaisella ja lihavoidulla jos erääntynyt eikä maksettu.
+                               DueDate < DateTime.Today = vertailu päivätasolla (kellonajat poistettu).
+                               Status != Paid = maksetuissa laskuissa eräpäivää ei enää punota. *@
                             <dd class="col-7 @(Model.DueDate < DateTime.Today && Model.Status != InvoiceStatus.Paid ? "text-danger fw-semibold" : "")">
                                 @Model.DueDate.ToString("dd.MM.yyyy")
                             </dd>
+
+                            @* Maksupäivä näytetään vain jos lasku on merkitty maksetuksi.
+                               PaidAt on nullable DateTime? — HasValue tarkistaa onko arvo asetettu. *@
                             @if (Model.PaidAt.HasValue)
                             {
                                 <dt class="col-5">@L["Invoice.Details.PaidAt"]</dt>
+                                @* .Value = nullable-arvon purkaminen (turvallista HasValue-tarkistuksen jälkeen).
+                                   ToLocalTime() = muuntaa UTC-aikaleiman paikalliseksi ajaksi.
+                                   text-success fw-semibold = vihreä lihavoitu = positiivinen tapahtuma. *@
                                 <dd class="col-7 text-success fw-semibold">@Model.PaidAt.Value.ToLocalTime().ToString("dd.MM.yyyy")</dd>
                             }
                         </dl>
@@ -87,18 +160,25 @@
                     <div class="col-sm-6">
                         <dl class="row mb-0 small">
                             <dt class="col-5">@L["Invoice.Details.VatRate"]</dt>
+                            @* VatRate on 0–1 -kerroin. * 100 muuntaa prosentiksi.
+                               "0.#" = näyttää enintään yhden desimaalin (esim. 25,5 % eikä 25,500 %). *@
                             <dd class="col-7">@((Model.VatRate * 100).ToString("0.#")) %</dd>
                         </dl>
                     </div>
                 </div>
 
+                @* Muistiinpanot näytetään vain jos niitä on.
+                   IsNullOrEmpty = tarkistaa sekä null- että tyhjän merkkijonon. *@
                 @if (!string.IsNullOrEmpty(Model.Notes))
                 {
+                    @* alert-secondary = neutraali taustakorostus muistiinpanoille.
+                       bi-sticky = tarralappu-ikoni. *@
                     <div class="alert alert-secondary small mb-3">
                         <i class="bi bi-sticky me-1"></i>@Model.Notes
                     </div>
                 }
 
+                @* Laskurivitaulukko. table-bordered = reunaviivat jokaiselle solulle. *@
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="table-light">
@@ -110,29 +190,49 @@
                             </tr>
                         </thead>
                         <tbody>
+                            @* Käydään kaikki laskurivit. Lines = navigaatio-ominaisuus,
+                               ladattu Include(i => i.Lines):llä kontrollerin kyselyssä. *@
                             @foreach (var line in Model.Lines)
                             {
                                 <tr>
                                     <td>@line.Description</td>
+                                    @* "G" = General format: näyttää luvun lyhyimmässä muodossa
+                                       (ei turha desimaaleja, esim. "2" eikä "2.0"). *@
                                     <td class="text-end">@line.Quantity.ToString("G")</td>
+                                    @* "C" = Currency format: valuuttamuoto kulttuurin mukaan
+                                       (esim. "1 250,00 €"). *@
                                     <td class="text-end">@line.UnitPrice.ToString("C")</td>
+                                    @* Rivin summa lasketaan Razor-puolella: määrä × yksikköhinta.
+                                       InvoiceLine-entiteetissä ei ole LineTotal-ominaisuutta,
+                                       joten kertolasku tehdään näkymässä. *@
                                     <td class="text-end fw-semibold">@((line.Quantity * line.UnitPrice).ToString("C"))</td>
                                 </tr>
                             }
                         </tbody>
+
+                        @* tfoot = taulukon alatunniste (erillinen semanttinen alue).
+                           Näytetään kolme summariviä. *@
                         <tfoot class="table-light">
+                            @* Veroton summa. colspan="3" = yhdistää kolme ensimmäistä solua. *@
                             <tr>
                                 <td colspan="3" class="text-end">@L["Invoice.Details.SubTotal"]</td>
+                                @* SubTotal = Invoice-entiteetin laskennallinen ominaisuus
+                                   (Lines.Sum(l => l.Quantity * l.UnitPrice)). *@
                                 <td class="text-end">@Model.SubTotal.ToString("C")</td>
                             </tr>
+                            @* ALV-rivi: otsikossa näkyy myös prosentti (esim. "ALV 25,5 %"). *@
                             <tr>
                                 <td colspan="3" class="text-end">
                                     @L["Invoice.Create.Vat"] @((Model.VatRate * 100).ToString("0.#")) %
                                 </td>
+                                @* VatAmount = SubTotal × VatRate (laskennallinen ominaisuus). *@
                                 <td class="text-end">@Model.VatAmount.ToString("C")</td>
                             </tr>
+                            @* Loppusummarivi lihavoituna ja isommalla (fs-6). *@
                             <tr class="fw-bold fs-6">
                                 <td colspan="3" class="text-end">@L["Common.Total"]</td>
+                                @* TotalAmount = SubTotal + VatAmount (laskennallinen).
+                                   text-primary = projektin korostusväri (sininen). *@
                                 <td class="text-end text-primary">@Model.TotalAmount.ToString("C")</td>
                             </tr>
                         </tfoot>
@@ -142,32 +242,48 @@
             </div>
         </div>
 
+        @* ── LIITEKORTTI ── *@
         <div class="card mt-3">
             <div class="card-header">
+                @* bi-paperclip = paperiliitin-ikoni. *@
                 <i class="bi bi-paperclip me-2"></i>@L["Invoice.Details.Attachments"]
+                @* Liitteiden lukumäärä badgena. Attachments.Count = navigaatio-ominaisuus. *@
                 <span class="badge bg-secondary ms-1">@Model.Attachments.Count</span>
             </div>
 
+            @* Jos liitteitä on, näytetään lista. *@
             @if (Model.Attachments.Any())
             {
+                @* list-group-flush = lista ilman ulkoreunoja (sopii kortin sisään). *@
                 <ul class="list-group list-group-flush">
                     @foreach (var a in Model.Attachments)
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center py-2">
                             <div class="text-truncate" style="max-width:70%">
+                                @* bi-file-earmark-pdf = PDF-tiedosto-ikoni. *@
                                 <i class="bi bi-file-earmark-pdf me-2 text-muted"></i>
+                                @* Latauslinkki. asp-action="DownloadAttachment" + asp-route-id
+                                   → GET /Invoice/DownloadAttachment/{id} palauttaa tiedoston. *@
                                 <a asp-action="DownloadAttachment" asp-route-id="@a.Id"
                                    class="text-decoration-none">@a.FileName</a>
+                                @* Latausaika pienemmällä harmaalla tekstillä.
+                                   d-none d-sm-inline = piilotettu mobiililla, näkyy ≥576px leveillä. *@
                                 <small class="text-muted ms-2 d-none d-sm-inline">
                                     @a.UploadedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
                                 </small>
                             </div>
+                            @* Poistopainike vain adminille. *@
                             @if (isAdmin)
                             {
+                                @* Jokainen liite saa oman lomakkeen poistoa varten.
+                                   onsubmit="return confirm(...)" = varmistuspyyntö ennen lähetystä.
+                                   JsonSerializer.Serialize + Html.Raw = turvallinen JS-merkkijono
+                                   (erikoismerkit escapettu, lainausmerkit lisätty automaattisesti). *@
                                 <form asp-action="DeleteAttachment" asp-route-id="@a.Id" method="post"
                                       onsubmit="return confirm(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Invoice.Details.DeleteAttachmentConfirm"].Value)));"
                                       class="d-inline">
                                     @Html.AntiForgeryToken()
+                                    @* py-0 = nollaa pystypadding pienen painikkeen tiivistämiseksi. *@
                                     <button type="submit" class="btn btn-outline-danger btn-sm py-0">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -179,23 +295,33 @@
             }
             else
             {
+                @* Tyhjä tila: ei liitteitä. *@
                 <div class="card-body py-2">
                     <p class="text-muted mb-0 small">@L["Invoice.Details.NoAttachments"]</p>
                 </div>
             }
 
+            @* Liitteen latauslomake (vain admin). *@
             @if (isAdmin)
             {
                 <div class="card-footer p-2">
+                    @* enctype="multipart/form-data" = PAKOLLINEN tiedostojen lataukseen.
+                       Ilman tätä tiedoston bittejä ei lähetetä palvelimelle. *@
                     <form asp-action="UploadAttachment" method="post" enctype="multipart/form-data">
                         @Html.AntiForgeryToken()
+                        @* invoiceId piilokenttänä — kontrolleri tietää mihin laskuun liite kuuluu. *@
                         <input type="hidden" name="invoiceId" value="@Model.Id" />
+                        @* input-group = yhdistää tiedostovalitsimen ja napin vierekkäin. *@
                         <div class="input-group input-group-sm">
+                            @* type="file" = selaimen tiedostovalitsin.
+                               required = estää tyhjän lomakkeen lähetyksen (ei tiedostoa valittuna). *@
                             <input type="file" name="file" class="form-control form-control-sm" required />
                             <button type="submit" class="btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-upload me-1"></i>@L["Common.Upload"]
                             </button>
                         </div>
+                        @* Tiedostokokorajoituksen ohje. 20 MB = IIS/kestron oletus tai
+                           kontrollerin [RequestSizeLimit(20 * 1024 * 1024)] -rajoitus. *@
                         <small class="text-muted">Max 20 MB</small>
                     </form>
                 </div>
@@ -204,7 +330,10 @@
 
     </div>
 
+    @* ── OIKEA SARAKE (4/12): yhteenveto + tilanvaihto + historia ── *@
     <div class="col-md-4">
+
+        @* Yhteenvetokortti (veroton / ALV / maksettava). *@
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-bar-chart me-2"></i>@L["Invoice.Details.Summary"]</div>
             <div class="card-body">
@@ -216,28 +345,43 @@
                     <span class="text-muted small">@L["Invoice.Create.Vat"]</span>
                     <span class="fw-semibold small">@Model.VatAmount.ToString("C")</span>
                 </div>
+                @* <hr> = viiva erottaa summien ja loppusumman. *@
                 <hr class="my-2" />
                 <div class="d-flex justify-content-between">
                     <span class="fw-bold">@L["Invoice.Details.Payable"]</span>
+                    @* fs-5 = Bootstrap font-size utility: 1.25rem — korostaa loppusumman.
+                       text-primary = projektin pääväri (sininen). *@
                     <span class="fw-bold text-primary fs-5">@Model.TotalAmount.ToString("C")</span>
                 </div>
             </div>
         </div>
 
+        @* Tilanvaihtolomake — vain admin JA vain jos statusModel on asetettu.
+           "statusModel is not null" = nollaturvallinen tarkistus. *@
         @if (isAdmin && statusModel is not null)
         {
+            @* border-warning = keltainen kehys erottaa hallintalomakkeen.
+               bg-opacity-25 = 25 % läpikuultava keltainen tausta. *@
             <div class="card border-warning">
                 <div class="card-header bg-warning bg-opacity-25">
                     <i class="bi bi-sliders me-2"></i>@L["Invoice.Details.Manage"]
                 </div>
                 <div class="card-body">
                     <form asp-action="UpdateStatus" method="post">
+                        @* Laskun ID piilokenttänä — kontrolleri tarvitsee tietääkseen
+                           minkä laskun tilaa päivitetään.
+                           asp-for="@statusModel.Id" + name="Id" = kaksoisvarmistus. *@
                         <input type="hidden" asp-for="@statusModel.Id" name="Id" />
 
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">@L["Dash.Col.Status"]</label>
+                            @* onchange="togglePaidDate(this.value)" = kutsuu JS-funktiota
+                               kun tila vaihtuu — näyttää tai piilottaa maksupäiväkentän. *@
                             <select name="Status" id="invoice-status-admin" class="form-select form-select-sm"
                                     onchange="togglePaidDate(this.value)">
+                                @* Generoidaan vaihtoehto jokaiselle InvoiceStatus-enumin arvolle.
+                                   selected="@(statusModel.Status == s)" = Tag Helper asettaa
+                                   selected-attribuutin vastaavalle vaihtoehdolle. *@
                                 @foreach (var s in Enum.GetValues<InvoiceStatus>())
                                 {
                                     <option value="@s" selected="@(statusModel.Status == s)">@StatusLabel(s)</option>
@@ -245,14 +389,24 @@
                             </select>
                         </div>
 
+                        @* Maksupäiväkenttä — näkyy vain kun tila on "Paid".
+                           display:block/none = JS-ohjattu näkyvyys.
+                           Alustustila asetetaan Razor-puolella: jos lasku on jo maksettu,
+                           kenttä on näkyvissä heti (ei tarvita JS:ää sivun latauksessa). *@
                         <div id="paid-date-row" class="mb-3"
                              style="display:@(statusModel.Status == InvoiceStatus.Paid ? "block" : "none")">
                             <label class="form-label small fw-semibold">@L["Invoice.Details.PaidDate"]</label>
+                            @* type="date" = selaimen natiivia päivämäärävalitsin.
+                               PaidAt?.ToString("yyyy-MM-dd") = nullable DateTime? → ISO 8601.
+                               ?? DateTime.Today.ToString("...") = oletusarvo: tänään
+                               jos maksupäivää ei ole vielä asetettu. *@
                             <input type="date" name="PaidAt" id="invoice-paid-at"
                                    class="form-control form-control-sm"
                                    value="@(statusModel.PaidAt?.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" />
                         </div>
 
+                        @* d-grid = Bootstrap: täyttää koko leveyden (leveä painike).
+                           btn-warning = keltainen painike korostaa hallintatoimintoa. *@
                         <div class="d-grid">
                             <button type="submit" id="btn-invoice-save" class="btn btn-warning btn-sm fw-semibold">
                                 <i class="bi bi-check-lg me-1"></i>@L["Common.Save"]
@@ -263,29 +417,43 @@
             </div>
         }
 
+        @* Asiakashistoria — saman asiakkaan muut laskut (admin näkee aina). *@
         @if (history.Any())
         {
             <div class="card mt-3">
+                @* bg-surface2 = projektin oma CSS-muuttuja kevyelle taustavärille. *@
                 <div class="card-header bg-surface2">
                     <i class="bi bi-clock-history me-2"></i>@L["Invoice.Details.CustomerHistory"]
                 </div>
+                @* p-0 = ei sisäpaddingia — listat roikkuvat kortin reunaan. *@
                 <div class="card-body p-0">
+                    @* invoice-list = projektin oma CSS-komponentti kompaktille laskulistalle. *@
                     <ul class="invoice-list">
                         @foreach (var inv in history)
                         {
+                            @* hCss = tilan värityyli kyseiselle historiariville. *@
                             var hCss = HistoryCss(inv.Status);
 
                             <li>
+                                @* inv-left = vasemmalle: numero + päivä. *@
                                 <div class="inv-left">
                                     <span class="inv-num">
+                                        @* Linkki toiseen laskuun — sama Details-näkymä eri ID:llä. *@
                                         <a asp-action="Details" asp-route-id="@inv.Id" class="link-subtle">
                                             @inv.InvoiceNumber
                                         </a>
                                     </span>
+                                    @* inv-customer = laskupäivä harmaana alaotsikkona. *@
                                     <span class="inv-customer">@inv.InvoiceDate.ToString("dd.MM.yyyy")</span>
                                 </div>
+                                @* inv-right = oikealle: summa + tilaindikaattori. *@
                                 <div class="inv-right d-flex align-items-center gap-2">
+                                    @* "N2" = numeraalimuoto kahdella desimaalilla (ei valuuttasymbolia).
+                                       € lisätään manuaalisesti merkkijonon perään. *@
                                     <span class="inv-amount">@inv.TotalAmount.ToString("N2") €</span>
+                                    @* Pieni väripiste tilan mukaan. bi-circle-fill = täytetty ympyrä.
+                                       font-size: 0.5rem = erittäin pieni (noin 8px).
+                                       title = tooltip joka kertoo tilanimen hover-tilanteessa. *@
                                     <i class="bi bi-circle-fill @hCss" style="font-size: 0.5rem;" title="@StatusLabel(inv.Status)"></i>
                                 </div>
                             </li>
@@ -297,8 +465,12 @@
     </div>
 </div>
 
+@* Scripts-osio: yksinkertainen JS-funktio maksupäiväkentän näyttämiseen/piilottamiseen. *@
 @section Scripts {
 <script>
+@* togglePaidDate(status) = kutsutaan tilavalitsimen onchange-tapahtumasta.
+   status = valitsimen arvo merkkijonona (esim. "Paid", "Unpaid", "Overdue").
+   Jos tila on "Paid", näytetään maksupäiväkenttä; muuten piilotetaan. *@
 function togglePaidDate(status) {
     document.getElementById('paid-date-row').style.display =
         status === 'Paid' ? 'block' : 'none';

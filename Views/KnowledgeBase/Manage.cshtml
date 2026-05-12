@@ -1,27 +1,49 @@
 @*
     KnowledgeBase/Manage.cshtml — Adminin artikkelien hallintasivu.
-    Listaa kaikki artikkelit (myös julkaisemattomat luonnokset).
+
+    Listaa KAIKKI artikkelit — myös julkaisemattomat luonnokset.
+    (KnowledgeBase/Index.cshtml näyttää vain julkaistut asiakkaille.)
+
+    Sarakkeita:
+      - Otsikko (linkki artikkelin näyttöön)
+      - Kategoria (badge)
+      - Tila (Julkaistu / Luonnos)
+      - Nostettu (tähti-ikoni jos IsFeatured=true)
+      - Luettu (ViewCount)
+      - Päivitetty (päivämäärä)
+      - Toiminnot (Muokkaa + Poista)
+
+    Yhteys: KnowledgeBaseController.Manage.
 *@
+
+@* Malli = lista kaikista KnowledgeBaseArticle-olioista, Category-navigaatio-ominaisuus ladattu. *@
 @model List<HakaTech.Portal.Models.Domain.KnowledgeBaseArticle>
+
 @{
     ViewData["Title"] = L["KB.Manage"].Value;
 }
 
+@* Otsikkorivi + painikkeet. *@
 <div class="d-flex align-items-center justify-content-between mb-4">
     <h2 class="fw-bold mb-0"><i class="bi bi-book me-2"></i>Tietopankki – Hallinta</h2>
     <div class="d-flex gap-2">
+        @* Kategorioiden hallinta. *@
         <a asp-action="Categories" class="btn btn-outline-secondary btn-sm">
+            @* bi-tags = monikkotag-ikoni. *@
             <i class="bi bi-tags me-1"></i>Kategoriat
         </a>
+        @* Uusi artikkeli. *@
         <a asp-action="CreateArticle" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg me-1"></i>Uusi artikkeli
         </a>
+        @* Esikatselu: hyppää asiakkaan näkymään (julkaistut artikkelit). *@
         <a asp-action="Index" class="btn btn-outline-primary btn-sm">
             <i class="bi bi-eye me-1"></i>Asiakkaan näkymä
         </a>
     </div>
 </div>
 
+@* Artikkelitaulukko kortissa. *@
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         <table class="table table-hover align-middle mb-0">
@@ -30,26 +52,30 @@
                     <th class="ps-4">Otsikko</th>
                     <th>Kategoria</th>
                     <th class="text-center">Tila</th>
-                    <th class="text-center">Nostettu</th>
-                    <th class="text-center">Luettu</th>
+                    <th class="text-center">Nostettu</th>    @* IsFeatured *@
+                    <th class="text-center">Luettu</th>      @* ViewCount *@
                     <th>Päivitetty</th>
-                    <th class="pe-4"></th>
+                    <th class="pe-4"></th>                   @* Toiminnot *@
                 </tr>
             </thead>
             <tbody>
                 @foreach (var a in Model)
                 {
                     <tr>
+                        @* Artikkelin otsikko linkkinä artikkelin näyttöön. *@
                         <td class="ps-4 fw-medium">
                             <a asp-action="Article" asp-route-id="@a.Id" class="text-decoration-none">
                                 @a.Title
                             </a>
                         </td>
+                        @* Kategorian nimi badgena. ?. null-ehdollinen, ?? "–" oletusarvo. *@
                         <td>
                             <span class="badge bg-light text-secondary border small">
                                 @(a.Category?.Name ?? "–")
                             </span>
                         </td>
+                        @* Tila: Julkaistu (vihreä) tai Luonnos (harmaa).
+                           -subtle = vaalea tausta Bootstrap 5.3+. *@
                         <td class="text-center">
                             @if (a.IsPublished)
                             {
@@ -60,19 +86,27 @@
                                 <span class="badge bg-secondary-subtle text-secondary border">Luonnos</span>
                             }
                         </td>
+                        @* Nostettu: tähti-ikoni jos IsFeatured=true, muuten tyhjä solu. *@
                         <td class="text-center">
                             @if (a.IsFeatured)
                             {
+                                @* bi-star-fill = täytetty tähti, keltainen. *@
                                 <i class="bi bi-star-fill text-warning"></i>
                             }
                         </td>
+                        @* Lukemiskertojen lukumäärä. *@
                         <td class="text-center text-muted small">@a.ViewCount</td>
+                        @* Viimeisin muokkausaika. *@
                         <td class="text-muted small">@a.UpdatedAt.ToString("d.M.yyyy")</td>
+                        @* Toiminnot: muokkaa + poista. *@
                         <td class="pe-4 text-end">
                             <a asp-action="EditArticle" asp-route-id="@a.Id"
                                class="btn btn-outline-secondary btn-sm me-1">
                                 <i class="bi bi-pencil"></i>
                             </a>
+                            @* Poistolomake jokaiselle artikkelille erikseen.
+                               &quot; = HTML-enkoodattu lainausmerkki — tarvitaan koska
+                               artikkelin otsikossa voi olla lainausmerkkejä. *@
                             <form asp-action="DeleteArticle" asp-route-id="@a.Id" method="post" class="d-inline kb-delete-form">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-outline-danger btn-sm"
@@ -83,6 +117,7 @@
                         </td>
                     </tr>
                 }
+                @* Tyhjä tila: ei artikkeleita vielä. Colspan 7 kattaa kaikki sarakkeet. *@
                 @if (Model.Count == 0)
                 {
                     <tr>

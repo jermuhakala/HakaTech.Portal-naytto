@@ -1,27 +1,93 @@
 @*
-    _AuthLayout.cshtml — Yksinkertaisempi pohja kirjautumisen ja rekisteröinnin
-    sivuille. Ei sisällä sidebar-valikkoa eikä topbaria, vain keskitetyn
-    lomakekortin. Käytetään esim. Login.cshtml:ssä.
+    _AuthLayout.cshtml — Yksinkertaisempi pohjasivu (layout) kirjautumista
+    ja rekisteröitymistä varten. Toisin kuin pääpohja (_Layout.cshtml),
+    tässä EI ole lainkaan vasenta sivupalkkia eikä topbaria — ainoastaan
+    keskitetty valkoinen kortti tyhjällä pohjalla. Käytetään esim.
+    Login.cshtml:ssä asetuksella: Layout = "~/Views/Shared/_AuthLayout.cshtml"
 *@
+
+@* <!DOCTYPE html> = HTML5-dokumenttityypin ilmoitus — kertoo selaimelle,
+   että tiedosto on nykyaikainen HTML5-dokumentti. *@
 <!DOCTYPE html>
+
+@* <html lang="..."> = sivun kieli HTML-attribuuttina.
+   CultureInfo.CurrentUICulture.TwoLetterISOLanguageName = palauttaa esim. "fi", "sv" tai "en"
+   nykyisen lokalisaatiokulttuurin mukaan — ruudunlukijat ja hakukoneet
+   käyttävät tätä kielen tunnistamiseen. *@
 <html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">
 <head>
+    @* Merkistö: UTF-8 = tukee skandinaavisia merkkejä (ä, ö, å) ja kaikkia
+       muita unicode-merkkejä oikein. *@
     <meta charset="utf-8" />
+
+    @* Mobiilioptimointi: viewport-asetukset.
+       width=device-width  = aseta leveys laitteen näyttöleveyteen.
+       initial-scale=1.0   = älä zoomaa automaattisesti — 1:1-suhde.
+       Ilman tätä mobiiliselaimet zoomaavat ulos ja sivu näyttää
+       epäselvältä pienellä näytöllä. *@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    @* Sivun otsikko selaimen välilehdellä ja kirjanmerkeissä.
+       @ViewData["Title"] = asetetaan esim. Login.cshtml:ssä:
+         ViewData["Title"] = "Kirjaudu sisään"
+       Tulos: "Kirjaudu sisään – HakaTech Portal" *@
     <title>@ViewData["Title"] – HakaTech Portal</title>
+
+    @* Bootstrap 5 CSS — tulee paikallisesta lib-kansiosta (wwwroot/lib/bootstrap),
+       ei CDN:stä. Varmistaa toimivuuden ilman internetyhteyttä. *@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    @* Bootstrap Icons -kirjasto CDN:stä.
+       Tarjoaa yli 2000 vektori-ikonia (bi-envelope, bi-lock jne.)
+       jotka käytetään <i class="bi bi-..."></i> -elementeillä. *@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    @* Google Fonts -latausoptimoiniti.
+       preconnect = muodosta TCP/TLS-yhteys etukäteen, jotta fontti latautuu
+       nopeammin kun se varsinaisesti pyydetään. Kaksi preconnect-riviä:
+       yksi fontit-palvelimelle ja yksi staattiselle sisältöpalvelimelle. *@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    @* Ladataan Inter-fontti Googlesta.
+       wght@400;500;600;700 = normaali, keskiraskas, puolipaksu ja paksu leikkaus.
+       display=swap = näytä varafontti ensin, vaihda Interiin kun se on ladattu
+       (estää tekstin katoamisen latauksen aikana — FOUT vs. FOIT). *@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    @* Oma CSS-tiedosto (wwwroot/css/site.css).
+       asp-append-version="true" = Tag Helper lisää URL:iin version-hashiin,
+       esim. site.css?v=Abc123XYZ. Tämä pakottaa selaimen lataamaan uuden
+       version kun CSS muuttuu — vanha välimuistettu versio ei jää voimaan. *@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
+
+@* auth-body = CSS-luokka, joka asettaa kirjautumissivun taustavärin
+   ja flexbox-asettelun (kaikki vertikaalisesti ja horisontaalisesti
+   keskitettynä näytöllä). Määritelty site.css:ssä. *@
 <body class="auth-body">
+
+    @* auth-wrapper = ulompi säiliö joka rajoittaa leveyttä ja pitää kortin
+       ruudun keskellä sekä pysty- että vaakasuunnassa. *@
     <div class="auth-wrapper">
+        @* @RenderBody() = paikanpitäjä, johon tätä layoutia käyttävän
+           näkymän (esim. Login.cshtml) varsinainen sisältö injektoidaan.
+           Razor korvaa tämän kohdan sivun HTML:llä kokoamisen aikana. *@
         @RenderBody()
     </div>
+
+    @* jQuery JavaScript-kirjasto — useimmat skriptit vaativat tämän ensin.
+       Latautuu paikallisesta lib-kansiosta. *@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    @* Bootstrap JavaScript -nippu (bundle).
+       Sisältää Bootstrapin JS:n + Popperin (dropdown/tooltip-paikat).
+       Täytyy ladata JQueryn jälkeen. *@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    @* Scripts-osio: näkymät voivat lisätä sivukohtaisia skriptejä tähän.
+       required: false = ei virhettä jos näkymässä ei ole @section Scripts { }
+       (esim. jos kirjautumissivulla ei tarvita lisäskriptejä). *@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

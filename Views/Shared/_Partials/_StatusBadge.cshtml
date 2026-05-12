@@ -1,17 +1,56 @@
 @*
-    _StatusBadge.cshtml — Pieni värillinen merkki tilan näyttöön.
-    Esim. tiketin tila ("Avoin"), laskun tila ("Maksettu"), prioriteetti.
+    _StatusBadge.cshtml — Tilamerkki (status badge).
+
+    Pieni värillinen merkki tilan näyttämiseen. Käytetään taulukoissa,
+    korteissa ja listoissa kuvaamaan lyhyesti entiteetin tila.
+
+    Esimerkkejä:
+      - Tiketin tila: "Avoin" (sininen), "Ratkaistu" (vihreä), "Suljettu" (harmaa)
+      - Laskun tila:  "Maksettu" (vihreä), "Erääntynyt" (punainen)
+      - Prioriteetti: "Kriittinen" (punainen), "Korkea" (keltainen)
+
+    Käyttöesimerkki:
+        <partial name="_Partials/_StatusBadge"
+                 model="new StatusBadgeModel {
+                     Label = \"Avoin\",
+                     Tone  = StatusTone.Info,
+                     Icon  = \"bi-circle-fill\",   // valinnainen
+                     NoDot = false
+                 }" />
 *@
+
+@* StatusBadgeModel sisältää:
+     - Label (string):    näytettävä teksti, esim. "Avoin"
+     - Tone (StatusTone): värikeino — Info, Success, Warning, Danger, Neutral, ...
+     - Icon (string?):   Bootstrap Icons -luokka, lisätään ennen tekstiä
+     - NoDot (bool):     jos true, poistetaan pisteindikaattori CSS:ssä *@
 @model HakaTech.Portal.Models.ViewModels.Ui.StatusBadgeModel
+
 @{
+    @* Muunnetaan Tone-enum CSS-luokaksi:
+       Tone.ToString() → "Info", "Success", "Warning", "Danger", "Neutral"
+       ToLowerInvariant() → "info", "success", "warning", "danger", "neutral"
+       Tulos: "tone-info", "tone-success", jne.
+       Vastaavat CSS-värimääritykset löytyvät site.css:stä. *@
     var tone = "tone-" + Model.Tone.ToString().ToLowerInvariant();
+
+    @* NoDot-luokka lisätään jos piste-indikaattori halutaan piilottaa.
+       Oletuksena merkeissä on pieni värillinen piste tekstin edellä. *@
     var dot  = Model.NoDot ? "no-dot" : "";
+
+    @* Yhdistetään CSS-luokat ja siistetään mahdolliset tyhjät välit. *@
     var cls  = ("badge-status-lnr " + tone + " " + dot).Trim();
 }
+
+@* <span> = inline-elementti, sopii käytettäväksi tekstin seassa tai taulukon solussa.
+   CSS-luokat määräävät värin, pyöristyksen ja koon. *@
 <span class="@cls">
+    @* Ikoni lisätään tekstin eteen vain jos se on asetettu.
+       Yleensä pieni ikoni: esim. bi-circle-fill (piste), bi-check-circle (OK). *@
     @if (!string.IsNullOrEmpty(Model.Icon))
     {
         <i class="bi @Model.Icon"></i>
     }
+    @* Merkin teksti, esim. "Avoin", "Ratkaistu", "Kriittinen". *@
     @Model.Label
 </span>

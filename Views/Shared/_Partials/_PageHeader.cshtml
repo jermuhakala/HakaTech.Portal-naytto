@@ -1,21 +1,58 @@
 @*
-    _PageHeader.cshtml — Yhtenäinen sivun yläosa: leivänmurut + iso otsikko +
-    alaotsikko + toimintapainikkeet oikealla. Käytetään lähes kaikilla sivuilla.
+    _PageHeader.cshtml — Yhtenäinen sivun yläosa (partial).
+
+    Lähes kaikilla sivuilla on samanlainen rakenne:
+      - Leivänmurut (breadcrumbs) navigointipolkuna
+      - Iso otsikko (h1) + mahdollinen ikoni ja merkki (badge)
+      - Alaotsikko (subtitle) lisätietona
+      - Toimintopainikkeet oikealla (esim. "Uusi tiketti")
+
+    Tämä partial varmistaa yhtenäisen ulkoasun kaikilla sivuilla.
+
+    Käyttöesimerkki:
+        <partial name="_Partials/_PageHeader"
+                 model="new PageHeaderModel {
+                     Title    = \"Tiketit\",
+                     Subtitle = \"Hallinnoi tukipyyntöjä\",
+                     Icon     = \"bi-ticket-detailed\",
+                     Breadcrumbs = new List<BreadcrumbItem> {
+                         new(\"Etusivu\", \"/\"),
+                         new(\"Tiketit\", null)
+                     },
+                     Actions = ...   // IHtmlContent, esim. \"Uusi\"-painike
+                 }" />
 *@
+
+@* PageHeaderModel sisältää kaikki sivun yläosan ominaisuudet. *@
 @model HakaTech.Portal.Models.ViewModels.Ui.PageHeaderModel
+
+@* page-header = CSS-säiliö jossa flex-asettelu:
+   pääsisältö vasemmalla, toimintopainikkeet oikealla. *@
 <div class="page-header">
+
+    @* Vasen puoli: leivänmurut, otsikko, alaotsikko. *@
     <div class="page-header-main">
+
+        @* Leivänmurut: polku sivulle, esim. "Etusivu > Tiketit > #42".
+           Näytetään vain jos leivänmurulistassa on elementtejä. *@
         @if (Model.Breadcrumbs.Count > 0)
         {
             <div class="page-header-crumbs">
+                @* Käydään leivänmurut läpi indeksin kanssa.
+                   Tarvitaan indeksi jotta erotin "/" lisätään vain väleille. *@
                 @for (var i = 0; i < Model.Breadcrumbs.Count; i++)
                 {
                     var c = Model.Breadcrumbs[i];
-                    if (i > 0)
+
+                    @* Erotin "/" kaikkien välissä paitsi ensimmäisen eteen. *@
+                    @if (i > 0)
                     {
                         <span class="sep">/</span>
                     }
-                    if (!string.IsNullOrEmpty(c.Href))
+
+                    @* Jos Href on asetettu → klikattava linkki.
+                       Jos ei → vain teksti (viimeinen eli nykyinen sivu). *@
+                    @if (!string.IsNullOrEmpty(c.Href))
                     {
                         <a href="@c.Href">@c.Label</a>
                     }
@@ -26,22 +63,40 @@
                 }
             </div>
         }
+
+        @* Pääotsikko (h1 = tärkein otsikkotaso sivulla).
+           page-header-title = CSS-tyyli joka tekee otsikosta ison. *@
         <h1 class="page-header-title">
+            @* Ikoni otsikon vasemmalle vain jos asetettu.
+               text-muted = harmaannettu Bootstrap-apuluokka.
+               font-size:1.2rem = hieman pienempi kuin otsikkoteksti. *@
             @if (!string.IsNullOrEmpty(Model.Icon))
             {
                 <i class="bi @Model.Icon text-muted" style="font-size:1.2rem;"></i>
             }
+
+            @* Otsikkoteksti <span>:issa jotta ikonin ja tekstin välinen
+               väli voidaan hallita CSS:llä. *@
             <span>@Model.Title</span>
+
+            @* Otsikon perässä merkki (badge), esim. määrä tai tila.
+               TitleBadge on IHtmlContent-olio. *@
             @if (Model.TitleBadge != null)
             {
                 @Model.TitleBadge
             }
         </h1>
+
+        @* Alaotsikko: lisäkuvaus sivun toiminnosta.
+           Näytetään vain jos asetettu. *@
         @if (!string.IsNullOrEmpty(Model.Subtitle))
         {
             <p class="page-header-sub">@Model.Subtitle</p>
         }
     </div>
+
+    @* Oikea puoli: toimintopainikkeet (esim. "Uusi tiketti", "Vie CSV").
+       Näytetään vain jos Actions on asetettu. *@
     @if (Model.Actions != null)
     {
         <div class="page-header-actions">@Model.Actions</div>

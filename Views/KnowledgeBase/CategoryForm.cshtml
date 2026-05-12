@@ -1,59 +1,93 @@
 @*
-    KnowledgeBase/CategoryForm.cshtml — Tietopankin kategorian
-    luonti- ja muokkauslomake.
+    KnowledgeBase/CategoryForm.cshtml — Tietopankin kategorian luonti- ja muokkauslomake.
+
+    Sama lomake palvelee molempia toimintoja:
+      - Id == 0 → uusi kategoria (CreateCategory, sininen otsikko)
+      - Id > 0  → muokkaus (EditCategory, harmaa otsikko)
+
+    Kentät:
+      - Name (kategorian nimi, pakollinen)
+      - Description (lyhyt kuvaus, vapaaehtoinen)
+      - SortOrder (järjestysnumero — pienempi näytetään ensin)
+      - IsActive (onko kategoria näkyvissä asiakkaille)
+
+    Yhteys: KnowledgeBaseController.CreateCategory (GET + POST) ja EditCategory (GET + POST).
 *@
+
+@* KbCategoryFormViewModel sisältää: Id, Name, Description, SortOrder, IsActive. *@
 @model HakaTech.Portal.Models.ViewModels.KbCategoryFormViewModel
+
 @{
+    @* isNew = onko kyse uuden kategorian luomisesta. *@
     bool   isNew  = Model.Id == 0;
+    @* action = reittimetodi: joko "CreateCategory" tai "EditCategory". *@
     string action = isNew ? "CreateCategory" : "EditCategory";
+    @* Sivun otsikko vaihtelee toiminnon mukaan. *@
     ViewData["Title"] = (isNew ? L["KB.CategoryNew"] : L["KB.CategoryEdit"]).Value;
 }
 
+@* Takaisin kategorioihin. *@
 <div class="mb-3">
     <a asp-action="Categories" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Takaisin kategorioihin
     </a>
 </div>
 
+@* Lomake rajoitettu leveyttä. *@
 <div class="row justify-content-center">
     <div class="col-md-6">
         <div class="card border-0 shadow-sm">
+            @* Korttinotsikko: sininen (uusi) tai harmaa (muokkaus). *@
             <div class="card-header @(isNew ? "bg-primary" : "bg-secondary") text-white py-3">
                 <h5 class="mb-0">
+                    @* bi-tag = yksittäinen etikettiikoni. *@
                     <i class="bi bi-tag me-2"></i>@ViewData["Title"]
                 </h5>
             </div>
             <div class="card-body p-4">
+                @* asp-route-id: uudelle null, muokkaukselle ID merkkijonona.
+                   Model.Id.ToString() tarvitaan koska asp-route-id odottaa string-tyyppiä. *@
                 <form asp-action="@action" asp-route-id="@(isNew ? null : Model.Id.ToString())" method="post">
                     @Html.AntiForgeryToken()
+                    @* Virhekooste piilotettu aluksi — näytetään vain jos palvelinpuoli palauttaa virheitä. *@
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3" style="display:none"></div>
 
+                    @* Kategorian nimi (pakollinen kenttä). *@
                     <div class="mb-3">
                         <label asp-for="Name" class="form-label fw-medium"></label>
                         <input asp-for="Name" class="form-control" placeholder="esim. Tekniset ohjeet" />
                         <span asp-validation-for="Name" class="text-danger small"></span>
                     </div>
 
+                    @* Lyhyt kuvaus (vapaaehtoinen). *@
                     <div class="mb-3">
                         <label asp-for="Description" class="form-label fw-medium"></label>
                         <input asp-for="Description" class="form-control" placeholder="Lyhyt kuvaus (valinnainen)" />
+                        @* Ei validointivirhettä — Description ei ole pakollinen. *@
                     </div>
 
+                    @* Järjestysnumero. min="0" = ei negatiivisia.
+                       max-width:100px = kapea kenttä (pieni numero). *@
                     <div class="mb-3">
                         <label asp-for="SortOrder" class="form-label fw-medium"></label>
                         <input asp-for="SortOrder" class="form-control" type="number" min="0" style="max-width: 100px" />
                         <div class="form-text">Pienempi numero näytetään ensin.</div>
                     </div>
 
+                    @* Aktiivinen-valintaruutu. *@
                     <div class="form-check mb-4">
                         <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                        @* Muokkauksessa esitäytetty: jos IsActive=true, rasti on päällä. *@
                         <label asp-for="IsActive" class="form-check-label">Aktiivinen</label>
                     </div>
 
+                    @* Toimintopainikkeet. *@
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
+                            @* bi-floppy = levyke-ikoni (tallenna). *@
                             <i class="bi bi-floppy me-1"></i>Tallenna
                         </button>
+                        @* Peruuta vie takaisin kategorioiden listaan. *@
                         <a asp-action="Categories" class="btn btn-outline-secondary">Peruuta</a>
                     </div>
                 </form>
@@ -63,5 +97,6 @@
 </div>
 
 @section Scripts {
+    @* Validointikirjastot. *@
     @await Html.PartialAsync("_ValidationScriptsPartial")
 }

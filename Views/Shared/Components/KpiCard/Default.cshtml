@@ -1,36 +1,95 @@
 @*
-    KpiCard/Default.cshtml — KPI-kortin näkymä. Renderöi tunnusluvun
-    isolla, mahdollisen muutosprosentin merkkinä, ja sparkline-trendin.
-    Jos Href on annettu, koko kortti on klikattava linkki.
+    KpiCard/Default.cshtml — KPI-kortin näkymä (ViewComponent).
+
+    KPI = Key Performance Indicator = suorituskykymittari.
+    Tämä kortti näyttää yhden tunnusluvun hallintapaneelissa:
+      - Iso luku (esim. "42 avoinna")
+      - Kuvaava teksti (label)
+      - Mahdollinen alaotsikko (sub)
+      - Delta-prosentti (esim. "+12,3%" nuolella)
+      - Sparkline-trendiviiva (pieni viivakaavio 14 päivältä)
+
+    Jos Href on annettu, KOKO kortti on klikattava linkki.
+    Jos ei, kortti on pelkkä informaatioruutu (ei klikattava).
+
+    Sparkline:
+      - data-sparkline = JSON-taulukko double-arvoista, esim. [1,3,2,5,4]
+      - data-tone = värikeino (info/success/warning/danger)
+      - site.js renderöi Chart.js-sparkline tähän <canvas>-elementtiin.
+
+    ViewComponent sijaitsee: ViewComponents/KpiCardViewComponent.cs
 *@
+
+@* KpiCardVm = ViewComponent-malli. Sisältää:
+     - Label (string): kortin otsikko, esim. "Avoimet tiketit"
+     - Value (string): iso numero tai arvo, esim. "42"
+     - Sub   (string?): lisätieto, esim. "12 käsittelyssä"
+     - Icon  (string?): Bootstrap Icons -luokka
+     - Href  (string?): klikkauskohde
+     - Tone  (string?): "info"|"success"|"warning"|"danger"|"neutral"
+     - DeltaPct (double?): prosenttimuutos (positiivinen/negatiivinen)
+     - Trend (double[]?): sparkline-data *@
 @model HakaTech.Portal.ViewComponents.KpiCardViewComponent.KpiCardVm
+
 @{
+    @* Rakennetaan CSS-luokka tonen mukaan.
+       Jos Tone on null tai tyhjä, käytetään "neutral" oletuksena.
+       Tulos: "tone-info", "tone-success", "tone-warning", "tone-danger", "tone-neutral". *@
     var toneClass = "tone-" + (string.IsNullOrEmpty(Model.Tone) ? "neutral" : Model.Tone);
+
+    @* Serialisoidaan Trend-taulukko JSON:iksi sparkline-renderöintiä varten.
+       Array.Empty<double>() = tyhjä taulukko jos Trend on null (null-coalescing ??). *@
     var trendJson = System.Text.Json.JsonSerializer.Serialize(Model.Trend ?? Array.Empty<double>());
 }
+
+@* Haaraudutaan: klikattava <a> vai staattinen <div>? *@
 @if (!string.IsNullOrEmpty(Model.Href))
 {
+    @* Koko kortti on klikattava linkki — navigoi Hrefiin.
+       kpi-lnr = pohjatyyli, toneClass = väri. *@
     <a class="kpi-lnr @toneClass" href="@Model.Href">
+
+        @* Ylätunniste: ikoni, label ja delta rinnakkain. *@
         <div class="kpi-lnr-head">
+            @* Ikoni vasemmalla (vain jos asetettu). *@
             @if (!string.IsNullOrEmpty(Model.Icon))
             {
                 <span class="kpi-lnr-icon"><i class="bi @Model.Icon"></i></span>
             }
+            @* Kortin selitysteksti, esim. "Avoimet tiketit". *@
             <span class="kpi-lnr-label">@Model.Label</span>
+
+            @* Delta-prosentti: { } d1 = C#-tyyppikuvio (property pattern).
+               DeltaPct is { } d1 = "jos DeltaPct ei ole null, tallenna arvo d1:een".
+               Näin vältetään .Value-kutsu nullable-tyyppiin. *@
             @if (Model.DeltaPct is { } d1)
             {
+                @* up = positiivinen muutos (>= 0).
+                   "up" tai "down" CSS-luokat muuttavat värin vihreäksi/punaiseksi. *@
                 var up = d1 >= 0;
                 <span class="kpi-lnr-delta @(up ? "up" : "down")">
+                    @* Nuoli-ikoni: ylös tai alas muutoksen suunnan mukaan. *@
                     <i class="bi @(up ? "bi-arrow-up-short" : "bi-arrow-down-short")"></i>
+                    @* Math.Abs = absoluuttiarvo (poistetaan miinus-merkki).
+                       "0.0" = yksi desimaali, esim. "12,3%". *@
                     @Math.Abs(d1).ToString("0.0")%
                 </span>
             }
         </div>
+
+        @* Iso luku: kortin päätunnus. *@
         <div class="kpi-lnr-value">@Model.Value</div>
+
+        @* Alaotsikko lisätietoineen (vain jos asetettu). *@
         @if (!string.IsNullOrEmpty(Model.Sub))
         {
             <div class="kpi-lnr-sub">@Model.Sub</div>
         }
+
+        @* Sparkline-trendiviiva (vain jos dataa yli 1 piste).
+           { Length: > 1 } = C#-property pattern: taulukko ei ole null ja pituus > 1.
+           data-sparkline = JSON-data, jonka site.js lukee ja renderöi Chart.js:llä.
+           data-tone = väri, joka vastaa kortin teemaväriä. *@
         @if (Model.Trend is { Length: > 1 })
         {
             <div class="kpi-lnr-spark">
@@ -41,6 +100,8 @@
 }
 else
 {
+    @* Ei klikattava — pelkkä informaatiokokortti.
+       Täsmälleen sama sisältö kuin yllä, mutta <div>:ssä eikä <a>:ssa. *@
     <div class="kpi-lnr @toneClass">
         <div class="kpi-lnr-head">
             @if (!string.IsNullOrEmpty(Model.Icon))
@@ -48,6 +109,8 @@ else
                 <span class="kpi-lnr-icon"><i class="bi @Model.Icon"></i></span>
             }
             <span class="kpi-lnr-label">@Model.Label</span>
+            @* d2 jotta muuttujanimi ei törmää yllä olevaan d1:een
+               (vaikka ne ovat eri @if-lohkoissa, Razor välttää uudelleenmäärittelyä). *@
             @if (Model.DeltaPct is { } d2)
             {
                 var up = d2 >= 0;

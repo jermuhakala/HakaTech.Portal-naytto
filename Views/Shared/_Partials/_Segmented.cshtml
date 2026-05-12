@@ -1,18 +1,78 @@
 @*
-    _Segmented.cshtml — Vierekkäin asetetut radio-painikkeet (yhden valinta).
-    Esim. tilan suodatus: "Kaikki | Avoimet | Suljetut".
+    _Segmented.cshtml — Segmentoitu valintapainike (radio group).
+
+    Vierekkäin asetettu painikeryhmä jossa voi valita vain yhden vaihtoehdon.
+    Teknisesti toteutettu piilotetuilla radio-painikkeilla + labeleilla —
+    CSS tekee niistä visuaalisesti painikerivin.
+
+    Käyttökohtia portaalissa:
+      - Tiketin tilan suodatus: "Kaikki | Avoimet | Suljetut"
+      - Kielen valinta: "FI | SV | EN"
+      - Laskun tilan valinta: "Kaikki | Lähetetty | Maksettu | Erääntynyt"
+
+    Käyttöesimerkki:
+        <partial name="_Partials/_Segmented"
+                 model="new SegmentedModel {
+                     Name     = \"status\",           // radio-painikkeiden name-attribuutti
+                     Selected = \"open\",              // valittuna oleva vaihtoehto
+                     Full     = false,                 // full = true → 100% leveys
+                     Options  = new List<SegmentedOption> {
+                         new SegmentedOption { Value = \"\",       Label = \"Kaikki\" },
+                         new SegmentedOption { Value = \"open\",   Label = \"Avoimet\", Icon = \"bi-circle\" },
+                         new SegmentedOption { Value = \"closed\", Label = \"Suljetut\" }
+                     }
+                 }" />
 *@
+
+@* SegmentedModel sisältää:
+     - Name (string):    radio-ryhmän name-attribuutti (kaikki radiot ryhmässä)
+     - Options (lista):  valinnat (arvo + teksti + valinnainen ikoni)
+     - Selected (string?): valittuna oleva arvo
+     - Full (bool):      jos true, painike ottaa kaiken käytettävissä olevan leveyden
+     - CssClass (string?): lisäluokat *@
 @model HakaTech.Portal.Models.ViewModels.Ui.SegmentedModel
+
 @{
+    @* Rakennetaan CSS-luokka:
+       "segmented" = perustyyli
+       "full"      = lisätään jos Full=true (100% leveys)
+       CssClass    = käyttäjän lisäluokat *@
     var cls = ("segmented " + (Model.Full ? "full " : "") + (Model.CssClass ?? "")).Trim();
 }
+
+@* role="radiogroup" = ARIA-semantiikka: ruudunlukijat tietävät tämän
+   olevan valintaryhmä (eikä vain lista painikkeita). *@
 <div class="@cls" role="radiogroup">
+
+    @* Käydään läpi kaikki vaihtoehdot ja renderöidään radio + label.
+       CSS:ssä: input[type="radio"] on piilotettu (display:none),
+       mutta label on tyylitelty painiketyyliseksi.
+       Kun radio on checked, label saa selected-tyylin. *@
     @foreach (var opt in Model.Options)
     {
+        @* Luodaan yksilöllinen ID jokaiselle radio-painikkeelle yhdistämällä
+           ryhmän nimi ja vaihtoehdon arvo: esim. "status_open", "status_closed".
+           Tämä kytkee labelin oikeaan radioon. *@
         var id = Model.Name + "_" + opt.Value;
+
+        @* Tarkistetaan onko tämä vaihtoehto valittuna.
+           Model.Selected == opt.Value → vertailaan merkkijonoja. *@
         var isSel = Model.Selected == opt.Value;
+
+        @* Piilotettu radio-painike — se sisältää todellisen valinta-logiikan.
+           type="radio" = vain yksi voidaan valita ryhmässä samaan aikaan.
+           name="@Model.Name" = ryhmittelee radiot yhteen.
+           id="@id" = linkittyy alla olevaan labeliin.
+           value="@opt.Value" = lomakkeen lähettämä arvo kun tämä on valittu.
+           @(isSel ? "checked" : null) = ehdollinen checked-attribuutti;
+             null = attribuutti jätetään pois kokonaan. *@
         <input type="radio" name="@Model.Name" id="@id" value="@opt.Value" @(isSel ? "checked" : null) />
+
+        @* Label on visuaalinen painike.
+           for="@id" = klikkaamalla labelia aktivoituu radio (HTML5-standardi).
+           CSS muuttaa checked-radion labelin näyttämään valitulta. *@
         <label for="@id">
+            @* Ikoni näytetään labelin vasemmalla vain jos asetettu. *@
             @if (!string.IsNullOrEmpty(opt.Icon))
             {
                 <i class="bi @opt.Icon"></i>

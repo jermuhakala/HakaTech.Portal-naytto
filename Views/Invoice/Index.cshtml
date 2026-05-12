@@ -1,18 +1,41 @@
 @*
-    Invoice/Index.cshtml — Laskulista. Asiakas näkee oman yrityksensä
-    laskut, admin näkee kaikki. Tukee suodatusta tilan ja asiakkaan mukaan.
+    Invoice/Index.cshtml — Laskulista.
+
+    Asiakas näkee vain oman yrityksensä laskut.
+    Admin näkee kaikki laskut ja voi suodattaa asiakkaan mukaan.
+
+    Suodattimet:
+      - Tila (Kaikki / Lähetetty / Maksamatta / Maksettu / Erääntynyt)
+
+    Taulukossa:
+      - Punainen rivi = erääntynyt lasku (korostus table-danger-luokalla)
+      - Erääntymispäivä punainen + lihavoitu jos lasku on erääntynyt
+      - Yhteensä-rivi taulukon alaosassa (tfoot)
+
+    Yhteys: InvoiceController.Index.
 *@
+
+@* Lista Invoice-olioista. *@
 @model IEnumerable<HakaTech.Portal.Models.Domain.Invoice>
 @using HakaTech.Portal.Models.Domain
+
 @{
     ViewData["Title"] = L["Invoice.Index.Title"].Value;
+
+    @* isAdmin = onko järjestelmäadmin. *@
     bool isAdmin        = (bool)(ViewBag.IsAdmin ?? false);
+
+    @* Valittu tilasuodatin tai null = kaikki tilat. *@
     var statusFilter    = ViewBag.StatusFilter as InvoiceStatus?;
+
+    @* Asiakassuodatin (voi tulla Customer/Details-sivulta). *@
     int? customerFilter = ViewBag.CustomerFilter;
 
+    @* Apufunktio: lokalisoitu tilan nimi. *@
     string StatusLabel(InvoiceStatus s) => L[$"InvoiceStatus.{s}"].Value;
 }
 
+@* Otsikkorivi. Admin näkee "Uusi lasku" -painikkeen. *@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0"><i class="bi bi-receipt me-2"></i>@L["Invoice.Index.Title"]</h2>
     @if (isAdmin)
@@ -23,30 +46,42 @@
     }
 </div>
 
+@* Suodatinlomake. method="get" = suodatin URL-parametreihin. *@
 <form asp-action="Index" method="get" class="row g-2 mb-3 align-items-end">
+    @* Jos asiakassuodatin on asetettu, pidetään se piilokenttänä jotta
+       tilan vaihto ei poista asiakasrajausta. *@
     @if (customerFilter.HasValue)
     {
         <input type="hidden" name="customerId" value="@customerFilter" />
     }
+
+    @* Tilavalitsin. *@
     <div class="col-md-3">
         <select name="status" id="invoice-status-filter" class="form-select">
             <option value="">@L["Ticket.Index.AllStatuses"]</option>
+            @* Käydään kaikki InvoiceStatus-enumin arvot.
+               selected="@(statusFilter == s)" = Tag Helper asettaa selected-attribuutin
+               kun tämä vaihtoehto vastaa nykyistä suodatinta. *@
             @foreach (var s in Enum.GetValues<InvoiceStatus>())
             {
                 <option value="@s" selected="@(statusFilter == s)">@StatusLabel(s)</option>
             }
         </select>
     </div>
+
+    @* Suodata + Tyhjennä -painikkeet. *@
     <div class="col-auto">
         <button type="submit" class="btn btn-outline-secondary">
             <i class="bi bi-funnel"></i> @L["Common.Filter"]
         </button>
+        @* Tyhjennä: linkki ilman parametreja nollaa kaikki suodattimet. *@
         <a asp-action="Index" class="btn btn-outline-danger ms-1" title="@L["Common.ClearFilter"]">
             <i class="bi bi-x-lg"></i>
         </a>
     </div>
 </form>
 
+@* Tyhjä tila. *@
 @if (!Model.Any())
 {
     <div class="card border-0 shadow-sm text-center py-5">
@@ -64,9 +99,11 @@ else
             <thead class="table-light">
                 <tr>
                     <th>@L["Invoice.Col.Number"]</th>
+                    @* Asiakas-sarake vain admineille. *@
                     @if (isAdmin) { <th>@L["Dash.Col.Customer"]</th> }
                     <th>@L["Invoice.Col.Date"]</th>
                     <th>@L["Invoice.Col.DueDate"]</th>
+                    @* text-end = tasataan oikealle (raha-arvojen standardi). *@
                     <th class="text-end">@L["Invoice.Col.Total"]</th>
                     <th>@L["Dash.Col.Status"]</th>
                     <th></th>
@@ -75,30 +112,49 @@ else
             <tbody>
                 @foreach (var inv in Model)
                 {
+                    @* Värimerkki taulukon riville tilan mukaan. *@
                     string badgeCss = inv.Status switch {
-                        InvoiceStatus.Paid    => "bg-success",
-                        InvoiceStatus.Overdue => "bg-danger",
-                        InvoiceStatus.Sent    => "bg-primary",
-                        InvoiceStatus.Unpaid  => "bg-warning text-dark",
-                        _                     => "bg-secondary"
+                        InvoiceStatus.Paid    => "bg-success",           // Vihreä — maksettu
+                        InvoiceStatus.Overdue => "bg-danger",            // Punainen — erääntynyt
+                        InvoiceStatus.Sent    => "bg-primary",           // Sininen — lähetetty
+                        InvoiceStatus.Unpaid  => "bg-warning text-dark", // Keltainen — maksamatta
+                        _                     => "bg-secondary"          // Harmaa — muut
                     };
+
+                    @* Erääntynyt lasku → punainen koko rivi (table-danger). *@
                     <tr class="@(inv.Status == InvoiceStatus.Overdue ? "table-danger" : "")">
+                        @* Laskunumero linkkinä. *@
                         <td>
                             <a asp-action="Details" asp-route-id="@inv.Id"
                                class="fw-semibold text-decoration-none">
                                 @inv.InvoiceNumber
                             </a>
                         </td>
+
+                        @* Yritysnimi vain admineille. *@
                         @if (isAdmin)
                         {
                             <td class="small text-muted">@(inv.Customer?.CompanyName ?? "—")</td>
                         }
+
+                        @* Laskun päiväys. *@
                         <td class="small">@inv.InvoiceDate.ToString("dd.MM.yyyy")</td>
+
+                        @* Eräpäivä: punainen ja lihavoitu jos erääntynyt (eikä maksettu).
+                           DueDate < DateTime.Today = verrataan päivä-tasolla (ilman kellonaikaa).
+                           Status != Paid = maksettu lasku ei enää punaistu vaikka päivä meni. *@
                         <td class="small @(inv.DueDate < DateTime.Today && inv.Status != InvoiceStatus.Paid ? "text-danger fw-semibold" : "")">
                             @inv.DueDate.ToString("dd.MM.yyyy")
                         </td>
+
+                        @* Kokonaissumma. TotalAmount = laskettu navigaatio-ominaisuus rivien summasta.
+                           ToString("C") = valuuttamuoto kulttuurin mukaan (esim. "1 250,00 €"). *@
                         <td class="text-end fw-semibold">@inv.TotalAmount.ToString("C")</td>
+
+                        @* Tila-merkki. *@
                         <td><span class="badge @badgeCss">@StatusLabel(inv.Status)</span></td>
+
+                        @* Avaa-painike. *@
                         <td>
                             <a asp-action="Details" asp-route-id="@inv.Id"
                                class="btn btn-sm btn-outline-primary">
@@ -108,9 +164,16 @@ else
                     </tr>
                 }
             </tbody>
+
+            @* tfoot = taulukon alatunniste: yhteenveto.
+               Näyttää laskujen kokonaismäärän ja kaikki summat yhteensä. *@
             <tfoot class="table-light fw-semibold">
                 <tr>
+                    @* colspan = yhdistää sarakkeet (jättää tilaa summalle).
+                       isAdmin = adminilla on yksi sarake enemmän (asiakas). *@
                     <td colspan="@(isAdmin ? 4 : 3)">@string.Format(L["Invoice.TotalRow"].Value, Model.Count())</td>
+                    @* Sum = LINQ-aggregointi: lasketaan kaikkien laskujen summa.
+                       TotalAmount on computed property, joten se on jo laskettu. *@
                     <td class="text-end">@Model.Sum(i => i.TotalAmount).ToString("C")</td>
                     <td colspan="2"></td>
                 </tr>

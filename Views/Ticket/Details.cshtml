@@ -1,23 +1,65 @@
 @*
-    Ticket/Details.cshtml — Yksittäisen tiketin detaljisivu. Sisältää
-    tiketin tiedot, kommenttiketjun (reaaliaikainen, SignalR-päivitys),
-    liitteet ja adminille tilanvaihtopainikkeet.
+    Ticket/Details.cshtml — Yksittäisen tiketin detaljisivu.
+
+    Rakenne (kaksipalstainen, col-md-8 + col-md-4):
+      Vasen (8/12):
+        - Tiketin kuvaus (white-space:pre-wrap säilyttää rivinvaihdot)
+        - Kommenttiketju (reaaliaikainen SignalR-chat)
+        - Liitteet: latauslinkki + poisto (admin) + tiedoston latauslomake
+      Oikea (4/12):
+        - Tietokortti: asiakas, luoja, aikaleima, vastuuhenkilö
+        - Adminille: tilanvaihto-/prioriteetti-/vastuuhenkilölomake
+        - Palaute: tähtilomake (jos tiketti ratkaistu) tai jo annettu palaute
+
+    SignalR-chat:
+      - connection.start() → muodostaa WebSocket-yhteyden /hubs/ticket -Hubiin
+      - JoinTicketGroup(ticketId) → liittyy tiketin omaan viestikanavaan
+      - ReceiveMessage-tapahtuma → lisää uuden viestin chatiin ilman sivunlatausta
+      - withAutomaticReconnect() → yhdistää automaattisesti jos yhteys katkeaa
+      - escHtml() → suojaa käyttäjän sisältö XSS-hyökkäyksiltä (innerHTML-injektion esto)
+      - Enter-näppäin lähettää viestin (Shift+Enter = rivinvaihto)
+
+    Tähtipalaute (JavaScript):
+      - mouseenter/mouseleave → visuaalinen hover-efekti tähdissä
+      - click → valitsee arvosanan, päivittää piilokentän arvon
+      - btn.disabled = true kunnes tähti valittu
+
+    Yhteys: TicketController.Details (GET), Close (POST), UpdateStatus (POST),
+            UploadAttachment (POST), DeleteAttachment (POST), SubmitFeedback (POST).
 *@
+
+@* Malli = yksittäinen Ticket-olio (navigaatiot ladattu:
+   Comments, Attachments, Customer, CreatedByUser, AssignedToUser, Feedback). *@
 @model HakaTech.Portal.Models.Domain.Ticket
 @using HakaTech.Portal.Models.Domain
 @using HakaTech.Portal.Models.ViewModels
+
 @{
+    @* Selaimen välilehden otsikko: "#42 Verkko-ongelma" *@
     ViewData["Title"] = $"#{Model.Id} {Model.Title}";
+
+    @* Murupolku: "Tiketit" → "#42" *@
     ViewData["Breadcrumbs"] = new List<(string, string?)>
     {
         (L["Ticket.Index.Title"].Value, Url.Action("Index", "Ticket")),
-        ($"#{Model.Id}", null)
+        ($"#{Model.Id}", null)  @* Null = ei linkkiä, ollaan tällä sivulla *@
     };
+
+    @* Kontrolleri asettaa nämä ViewBagissa. *@
     bool isAdmin             = (bool)(ViewBag.IsAdmin ?? false);
+
+    @* TicketCommentViewModel = piilokenttä kommentinlähettämistä varten (käytetään tarkistukseen).
+       as = null-safe tyyppimuunnos. *@
     var commentModel         = ViewBag.CommentModel as TicketCommentViewModel;
+
+    @* TicketEditViewModel = adminin muokkauslomakkeen tiedot (nykyinen tila, prioriteetti, jne.). *@
     var editModel            = ViewBag.EditModel    as TicketEditViewModel;
+
+    @* Kirjautunut käyttäjä — tarvitaan SignalR-konfiguraatioon. *@
     var currentUser          = ViewBag.CurrentUser  as HakaTech.Portal.Models.Domain.ApplicationUser;
 
+    @* Tila- ja prioriteettibadgien CSS-luokat switch expression -lausekkeella.
+       Lasketaan kerran sivun yläosassa ja käytetään useammassa paikassa. *@
     string statusBadge = Model.Status switch {
         TicketStatus.Open            => "bg-primary",
         TicketStatus.InProgress      => "bg-info text-dark",
@@ -30,20 +72,32 @@
         TicketPriority.Critical => "bg-danger",
         TicketPriority.High     => "bg-warning text-dark",
         TicketPriority.Normal   => "bg-primary",
-        _                       => "bg-secondary"
+        _                       => "bg-secondary"   @* Low *@
     };
-    string StatusLabel(TicketStatus s) => L[$"TicketStatus.{s}"].Value;
-    string PriorityLabel(TicketPriority p) => L[$"TicketPriority.{p}"].Value;
-    string CategoryLabel(TicketCategory c) => L[$"TicketCategory.{c}"].Value;
 
+    @* Paikalliset lokalisointiapufunktiot. *@
+    string StatusLabel(TicketStatus s)      => L[$"TicketStatus.{s}"].Value;
+    string PriorityLabel(TicketPriority p)  => L[$"TicketPriority.{p}"].Value;
+    string CategoryLabel(TicketCategory c)  => L[$"TicketCategory.{c}"].Value;
+
+    @* visibleComments: suodatetaan näytettävät kommentit:
+       - Admin näkee KAIKKI kommentit (myös sisäiset, IsInternal=true).
+       - Asiakas näkee vain julkiset kommentit (!c.IsInternal).
+       OrderBy(c => c.CreatedAt) = aikajärjestyksessä vanhimmasta uusimpaan. *@
     var visibleComments = isAdmin
         ? Model.Comments.OrderBy(c => c.CreatedAt).ToList()
         : Model.Comments.Where(c => !c.IsInternal).OrderBy(c => c.CreatedAt).ToList();
 }
 
+@* ── Murupolku ───────────────────────────────────────────────────────
+   aria-label = saavutettavuus: ruudunlukijat kertovat "murupolku-navigaatio".
+   breadcrumb = Bootstrap-komponentti. *@
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
+        @* Tikettilistaan. *@
         <li class="breadcrumb-item"><a asp-action="Index">@L["Ticket.Index.Title"]</a></li>
+        @* Admin: asiakkaan nimi linkkinä Customer/Details-sivulle.
+           is not null = C# 9 null-check. *@
         @if (isAdmin && Model.Customer is not null)
         {
             <li class="breadcrumb-item">
@@ -52,23 +106,36 @@
                 </a>
             </li>
         }
+        @* Aktiivinen murupolkuaskel (ei linkki). *@
         <li class="breadcrumb-item active">#@Model.Id</li>
     </ol>
 </nav>
 
+@* ── Tiketin otsikkorivi ─────────────────────────────────────────────
+   justify-content-between: otsikko vasemmalla, toiminnot oikealla.
+   flex-wrap gap-2: rivittyvät tarvittaessa (pienillä näytöillä). *@
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
+        @* Otsikko: harmaa "#42" + tiketin otsikko. *@
         <h2 class="mb-1">
             <span class="text-muted fw-light">#@Model.Id</span>
             @Model.Title
         </h2>
+        @* Tila-, prioriteetti- ja kategoriabadget. *@
         <span class="badge @statusBadge me-1">@StatusLabel(Model.Status)</span>
         <span class="badge @priorityBadge me-1">@PriorityLabel(Model.Priority)</span>
+        @* Kategoria: vaalea badge. bg-light text-dark border = vaalea tausta + reunaviiva. *@
         <span class="badge bg-light text-dark border">@CategoryLabel(Model.Category)</span>
     </div>
+
+    @* Sulkemispainike — näytetään vain jos tiketti ei ole jo suljettu. *@
     <div class="d-flex gap-2 flex-wrap">
         @if (Model.Status != TicketStatus.Closed)
         {
+            @* Sulkeminen on POST-pyyntö (muuttaa tilaa).
+               onsubmit = vahvistusikkuna ennen sulkemista.
+               Html.Raw + JsonSerializer.Serialize = turvallinen tapa upottaa lokalisoitu teksti
+               JavaScript-merkkijonoon (poistaa erikoismerkit, lisää lainausmerkit). *@
             <form asp-action="Close" asp-route-id="@Model.Id" method="post"
                   onsubmit="return confirm(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(string.Format(L["Ticket.Details.CloseConfirm"].Value, Model.Id))));">
                 @Html.AntiForgeryToken()
@@ -80,57 +147,83 @@
     </div>
 </div>
 
+@* ── Kaksipalstainen layout ────────────────────────────────────────── *@
 <div class="row g-3">
+
+    @* ── Vasen sarake (8/12): pääsisältö ─────────────────────────── *@
     <div class="col-md-8">
 
+        @* ── Kuvauskortti ── *@
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-card-text me-2"></i>@L["Common.Description"]</div>
             <div class="card-body">
+                @* white-space:pre-wrap = säilyttää käyttäjän kirjoittamat rivinvaihdot.
+                   Ilman tätä kaikki teksti olisi yhdellä rivillä. *@
                 <p class="mb-0" style="white-space:pre-wrap;">@Model.Description</p>
             </div>
         </div>
 
+        @* ── Kommenttiketju (SignalR-chat) ── *@
         <div class="card mb-3">
+            @* Otsikkopalkki: viestilaskuri + SignalR-yhteyden tila. *@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>
                     <i class="bi bi-chat-dots me-2"></i>@L["Ticket.Details.Messages"]
+                    @* Viestien lukumäärä badgena. *@
                     <span class="badge bg-secondary ms-1">@visibleComments.Count</span>
                 </span>
+                @* SignalR-yhteyden tilamerkki: "Yhdistetään..." → "Yhdistetty" / "Katkennut".
+                   JavaScript päivittää tämän elementin luokan ja tekstin. *@
                 <span id="chat-badge" class="badge bg-secondary" title="@L["Ticket.Details.SignalrState"]">@L["Ticket.Details.Connecting"]</span>
             </div>
 
+            @* Viestialue. max-height:500px overflow-y:auto = vieritettävä jos viestejä paljon.
+               id="chat-messages" = JavaScript scrollaa tähän elementtiin. *@
             <div id="chat-messages"
                  class="card-body p-0"
                  style="max-height:500px; overflow-y:auto;">
+                @* Tyhjä-tila viesti — JavaScript poistaa tämän kun uusi viesti saapuu. *@
                 @if (!visibleComments.Any())
                 {
                     <p class="text-muted p-3 mb-0" id="chat-empty">@L["Ticket.Details.NoMessages"]</p>
                 }
+                @* Olemassa olevat kommentit palvelimelta (ladattu sivun avauksen yhteydessä).
+                   Uudet kommentit lisätään SignalR:n kautta JavaScriptissä. *@
                 @foreach (var c in visibleComments)
                 {
+                    @* Sisäiset kommentit (IsInternal=true) korostetaan keltaisella.
+                       bg-warning bg-opacity-10 = erittäin vaalea keltainen taustaväri. *@
                     <div class="p-3 border-bottom @(c.IsInternal ? "bg-warning bg-opacity-10" : "")">
                         <div class="d-flex justify-content-between align-items-center mb-1">
+                            @* Viestin kirjoittaja: FullName tai Email. *@
                             <span class="fw-semibold small">
                                 <i class="bi bi-person-circle me-1"></i>
                                 @(c.Author?.FullName?.Length > 0 ? c.Author.FullName : c.Author?.Email ?? "—")
                             </span>
                             <span class="text-muted small">
+                                @* ToLocalTime() = muuntaa UTC-ajan paikalliseksi ajaksi. *@
                                 @c.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                @* Sisäinen-merkki näkyy vain adminille (koska visibleComments suodattaa). *@
                                 @if (c.IsInternal)
                                 {
                                     <span class="badge bg-warning text-dark ms-2">@L["Ticket.Details.Internal"]</span>
                                 }
                             </span>
                         </div>
+                        @* Viestin sisältö. white-space:pre-wrap = rivinvaihdot säilytetään. *@
                         <p class="mb-0" style="white-space:pre-wrap;">@c.Content</p>
                     </div>
                 }
             </div>
 
+            @* Viestinsyöttöalue — näkyy vain jos tiketti on auki ja commentModel on asetettu.
+               Suljettu tiketti ei hyväksy uusia viestejä. *@
             @if (Model.Status != TicketStatus.Closed && commentModel is not null)
             {
                 <div class="card-footer p-2">
                     <div class="d-flex gap-2 align-items-end">
+                        @* Tekstikenttä viesteille. disabled="disabled" — JavaScript aktivoi
+                           tämän kun SignalR-yhteys on muodostettu. *@
                         <div class="flex-grow-1">
                             <textarea id="chat-input" rows="2"
                                       class="form-control form-control-sm"
@@ -138,6 +231,8 @@
                                       maxlength="4000" disabled></textarea>
                         </div>
                         <div class="d-flex flex-column align-items-end gap-1">
+                            @* "Sisäinen viesti"-valintaruutu vain adminille.
+                               Sisäiset viestit näkyvät vain admineille (asiakas ei näe). *@
                             @if (isAdmin)
                             {
                                 <div class="form-check mb-1">
@@ -145,6 +240,7 @@
                                     <label class="form-check-label small" for="chat-internal">@L["Ticket.Details.Internal"]</label>
                                 </div>
                             }
+                            @* Lähetä-painike — disabled kunnes SignalR yhdistetty. *@
                             <button id="btn-chat-send" class="btn btn-primary btn-sm" disabled>
                                 <i class="bi bi-send"></i>
                             </button>
@@ -154,33 +250,47 @@
             }
         </div>
 
+        @* ── Liitekortti ── *@
         <div class="card mb-3">
             <div class="card-header">
                 <i class="bi bi-paperclip me-2"></i>@L["Ticket.Details.Attachments"]
+                @* Liitteiden lukumäärä badgena. *@
                 <span class="badge bg-secondary ms-1">@Model.Attachments.Count</span>
             </div>
 
+            @* Liitelista jos liitteitä on. *@
             @if (Model.Attachments.Any())
             {
+                @* list-group-flush = lista ilman reunaviivoja, upotettuna korttiin. *@
                 <ul class="list-group list-group-flush">
                     @foreach (var a in Model.Attachments)
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            @* Tiedostonimi linkkinä ladattavaksi.
+                               text-truncate max-width:70% = katkaistaan jos nimi liian pitkä. *@
                             <div class="text-truncate" style="max-width:70%">
                                 <i class="bi bi-file-earmark me-2 text-muted"></i>
+                                @* DownloadAttachment = kontrollerin action joka palauttaa tiedoston. *@
                                 <a asp-action="DownloadAttachment" asp-route-id="@a.Id"
                                    class="text-decoration-none">@a.FileName</a>
+                                @* Latausaika + lataaja — piilotetaan pienillä näytöillä (d-none d-sm-inline). *@
                                 <small class="text-muted ms-2 d-none d-sm-inline">
                                     @a.UploadedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                                    @* &ndash; = HTML-entiteetti pitkälle viivalle (–). *@
                                     &ndash; @(a.UploadedByUser?.FullName?.Length > 0 ? a.UploadedByUser.FullName : a.UploadedByUser?.Email ?? "—")
                                 </small>
                             </div>
+                            @* Poista-lomake vain adminille. *@
                             @if (isAdmin)
                             {
+                                @* Jokainen liite saa oman piilolomakkeensa DELETE-toimintoa varten.
+                                   onsubmit = vahvistusikkuna; Html.Raw + JsonSerializer = turvallinen
+                                   lokalisoitu merkkijono JavaScript-kontekstissa. *@
                                 <form asp-action="DeleteAttachment" asp-route-id="@a.Id" method="post"
                                       onsubmit="return confirm(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.DeleteAttachmentConfirm"].Value)));"
                                       class="d-inline">
                                     @Html.AntiForgeryToken()
+                                    @* py-0 = poistetaan ylimääräinen pystypadding pienestä painikkeesta. *@
                                     <button type="submit" class="btn btn-outline-danger btn-sm py-0">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -197,97 +307,134 @@
                 </div>
             }
 
+            @* Tiedoston latauslomake — ei näytetä suljetulle tiketille. *@
             @if (Model.Status != TicketStatus.Closed)
             {
                 <div class="card-footer p-2">
+                    @* enctype="multipart/form-data" = pakollinen tiedostojen latauksessa.
+                       Ilman tätä selain lähettäisi vain tiedoston nimen, ei sisältöä. *@
                     <form asp-action="UploadAttachment" method="post" enctype="multipart/form-data">
                         @Html.AntiForgeryToken()
+                        @* Piilokenttä: kertoo kontrollerille mihin tikettiin liite kuuluu. *@
                         <input type="hidden" name="ticketId" value="@Model.Id" />
+                        @* input-group-sm = pienikokoinen tiedostovalitsin + painike. *@
                         <div class="input-group input-group-sm">
+                            @* type="file" = tiedostovalitsin. required = pakollinen. *@
                             <input type="file" name="file" class="form-control form-control-sm" required />
                             <button type="submit" class="btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-upload me-1"></i>@L["Common.Upload"]
                             </button>
                         </div>
+                        @* Ohjeteksti tiedostokokorajoituksesta. *@
                         <small class="text-muted">Max 20 MB</small>
                     </form>
                 </div>
             }
         </div>
 
-    </div>
+    </div> @* /col-md-8 *@
 
-        @if (ViewBag.ShowFeedback == true)
-        {
-            <div class="card mb-3 border-success" id="feedback-card">
-                <div class="card-header bg-success bg-opacity-10">
-                    <i class="bi bi-star me-2 text-success"></i>@L["Ticket.Feedback.Title"]
-                </div>
-                <div class="card-body">
-                    <p class="small text-muted mb-3">@L["Ticket.Feedback.Intro"]</p>
-                    <form asp-action="SubmitFeedback" method="post">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="TicketId" value="@Model.Id" />
-
-                        <div class="mb-3">
-                            <div class="d-flex gap-2 justify-content-center fs-3" id="star-row">
-                                @for (int s = 1; s <= 5; s++)
-                                {
-                                    <i class="bi bi-star text-warning star-btn"
-                                       data-value="@s" role="button" style="cursor:pointer"></i>
-                                }
-                            </div>
-                            <input type="hidden" name="Rating" id="rating-input" value="0" required />
-                            <div class="text-center mt-1">
-                                <span id="rating-label" class="small text-muted">@L["Ticket.Feedback.SelectStars"]</span>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <textarea name="Comment" class="form-control form-control-sm" rows="2"
-                                      placeholder="@L["Ticket.Feedback.CommentPlaceholder"]" maxlength="1000"></textarea>
-                        </div>
-
-                        <div class="d-grid">
-                            <button type="submit" id="btn-submit-feedback" class="btn btn-success btn-sm" disabled>
-                                <i class="bi bi-send me-1"></i>@L["Ticket.Feedback.Submit"]
-                            </button>
-                        </div>
-                    </form>
-                </div>
+    @* ── Tähtipalaute ─────────────────────────────────────────────────
+       ShowFeedback = kontrolleri asettaa tämän true jos tiketti on ratkaistu
+       eikä asiakas ole vielä antanut palautetta. *@
+    @if (ViewBag.ShowFeedback == true)
+    {
+        @* border-success = vihreä reunaviiva korostamaan palautekorttia.
+           id="feedback-card" = mahdollistaa JavaScriptin viittauksen. *@
+        <div class="card mb-3 border-success" id="feedback-card">
+            @* bg-success bg-opacity-10 = erittäin vaalea vihreä otsikkopalkki. *@
+            <div class="card-header bg-success bg-opacity-10">
+                <i class="bi bi-star me-2 text-success"></i>@L["Ticket.Feedback.Title"]
             </div>
-        }
+            <div class="card-body">
+                <p class="small text-muted mb-3">@L["Ticket.Feedback.Intro"]</p>
+                <form asp-action="SubmitFeedback" method="post">
+                    @Html.AntiForgeryToken()
+                    @* Tiketin ID piilokenttänä — kontrolleri tietää mihin tikettiin palaute kuuluu. *@
+                    <input type="hidden" name="TicketId" value="@Model.Id" />
 
-        @if (Model.Feedback is not null && !isAdmin)
-        {
-            <div class="card mb-3 border-success">
-                <div class="card-header bg-success bg-opacity-10">
-                    <i class="bi bi-star-fill me-2 text-warning"></i>@L["Ticket.Feedback.Yours"]
-                </div>
-                <div class="card-body">
-                    <div class="d-flex gap-1 mb-2">
-                        @for (int s = 1; s <= 5; s++)
-                        {
-                            <i class="bi @(s <= Model.Feedback.Rating ? "bi-star-fill text-warning" : "bi-star text-muted")"></i>
-                        }
-                        <span class="ms-2 small text-muted">@Model.Feedback.SubmittedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                    @* ── Tähtivalitsin ── *@
+                    <div class="mb-3">
+                        @* Viisi tähtipainiketta vierekkäin.
+                           fs-3 = isompi fonttikoko tähdille. gap-2 = välit. *@
+                        <div class="d-flex gap-2 justify-content-center fs-3" id="star-row">
+                            @* s = 1..5: jokainen tähti on <i>-elementti data-value="@s"-attribuutilla.
+                               role="button" = kertoo saavutettavuusteknologioille että klikkattavissa.
+                               style="cursor:pointer" = käsi-osoitin hiirelle. *@
+                            @for (int s = 1; s <= 5; s++)
+                            {
+                                <i class="bi bi-star text-warning star-btn"
+                                   data-value="@s" role="button" style="cursor:pointer"></i>
+                            }
+                        </div>
+                        @* Arvosana piilokenttänä — JavaScript päivittää tämän kun tähti klikataan.
+                           required = lomake ei lähetä ennen kuin arvo on asetettu. *@
+                        <input type="hidden" name="Rating" id="rating-input" value="0" required />
+                        @* Tekstiohje tähtien alla. JavaScript päivittää tämän klikatun tähden mukaan. *@
+                        <div class="text-center mt-1">
+                            <span id="rating-label" class="small text-muted">@L["Ticket.Feedback.SelectStars"]</span>
+                        </div>
                     </div>
-                    @if (!string.IsNullOrWhiteSpace(Model.Feedback.Comment))
-                    {
-                        <p class="mb-0 small">@Model.Feedback.Comment</p>
-                    }
-                </div>
-            </div>
-        }
 
+                    @* Vapaa kommenttikenttä (valinnainen). *@
+                    <div class="mb-3">
+                        <textarea name="Comment" class="form-control form-control-sm" rows="2"
+                                  placeholder="@L["Ticket.Feedback.CommentPlaceholder"]" maxlength="1000"></textarea>
+                    </div>
+
+                    @* Lähetä-painike — disabled kunnes tähti valittu. d-grid = painike koko levyinen. *@
+                    <div class="d-grid">
+                        <button type="submit" id="btn-submit-feedback" class="btn btn-success btn-sm" disabled>
+                            <i class="bi bi-send me-1"></i>@L["Ticket.Feedback.Submit"]
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+
+    @* ── Annettu palaute (vain asiakkaalle) ──
+       Model.Feedback is not null = asiakas on jo antanut palautteen.
+       !isAdmin = ei näytetä adminille (hänellä on eri näkymä raportissa). *@
+    @if (Model.Feedback is not null && !isAdmin)
+    {
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success bg-opacity-10">
+                <i class="bi bi-star-fill me-2 text-warning"></i>@L["Ticket.Feedback.Yours"]
+            </div>
+            <div class="card-body">
+                @* Tähtinäkymä: täytetyt tai tyhjät tähdet arvosanan mukaan. *@
+                <div class="d-flex gap-1 mb-2">
+                    @* s = 1..5: jos s <= Rating → täytetty tähti (bi-star-fill text-warning),
+                       muuten tyhjä tähti (bi-star text-muted). *@
+                    @for (int s = 1; s <= 5; s++)
+                    {
+                        <i class="bi @(s <= Model.Feedback.Rating ? "bi-star-fill text-warning" : "bi-star text-muted")"></i>
+                    }
+                    @* Palautteen antamispäivämäärä. *@
+                    <span class="ms-2 small text-muted">@Model.Feedback.SubmittedAt.ToLocalTime().ToString("dd.MM.yyyy")</span>
+                </div>
+                @* Vapaamuotoinen kommentti — näytetään vain jos annettu. *@
+                @if (!string.IsNullOrWhiteSpace(Model.Feedback.Comment))
+                {
+                    <p class="mb-0 small">@Model.Feedback.Comment</p>
+                }
+            </div>
+        </div>
+    }
+
+    @* ── Oikea sarake (4/12): metatiedot ja admin-toiminnot ── *@
     <div class="col-md-4">
 
+        @* ── Tietokortti ── *@
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-info-circle me-2"></i>@L["Common.Details"]</div>
             <div class="card-body">
+                @* dl.row = Bootstrap definition list -taulukko (termi + määritelmä parina). *@
                 <dl class="row mb-0 small">
                     <dt class="col-6">@L["Dash.Col.Customer"]</dt>
                     <dd class="col-6">
+                        @* Adminille asiakas on linkki Customer/Details-sivulle. *@
                         @if (isAdmin && Model.Customer is not null)
                         {
                             <a asp-controller="Customer" asp-action="Details"
@@ -295,36 +442,53 @@
                         }
                         else { @(Model.Customer?.CompanyName ?? "—") }
                     </dd>
+
                     <dt class="col-6">@L["Ticket.Details.CreatedBy"]</dt>
                     <dd class="col-6">@(Model.CreatedByUser?.FullName ?? Model.CreatedByUser?.Email ?? "—")</dd>
+
                     <dt class="col-6">@L["Dash.Col.Created"]</dt>
+                    @* ToLocalTime() = UTC → paikallinen aika. *@
                     <dd class="col-6">@Model.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
+
                     <dt class="col-6">@L["Ticket.Details.Updated"]</dt>
                     <dd class="col-6">@Model.UpdatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
+
+                    @* Ratkaisuaika näytetään vain jos asetettu. *@
                     @if (Model.ResolvedAt.HasValue)
                     {
                         <dt class="col-6">@L["Ticket.Details.Resolved"]</dt>
+                        @* .Value = nullable DateTimeOffset:n arvo, kun HasValue on tarkistettu. *@
                         <dd class="col-6">@Model.ResolvedAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</dd>
                     }
+
                     <dt class="col-6">@L["Ticket.Col.AssignedTo"]</dt>
+                    @* Lokalisoitu teksti "Ei määritetty" jos vastuuhenkilöä ei ole. *@
                     <dd class="col-6">@(Model.AssignedToUser?.FullName ?? L["Ticket.Details.NotAssigned"].Value)</dd>
                 </dl>
             </div>
         </div>
 
+        @* ── Adminin hallintakortti ────────────────────────────────────
+           Näkyy vain adminille, vain jos editModel on asetettu, vain jos tiketti auki. *@
         @if (isAdmin && editModel is not null && Model.Status != TicketStatus.Closed)
         {
+            @* border-warning = keltainen reunaviiva korostamaan admin-toimintoja.
+               bg-warning bg-opacity-25 = kevyt keltainen otsikkopalkki. *@
             <div class="card border-warning">
                 <div class="card-header bg-warning bg-opacity-25">
                     <i class="bi bi-sliders me-2"></i>@L["Ticket.Details.AdminActions"]
                 </div>
                 <div class="card-body">
+                    @* POST /Ticket/UpdateStatus — päivittää tilan, prioriteetin ja vastuuhenkilön. *@
                     <form asp-action="UpdateStatus" method="post">
+                        @* Piilokenttä: tiketin ID model-bindingille. *@
                         <input type="hidden" asp-for="@editModel.Id" name="Id" />
 
+                        @* ── Tilavalitsin ── *@
                         <div class="mb-2">
                             <label class="form-label small fw-semibold">@L["Dash.Col.Status"]</label>
                             <select name="Status" id="admin-status" class="form-select form-select-sm">
+                                @* Generoidaan kaikki tilat; nykyinen esivalittuna (selected). *@
                                 @foreach (var s in Enum.GetValues<TicketStatus>())
                                 {
                                     if (editModel.Status == s)
@@ -335,6 +499,7 @@
                             </select>
                         </div>
 
+                        @* ── Prioriteettiwalitsin ── *@
                         <div class="mb-2">
                             <label class="form-label small fw-semibold">@L["Dash.Col.Priority"]</label>
                             <select name="Priority" id="admin-priority" class="form-select form-select-sm">
@@ -348,10 +513,16 @@
                             </select>
                         </div>
 
+                        @* ── Vastuuhenkilövalitsin ──
+                           editModel.StaffOptions = lista henkilökunnan jäsenistä (SelectListItem).
+                           Täytetään kontrollerissa. *@
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">@L["Ticket.Col.AssignedTo"]</label>
                             <select name="AssignedToUserId" id="admin-assign" class="form-select form-select-sm">
+                                @* Tyhjä optio = "ei vastuuhenkilöä". *@
                                 <option value="">@L["Ticket.Details.SelectAssignee"]</option>
+                                @* Generoidaan jokainen henkilökunnan jäsen omaksi optioksi.
+                                   opt.Value = käyttäjän GUID-tunnus. opt.Text = käyttäjän nimi. *@
                                 @foreach (var opt in editModel.StaffOptions)
                                 {
                                     if (editModel.AssignedToUserId == opt.Value)
@@ -362,6 +533,8 @@
                             </select>
                         </div>
 
+                        @* Tallenna-painike koko levyinen. btn-warning = keltainen korostus.
+                           d-grid = flex container joka venyttää painikkeen koko leveyteen. *@
                         <div class="d-grid">
                             <button type="submit" id="btn-admin-save" class="btn btn-warning btn-sm fw-semibold">
                                 <i class="bi bi-check-lg me-1"></i>@L["Common.SaveChanges"]
@@ -375,11 +548,18 @@
     </div>
 </div>
 
+@* ── Scripts-osio ────────────────────────────────────────────────────── *@
 @section Scripts {
+
+@* ── Tähtipalaute-JavaScript — renderöidään VAIN jos ShowFeedback on true.
+   Jos tiketti ei ole ratkaistu, tätä koodia ei lisätä sivulle lainkaan. *@
 @if (ViewBag.ShowFeedback == true)
 {
 <script>
 (function () {
+    @* Lokalisoidut tähtiselitteet taulukossa. Indeksi 0 on tyhjä (ei ole arvosana 0).
+       Html.Raw + JsonSerializer.Serialize = muuntaa C#-merkkijonon turvallisesti
+       JavaScript-merkkijonoksi (lisää lainausmerkit ja escape-merkinnät). *@
     const labels = [
         '',
         @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Feedback.Star1"].Value)),
@@ -388,42 +568,64 @@
         @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Feedback.Star4"].Value)),
         @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Feedback.Star5"].Value))
     ];
-    const stars   = document.querySelectorAll('.star-btn');
-    const input   = document.getElementById('rating-input');
-    const label   = document.getElementById('rating-label');
-    const btn     = document.getElementById('btn-submit-feedback');
-    let selected  = 0;
 
+    @* Haetaan DOM-elementit kerran muistiin. *@
+    const stars   = document.querySelectorAll('.star-btn');  // kaikki viisi tähtielementiä
+    const input   = document.getElementById('rating-input'); // piilokenttä arvolle
+    const label   = document.getElementById('rating-label'); // tekstiselite tähtien alla
+    const btn     = document.getElementById('btn-submit-feedback'); // lähetyspainike
+    let selected  = 0; // tällä hetkellä valittu arvosana (0 = ei valittu)
+
+    @* paint(upTo): päivittää tähtien ulkoasun.
+       upTo = kuinka monta tähteä täytetään (1–5 tai hover-kohdistus).
+       stars.forEach = käy kaikki viisi tähteä läpi.
+       i < upTo → täytetty tähti (bi-star-fill), muuten tyhjä (bi-star). *@
     function paint(upTo) {
         stars.forEach((s, i) => {
             s.className = i < upTo
-                ? 'bi bi-star-fill text-warning star-btn'
-                : 'bi bi-star text-warning star-btn';
+                ? 'bi bi-star-fill text-warning star-btn'  // täytetty
+                : 'bi bi-star text-warning star-btn';       // tyhjä
         });
     }
 
+    @* Lisätään tapahtumankäsittelijät jokaiselle tähdelle.
+       stars.forEach((s, i) → s = tähti-elementti, i = indeksi (0–4). *@
     stars.forEach((s, i) => {
-        s.addEventListener('mouseenter', () => paint(i + 1));
+        @* mouseenter = hiiri siirtyy tähden päälle → näytetään hover-palaute. *@
+        s.addEventListener('mouseenter', () => paint(i + 1)); // i+1 koska indeksi alkaa 0:sta
+        @* mouseleave = hiiri poistuu tähdeltä → palautetaan valittu tila. *@
         s.addEventListener('mouseleave', () => paint(selected));
+        @* click = käyttäjä valitsee arvosanan. *@
         s.addEventListener('click', () => {
-            selected    = i + 1;
-            input.value = selected;
-            label.textContent = labels[selected];
-            btn.disabled = false;
-            paint(selected);
+            selected      = i + 1;        // tallennetaan valinta
+            input.value   = selected;     // päivitetään piilokentän arvo (lähetetään lomakkeen mukana)
+            label.textContent = labels[selected]; // näytetään selite (esim. "Kiitos!")
+            btn.disabled  = false;        // aktivoidaan Lähetä-painike
+            paint(selected);              // päivitetään tähtien ulkoasu pysyvästi
         });
     });
 })();
 </script>
 }
+
+@* ── SignalR-chat-JavaScript ────────────────────────────────────────────
+   SignalR = Microsoftin reaaliaikakommunikaatiokirjasto (WebSocket + long-polling fallback).
+   Ladataan CDN:stä. crossorigin="anonymous" = CORS-sääntö.
+   referrerpolicy="no-referrer" = ei lähetetä Referer-otsaketta tietosuojan vuoksi. *@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
 (function () {
+    @* Razor-muuttujat JavaScript-kontekstissa.
+       @Model.Id = tiketin ID (kokonaisluku, ei lainausmerkkejä).
+       '@Html.Raw(...)' = GUID merkkijonona lainausmerkeissä (turvallisuus).
+       @(isAdmin ? "true" : "false") = Razor-ternaari boolean-arvoksi. *@
     const ticketId      = @Model.Id;
     const currentUserId = '@Html.Raw(currentUser?.Id ?? "")';
     const isAdmin       = @(isAdmin ? "true" : "false");
 
+    @* Lokalisoidut tekstit JavaScript-objektissa.
+       Html.Raw + JsonSerializer = turvallinen tapa upottaa C#-merkkijonot JS:ään. *@
     const T = {
         reconnecting: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.Reconnecting"].Value)),
         connected:    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.Connected"].Value)),
@@ -433,41 +635,56 @@
         sendFailed:   @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["Ticket.Details.SendFailed"].Value))
     };
 
-    const chatMessages = document.getElementById('chat-messages');
-    const chatInput    = document.getElementById('chat-input');
-    const btnSend      = document.getElementById('btn-chat-send');
-    const badge        = document.getElementById('chat-badge');
+    @* DOM-elementit. *@
+    const chatMessages = document.getElementById('chat-messages'); // viestialue
+    const chatInput    = document.getElementById('chat-input');    // tekstikenttä
+    const btnSend      = document.getElementById('btn-chat-send'); // lähetä-nappi
+    const badge        = document.getElementById('chat-badge');    // yhteyden tilamerkki
 
+    @* Vieritetään viestialue pohjaan sivun latautuessa (uusimmat viestit näkyvät). *@
     if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
 
+    @* Jos lähetä-nappia ei ole (suljettu tiketti), lopetetaan heti.
+       SignalR-yhteyttä ei tarvita lukemiseen (palvelinpuoli lataa kommentit). *@
     if (!btnSend) return;
 
+    @* Rakennetaan SignalR-yhteys.
+       withUrl('/hubs/ticket') = WebSocket-endpointti (TicketHub.cs).
+       withAutomaticReconnect() = automaattinen uudelleenyhteys katkon jälkeen. *@
     const connection = new signalR.HubConnectionBuilder()
         .withUrl('/hubs/ticket')
         .withAutomaticReconnect()
         .build();
 
+    @* ReceiveMessage = palvelimen Hub kutsuu tätä kun uusi viesti lähetetty.
+       msg = {authorName, timestamp, content, isInternal} -objekti. *@
     connection.on('ReceiveMessage', function (msg) {
+        @* Asiakas ei näe sisäisiä viestejä. *@
         if (msg.isInternal && !isAdmin) return;
+        @* Poistetaan "Ei viestejä" -teksti jos se on vielä näkyvissä. *@
         document.getElementById('chat-empty')?.remove();
+        @* Lisätään uusi viesti chatiin ja vieritetään pohjaan. *@
         appendMessage(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     });
 
+    @* onreconnecting = SignalR yrittää yhdistää uudelleen katkon jälkeen. *@
     connection.onreconnecting(() => {
         badge.className   = 'badge bg-warning text-dark';
         badge.textContent = T.reconnecting;
-        chatInput.disabled = true;
+        chatInput.disabled = true;   // estetään kirjoittaminen katkon aikana
         btnSend.disabled   = true;
     });
 
+    @* onreconnected = yhteys palautettu. *@
     connection.onreconnected(() => {
         badge.className    = 'badge bg-success';
         badge.textContent  = T.connected;
-        chatInput.disabled = false;
+        chatInput.disabled = false;  // palautetaan kirjoittamismahdollisuus
         btnSend.disabled   = false;
     });
 
+    @* onclose = yhteys katkaistu pysyvästi (reconnect-yritykset loppuivat). *@
     connection.onclose(() => {
         badge.className   = 'badge bg-danger';
         badge.textContent = T.disconnected;
@@ -475,34 +692,48 @@
         btnSend.disabled   = true;
     });
 
+    @* startConnection = muodostaa yhteyden Hubiin.
+       async = odottaa asynkronista operaatiota (WebSocket-kättely).
+       try/catch = virheen sattuessa yritetään uudelleen 5s kuluttua. *@
     async function startConnection() {
         try {
-            await connection.start();
+            await connection.start(); // muodostaa yhteyden
+            @* JoinTicketGroup = Hub-metodi, liittyy tiketin omaan SignalR-ryhmään.
+               Vain tämän tiketin viestit vastaanotetaan. *@
             await connection.invoke('JoinTicketGroup', ticketId.toString());
             badge.className    = 'badge bg-success';
             badge.textContent  = T.connected;
-            chatInput.disabled = false;
+            chatInput.disabled = false; // aktivoidaan tekstikenttä
             btnSend.disabled   = false;
         } catch (e) {
             badge.className   = 'badge bg-danger';
             badge.textContent = T.noConnection;
+            @* Yritetään yhdistää uudelleen 5 sekunnin kuluttua. *@
             setTimeout(startConnection, 5000);
         }
     }
 
+    @* escHtml: sanitoi käyttäjän syötteen ennen innerHTML-asetusta.
+       XSS-suojaus (Cross-Site Scripting): estää <script>-tagien ja HTML-koodin
+       injektoinnin viestien sisältöön. Korvaa erikoismerkit HTML-entiteeteillä. *@
     function escHtml(str) {
         return String(str)
-            .replace(/&/g,  '&amp;')
-            .replace(/</g,  '&lt;')
-            .replace(/>/g,  '&gt;')
-            .replace(/"/g,  '&quot;');
+            .replace(/&/g,  '&amp;')   // & → &amp;
+            .replace(/</g,  '&lt;')    // < → &lt;
+            .replace(/>/g,  '&gt;')    // > → &gt;
+            .replace(/"/g,  '&quot;'); // " → &quot;
     }
 
+    @* appendMessage: rakentaa uuden viestin DOM-elementin ja lisää sen chatiin.
+       msg = {authorName, timestamp, content, isInternal} *@
     function appendMessage(msg) {
         const div = document.createElement('div');
+        @* Sisäinen viesti saa keltaisen taustan. *@
         div.className = 'p-3 border-bottom' + (msg.isInternal ? ' bg-warning bg-opacity-10' : '');
+        @* internalBadge = "Sisäinen"-badge vain sisäisille viesteille. *@
         const internalBadge = msg.isInternal
             ? `<span class="badge bg-warning text-dark ms-2">${escHtml(T.internal)}</span>` : '';
+        @* innerHTML = kaikki dynaaminen sisältö sanitoidaan escHtml:llä → ei XSS-riskiä. *@
         div.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-1">
                 <span class="fw-semibold small">
@@ -511,30 +742,42 @@
                 <span class="text-muted small">${escHtml(msg.timestamp)}${internalBadge}</span>
             </div>
             <p class="mb-0" style="white-space:pre-wrap;">${escHtml(msg.content)}</p>`;
-        chatMessages.appendChild(div);
+        chatMessages.appendChild(div); // lisätään viestilistaan
     }
 
+    @* sendMessage: lähettää viestin Hub:iin. *@
     async function sendMessage() {
         const content    = chatInput.value.trim();
+        @* ?. = optional chaining: jos chat-internal-elementtiä ei ole (ei admin), palauttaa undefined.
+           ?? false = null-coalescing: undefined → false. *@
         const isInternal = document.getElementById('chat-internal')?.checked ?? false;
-        if (!content) return;
+        if (!content) return; // tyhjää viestiä ei lähetetä
 
-        btnSend.disabled = true;
+        btnSend.disabled = true; // estetään tuplalähetys
         try {
+            @* SendMessage = Hub-metodi (TicketHub.cs).
+               Parametrit: tiketin ID, viestin sisältö, onko sisäinen viesti. *@
             await connection.invoke('SendMessage', ticketId, content, isInternal);
-            chatInput.value = '';
+            chatInput.value = ''; // tyhjennetään kenttä onnistuneen lähetyksen jälkeen
+            @* Tyhjennetään myös "Sisäinen"-valintaruutu. *@
             const internalChk = document.getElementById('chat-internal');
             if (internalChk) internalChk.checked = false;
         } catch (e) {
             console.error(e);
-            alert(T.sendFailed);
+            alert(T.sendFailed); // ilmoitetaan käyttäjälle lähetysvirheestä
         } finally {
+            @* finally = suoritetaan aina, myös virheen sattuessa.
+               Palautetaan Lähetä-painike aktiiviseksi ja asetetaan fokus kenttään. *@
             btnSend.disabled = false;
             chatInput.focus();
         }
     }
 
+    @* Lähetä-painike: lähettää viestin. *@
     btnSend.addEventListener('click', sendMessage);
+
+    @* Enter-näppäin lähettää (Shift+Enter = rivinvaihto).
+       e.preventDefault() estää oletustoiminnon (rivinvaihto ilman Shift). *@
     chatInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -542,6 +785,7 @@
         }
     });
 
+    @* Aloitetaan SignalR-yhteyden muodostus heti sivun latautuessa. *@
     startConnection();
 })();
 </script>

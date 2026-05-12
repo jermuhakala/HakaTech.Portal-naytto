@@ -1,9 +1,21 @@
-﻿@*
-    Privacy.cshtml — Staattinen tietosuojaseloste. Linkitetty footerista.
+@*
+    Privacy.cshtml — Tietosuojaseloste.
+
+    Staattinen sivu joka on linkitetty sivuston alatunnisteesta (footer).
+    Sisältö on toistaiseksi paikkamerkki (placeholder) — varsinainen
+    tietosuojaseloste täytetään ennen tuotantokäyttöönottoa.
+
+    Tärkeää: [AllowAnonymous]-attribuutti on asetettu HomeController.Privacy-metodissa
+    — kirjautumattomatkin käyttäjät pääsevät tälle sivulle (GDPR-vaatimus).
 *@
+
 @{
+    @* Sivun otsikko. L["Privacy.Title"] = lokalisoitu, esim. "Tietosuoja". *@
     ViewData["Title"] = L["Privacy.Title"].Value;
 }
+
+@* ViewData["Title"] näyttää sivun otsikon myös isona h1-elementtinä. *@
 <h1>@ViewData["Title"]</h1>
 
+@* Paikkamerkki-teksti — korvaa tämä oikealla tietosuojaselosteella. *@
 <p>Use this page to detail your site's privacy policy.</p>

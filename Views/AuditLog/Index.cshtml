@@ -1,101 +1,151 @@
 @*
     AuditLog/Index.cshtml — Audit-lokimerkintöjen selaussivu (vain admin).
-    Mahdollistaa suodatuksen toiminnon, käyttäjän ja aikavälin mukaan.
+
+    Auditloki = turvallisuusjäljitys, joka kirjaa kaikki merkittävät
+    toimenpiteet: kirjautumiset, käyttäjän luomiset, tiketin sulkemiset jne.
+    Kirjaukset tallentaa AuditService (IAuditService-rajapinta) jota
+    kutsutaan kontrollerien POST-metodeissa.
+
+    Sivulla voi suodattaa:
+      - Toiminto (esim. "Login", "TicketCreated", "UserDeleted")
+      - Käyttäjä sähköpostiosoitteen mukaan
+      - Entiteetin tyyppi ("Ticket", "Invoice", "User", "Customer")
+      - Aikaväli (alkaen / päättyen)
+
+    Sivutus: 50 merkintää/sivu (PageSize asetetaan kontrollerissa).
+    Yhteys: AuditLogController.Index.
 *@
+
+@* Lista sivun AuditLog-olioista (valmiiksi sivutettu kontrollerissa). *@
 @model IEnumerable<HakaTech.Portal.Models.Domain.AuditLog>
+
 @{
     ViewData["Title"] = L["AuditLog.Index.Title"].Value;
-    int page       = ViewBag.Page;
-    int pageSize   = ViewBag.PageSize;
-    int total      = ViewBag.Total;
-    int totalPages = ViewBag.TotalPages;
 
-    string? filterAction     = ViewBag.FilterAction;
-    string? filterUserEmail  = ViewBag.FilterUserEmail;
-    string? filterEntityType = ViewBag.FilterEntityType;
-    string? filterFrom       = ViewBag.FilterFrom;
-    string? filterTo         = ViewBag.FilterTo;
+    @* Haetaan sivutusmuuttujat ViewBag-sanakirjasta.
+       ViewBag = dynaaminen objekti johon kontrolleri voi tallentaa mitä tahansa.
+       Sijoitetaan paikallisiin muuttujiin, jotta näkymä on selkeämpi. *@
+    int page       = ViewBag.Page;       // Nykyinen sivu (1-pohjainen)
+    int pageSize   = ViewBag.PageSize;   // Merkintöjä per sivu
+    int total      = ViewBag.Total;      // Kokonaismäärä (kaikki suodattimien mukaiset)
+    int totalPages = ViewBag.TotalPages; // Sivujen kokonaismäärä
 
+    @* Suodatinarvot — palautetaan lomakkeeseen täytettynä (pysyvät filtterit). *@
+    string? filterAction     = ViewBag.FilterAction;     // Valittu toiminto
+    string? filterUserEmail  = ViewBag.FilterUserEmail;  // Käyttäjähaku
+    string? filterEntityType = ViewBag.FilterEntityType; // Valittu entiteettityyppi
+    string? filterFrom       = ViewBag.FilterFrom;       // Alkupäivä (yyyy-MM-dd)
+    string? filterTo         = ViewBag.FilterTo;         // Loppupäivä (yyyy-MM-dd)
+
+    @* actionTypes = kaikki tietokannassa esiintyvät eri toimintonimet.
+       Kontrolleri hakee ne DISTINCT-kyselyllä. as List<string> = turvallinen tyyppimuunnos.
+       ?? new() = tyhjä lista jos null (estää NullReferenceException). *@
     var actionTypes = ViewBag.ActionTypes as List<string> ?? new();
 
-    // Badge colour per action
+    @* BadgeClass = apufunktio CSS-väriluokan palauttamiseen toiminnon perusteella.
+       Onnistuneet toimet = vihreä/sininen, epäonnistuneet/vaaralliset = punainen. *@
     string BadgeClass(string action) => action switch {
-        "Login"              => "bg-success",
-        "LoginFailed"        => "bg-danger",
-        "LoginLockedOut"     => "bg-danger",
-        "Logout"             => "bg-secondary",
-        "UserCreated"        => "bg-primary",
-        "UserUpdated"        => "bg-info text-dark",
-        "UserDeleted"        => "bg-danger",
-        "PasswordChanged"    => "bg-warning text-dark",
-        "TicketCreated"      => "bg-primary",
-        "TicketStatusChanged"=> "bg-info text-dark",
-        "TicketClosed"       => "bg-secondary",
-        "FeedbackSubmitted"  => "bg-success",
-        "InvoiceDownloaded"  => "bg-secondary",
-        _                    => "bg-secondary"
+        "Login"               => "bg-success",           // Onnistunut kirjautuminen — vihreä
+        "LoginFailed"         => "bg-danger",            // Epäonnistunut kirjautuminen — punainen
+        "LoginLockedOut"      => "bg-danger",            // Tili lukittu — punainen
+        "Logout"              => "bg-secondary",         // Uloskirjautuminen — harmaa
+        "UserCreated"         => "bg-primary",           // Uusi käyttäjä — sininen
+        "UserUpdated"         => "bg-info text-dark",    // Käyttäjä muokattu — syaani
+        "UserDeleted"         => "bg-danger",            // Käyttäjä poistettu — punainen
+        "PasswordChanged"     => "bg-warning text-dark", // Salasana vaihdettu — keltainen
+        "TicketCreated"       => "bg-primary",           // Tiketti luotu — sininen
+        "TicketStatusChanged" => "bg-info text-dark",    // Tiketin tila muutettu — syaani
+        "TicketClosed"        => "bg-secondary",         // Tiketti suljettu — harmaa
+        "FeedbackSubmitted"   => "bg-success",           // Palaute lähetetty — vihreä
+        "InvoiceDownloaded"   => "bg-secondary",         // Lasku ladattu — harmaa
+        _                     => "bg-secondary"          // Muut — harmaa (oletus)
     };
 }
 
+@* Otsikkorivi: vasemmalla otsikko, oikealla kokonaismäärä-merkki. *@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">
         <i class="bi bi-journal-text me-2 text-primary"></i>Tapahtumaloki
     </h2>
+    @* Merkki kokonaismäärästä — kuinka monta tapahtumaa valituilla suodattimilla. *@
     <span class="badge bg-secondary">@total tapahtumaa</span>
 </div>
 
-@* ── Suodatinpaneeli ─────────────────────────────────────────── *@
+@* ── Suodatinpaneeli ────────────────────────────────────────────── *@
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-3">
+        @* GET-lomake — suodattimet välitetään URL-parametreina.
+           row g-2 = Bootstrap grid-rivijärjestys 2px:n väleillä. *@
         <form method="get" class="row g-2 align-items-end">
+
+            @* Toiminto-pudotusvalikko. *@
             <div class="col-auto">
                 <label class="form-label small fw-medium mb-1">Toiminto</label>
                 <select name="action" class="form-select form-select-sm">
                     <option value="">Kaikki</option>
+                    @* Dynaamiset vaihtoehdot tietokannassa esiintyneistä toiminnoista. *@
                     @foreach (var at in actionTypes)
                     {
+                        @* selected="@(...)" = Tag Helper lisää selected-attribuutin
+                           jos tämä vaihtoehto vastaa nykyistä suodatinta. *@
                         <option value="@at" selected="@(filterAction == at)">@at</option>
                     }
                 </select>
             </div>
+
+            @* Käyttäjä-hakukenttä: sähköpostin perusteella. *@
             <div class="col-auto">
                 <label class="form-label small fw-medium mb-1">Käyttäjä</label>
                 <input type="text" name="userEmail" value="@filterUserEmail"
                        class="form-control form-control-sm" placeholder="sähköposti" style="width:180px" />
             </div>
+
+            @* Entiteettityyppi-suodatin. *@
             <div class="col-auto">
                 <label class="form-label small fw-medium mb-1">Entiteetti</label>
                 <select name="entityType" class="form-select form-select-sm">
                     <option value="">Kaikki</option>
+                    @* Staattinen lista — nämä ovat ainoa entiteettityypit järjestelmässä. *@
                     @foreach (var et in new[] { "Ticket", "Invoice", "User", "Customer" })
                     {
                         <option value="@et" selected="@(filterEntityType == et)">@et</option>
                     }
                 </select>
             </div>
+
+            @* Alkupäivämäärä. *@
             <div class="col-auto">
                 <label class="form-label small fw-medium mb-1">Alkaen</label>
+                @* type="date" = selain näyttää päivämäärävalitsimen.
+                   value="@filterFrom" = esitäytetään suodatuksen arvo. *@
                 <input type="date" name="from" value="@filterFrom"
                        class="form-control form-control-sm" />
             </div>
+
+            @* Loppupäivämäärä. *@
             <div class="col-auto">
                 <label class="form-label small fw-medium mb-1">Päättyen</label>
                 <input type="date" name="to" value="@filterTo"
                        class="form-control form-control-sm" />
             </div>
+
+            @* Toimintopainikkeet. *@
             <div class="col-auto">
+                @* Suodata = lähettää GET-lomakkeen (lisää parametrit URL:iin). *@
                 <button type="submit" class="btn btn-primary btn-sm">
                     <i class="bi bi-funnel me-1"></i>Suodata
                 </button>
+                @* Tyhjennä = linkki ilman parametreja (nollaa kaikki suodattimet). *@
                 <a asp-action="Index" class="btn btn-outline-secondary btn-sm ms-1">Tyhjennä</a>
             </div>
         </form>
     </div>
 </div>
 
-@* ── Lokitaulukko ────────────────────────────────────────────── *@
+@* ── Lokitaulukko ───────────────────────────────────────────────── *@
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
+        @* Tyhjä tila jos suodattimet eivät tuottaneet tuloksia. *@
         @if (!Model.Any())
         {
             <div class="text-center py-5 text-muted">
@@ -106,34 +156,45 @@
         else
         {
             <div class="table-responsive">
+                @* table-sm = tiiviimpi (vähemmän padding). font-monospace via td. *@
                 <table class="table table-hover table-sm align-middle mb-0 small">
                     <thead class="table-light">
                         <tr>
-                            <th style="width:160px">Aika</th>
-                            <th style="width:160px">Toiminto</th>
-                            <th>Käyttäjä</th>
-                            <th>Entiteetti</th>
-                            <th>Tiedot</th>
-                            <th style="width:110px">IP-osoite</th>
+                            <th style="width:160px">Aika</th>       @* Aikaleima *@
+                            <th style="width:160px">Toiminto</th>   @* Tapahtuma *@
+                            <th>Käyttäjä</th>                       @* Sähköposti *@
+                            <th>Entiteetti</th>                     @* Mihin liittyy *@
+                            <th>Tiedot</th>                         @* Lisätiedot *@
+                            <th style="width:110px">IP-osoite</th>  @* Mistä tuli *@
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var log in Model)
                         {
                             <tr>
+                                @* Aikaleima. ToLocalTime() = UTC → paikallinen aika.
+                                   font-monospace = kiinteälevyinen fontti numeroille. *@
                                 <td class="text-muted font-monospace">
                                     @log.Timestamp.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")
                                 </td>
+
+                                @* Toiminto-merkki värikkäänä. BadgeClass palauttaa värin. *@
                                 <td>
                                     <span class="badge @BadgeClass(log.Action)">@log.Action</span>
                                 </td>
+
+                                @* Käyttäjän sähköposti. text-truncate = lyhennetään jos liian pitkä.
+                                   max-width rajoittaa leveyttä CSS:ssä. *@
                                 <td class="text-truncate" style="max-width:160px">
                                     @(log.UserEmail ?? "–")
                                 </td>
+
+                                @* Entiteettityyppi ja ID (esim. "Ticket #42"). *@
                                 <td>
                                     @if (log.EntityType is not null)
                                     {
                                         <span class="text-muted">@log.EntityType</span>
+                                        @* EntityId on string (GUID tai numero). *@
                                         @if (log.EntityId is not null)
                                         {
                                             <span class="text-muted"> #@log.EntityId</span>
@@ -144,10 +205,15 @@
                                         <span class="text-muted">–</span>
                                     }
                                 </td>
+
+                                @* Lisätiedot: lyhennettynä taulukossa, täysi teksti title-tooltipissä.
+                                   Käyttäjä voi lukea täyden tekstin viemällä hiiren päälle. *@
                                 <td class="text-muted text-truncate" style="max-width:260px"
                                     title="@log.Details">
                                     @(log.Details ?? "–")
                                 </td>
+
+                                @* IP-osoite. font-monospace = tasalevyinen, helppo lukea. *@
                                 <td class="font-monospace text-muted">
                                     @(log.IpAddress ?? "–")
                                 </td>
@@ -160,12 +226,19 @@
     </div>
 </div>
 
-@* ── Sivutus ─────────────────────────────────────────────────── *@
+@* ── Sivutus ─────────────────────────────────────────────────────── *@
+@* Näytetään vain jos sivuja on enemmän kuin yksi. *@
 @if (totalPages > 1)
 {
     <nav class="mt-3">
+        @* justify-content-center = sivutuspainikkeet ruudun keskellä. *@
         <ul class="pagination pagination-sm justify-content-center">
+
+            @* "Edellinen"-nuoli. disabled = harmaannettu jos ollaan ensimmäisellä sivulla. *@
             <li class="page-item @(page <= 1 ? "disabled" : "")">
+                @* asp-route-page = URL-parametri ?page=X.
+                   Kaikki muut suodattimet välitetään mukana, jotta ne pysyvät voimassa
+                   kun siirrytään seuraavalle sivulle. *@
                 <a class="page-link" asp-action="Index"
                    asp-route-page="@(page - 1)"
                    asp-route-action="@filterAction"
@@ -174,8 +247,13 @@
                    asp-route-from="@filterFrom"
                    asp-route-to="@filterTo">‹</a>
             </li>
+
+            @* Sivunumerot: näytetään ±3 sivua nykyisen ympärillä.
+               Math.Max(1, page-3) = ei mene alle 1.
+               Math.Min(totalPages, page+3) = ei mene yli kokonaissivumäärän. *@
             @for (int p = Math.Max(1, page - 3); p <= Math.Min(totalPages, page + 3); p++)
             {
+                @* active = korostaa nykyisen sivun. *@
                 <li class="page-item @(p == page ? "active" : "")">
                     <a class="page-link" asp-action="Index"
                        asp-route-page="@p"
@@ -186,6 +264,8 @@
                        asp-route-to="@filterTo">@p</a>
                 </li>
             }
+
+            @* "Seuraava"-nuoli. disabled = harmaannettu jos viimeisellä sivulla. *@
             <li class="page-item @(page >= totalPages ? "disabled" : "")">
                 <a class="page-link" asp-action="Index"
                    asp-route-page="@(page + 1)"

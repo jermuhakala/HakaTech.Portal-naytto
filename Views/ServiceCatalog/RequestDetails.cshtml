@@ -1,36 +1,70 @@
 @*
-    ServiceCatalog/RequestDetails.cshtml — Yksittäisen tarjouspyynnön
-    detaljisivu (admin). Näyttää asiakkaan viestin ja sallii adminin
-    päivittää tilaa ja sisäisiä muistiinpanoja.
+    ServiceCatalog/RequestDetails.cshtml — Yksittäisen tarjouspyynnön detaljisivu (admin).
+
+    Rakenne:
+      - Otsikkorivi: nuoli takaisin + "Tarjouspyyntö #X"
+      - Kaksipalstainen layout (col-md-7 + col-md-5):
+          Vasen (7/12): tietokortit (dl.row metatiedot + asiakkaan viesti)
+          Oikea (5/12): tilansäätökortti (Tila-valitsin + AdminNotes)
+      - dl.row = definition list Bootstrap-ruudukossa (termi vasemmalla, määritelmä oikealla)
+      - white-space: pre-wrap = asiakkaan viesti säilyttää rivinvaihdot
+      - @functions-lohko: samat StatusLabel ja BadgeClass kuin Requests.cshtml:ssä
+
+    Yhteys: ServiceCatalogController.RequestDetails (GET) ja UpdateRequest (POST).
 *@
+
+@* Malli = yksittäinen QuoteRequest (navigaatiot Service, Customer, CreatedByUser ladattu). *@
 @model HakaTech.Portal.Models.Domain.QuoteRequest
 @using HakaTech.Portal.Models.Domain
 @using HakaTech.Portal.Models.ViewModels
+
 @{
+    @* Sivun otsikko: "Tarjouspyyntö #42" (L["Service.Request.Details"] sisältää {0}-paikan).
+       string.Format = muotoilee merkkijonon: korvaa {0}:n Model.Id:llä. *@
     ViewData["Title"] = string.Format(L["Service.Request.Details"].Value, Model.Id);
+
+    @* updateModel = jos lomakkeen lähetys epäonnistuu (validointivirhe), kontrolleri
+       palauttaa täytetyn ViewModelin ViewBagissa ja käyttäjä näkee syöttämänsä arvot.
+       as QuoteRequestUpdateViewModel = tyyppimuunnos; palauttaa null jos ei onnistu. *@
     var updateModel = ViewBag.UpdateModel as QuoteRequestUpdateViewModel;
 }
 
+@* Otsikkorivi: nuoli + "Tarjouspyyntö #X". *@
 <div class="d-flex align-items-center gap-3 mb-3">
+    @* Takaisin tarjouspyyntölistaan. *@
     <a asp-action="Requests" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
     </a>
+    @* @Model.Id = tarjouspyynnön tietokantatunnus (esim. "Tarjouspyyntö #42"). *@
     <h2 class="mb-0"><i class="bi bi-envelope-open me-2"></i>Tarjouspyyntö #@Model.Id</h2>
 </div>
 
+@* Kaksipalstainen layout. g-4 = 1.5rem väli sarakkeiden välillä. *@
 <div class="row g-4">
 
-    @* Vasemmalle: tiedot *@
+    @* ── Vasen sarake (7/12): tiedot ── *@
     <div class="col-md-7">
+
+        @* Metatietokortti. *@
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-body">
+                @* dl.row = Bootstrap definition list -rakenne:
+                   dt = termi (otsikko, vasemmalla, col-sm-4)
+                   dd = määritelmä (arvo, oikealla, col-sm-8)
+                   mb-0 = ei ylimääräistä alapaddingia. *@
                 <dl class="row mb-0">
+
+                    @* Palvelu *@
                     <dt class="col-sm-4 text-muted small">Palvelu</dt>
                     <dd class="col-sm-8 fw-semibold">@(Model.Service?.Name ?? "—")</dd>
 
+                    @* Asiakas *@
                     <dt class="col-sm-4 text-muted small">Asiakas</dt>
                     <dd class="col-sm-8">@(Model.Customer?.CompanyName ?? "—")</dd>
 
+                    @* Pyytäjä: FullName jos asetettu ja ei-tyhjä, muuten Email, muuten "—".
+                       Moniporras ternäärinen lauseke: tarkistaa ensin nimen pituuden,
+                       sitten emailin null-turvallisuuden. *@
                     <dt class="col-sm-4 text-muted small">Pyytäjä</dt>
                     <dd class="col-sm-8">
                         @(Model.CreatedByUser?.FullName.Length > 0
@@ -38,49 +72,71 @@
                             : Model.CreatedByUser?.Email ?? "—")
                     </dd>
 
+                    @* Luontiaika — päivä, kuukausi, vuosi ja kellonaika. *@
                     <dt class="col-sm-4 text-muted small">Lähetetty</dt>
                     <dd class="col-sm-8">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd>
 
+                    @* Päivitysaika — milloin tila tai muistiinpanoja muutettiin viimeksi. *@
                     <dt class="col-sm-4 text-muted small">Päivitetty</dt>
                     <dd class="col-sm-8">@Model.UpdatedAt.ToString("dd.MM.yyyy HH:mm")</dd>
 
+                    @* Tila badgena (sama kuin listanäkymässä). *@
                     <dt class="col-sm-4 text-muted small">Tila</dt>
                     <dd class="col-sm-8">
+                        @* BadgeClass palauttaa CSS-luokat, StatusLabel suomenkielisen tekstin. *@
                         <span class="badge @BadgeClass(Model.Status)">@StatusLabel(Model.Status)</span>
                     </dd>
                 </dl>
             </div>
         </div>
 
+        @* Asiakkaan viesti — näytetään VAIN jos viesti ei ole tyhjä.
+           string.IsNullOrWhiteSpace = tarkistaa null, tyhjän merkkijonon JA pelkät välilyönnit. *@
         @if (!string.IsNullOrWhiteSpace(Model.Message))
         {
             <div class="card shadow-sm border-0">
+                @* Kortin otsikkopalkki. *@
                 <div class="card-header small fw-semibold">
                     <i class="bi bi-chat-left-text me-1"></i>Asiakkaan viesti
                 </div>
                 <div class="card-body">
+                    @* white-space: pre-wrap = säilyttää asiakkaan kirjoittamat rivinvaihdot
+                       (Enter-näppäimen painallukset). Ilman tätä kaikki teksti olisi yhdellä rivillä.
+                       pre-wrap = myös tavallinen sananväli ja rivitys toimii normaalisti. *@
                     <p class="mb-0" style="white-space: pre-wrap;">@Model.Message</p>
                 </div>
             </div>
         }
     </div>
 
-    @* Oikealle: admin-toiminnot *@
+    @* ── Oikea sarake (5/12): admin-toiminnot ── *@
     <div class="col-md-5">
         <div class="card shadow-sm border-0">
             <div class="card-header small fw-semibold">
                 <i class="bi bi-sliders me-1"></i>Päivitä tila
             </div>
             <div class="card-body">
+                @* POST /ServiceCatalog/UpdateRequest — päivittää tilan ja muistiinpanot. *@
                 <form asp-action="UpdateRequest" method="post">
+                    @* CSRF-suojaustunnus. *@
                     @Html.AntiForgeryToken()
+
+                    @* Piilokenttä: välittää tarjouspyynnön ID:n kontrollerille.
+                       Kontrolleri tarvitsee tämän tietääkseen mitä pyyntöä päivitetään.
+                       name="Id" = model binding sitoo tämän QuoteRequestUpdateViewModel.Id:hin. *@
                     <input type="hidden" name="Id" value="@Model.Id" />
 
+                    @* Tilavalitsin. *@
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Tila</label>
+                        @* Tilavalitsin: generoidaan manuaalisesti (ei asp-items) jotta
+                           voidaan käyttää StatusLabel-apufunktiota suomenkielisiin nimiin. *@
                         <select name="Status" class="form-select">
+                            @* Iteroidaan kaikki QuoteRequestStatus-arvot. *@
                             @foreach (QuoteRequestStatus s in Enum.GetValues<QuoteRequestStatus>())
                             {
+                                @* Nykyinen tila merkitään selected-attribuutilla.
+                                   selected = selain näyttää tämän option oletuksena valittuna. *@
                                 if (Model.Status == s)
                                 {
                                     <option value="@s" selected>@StatusLabel(s)</option>
@@ -93,12 +149,19 @@
                         </select>
                     </div>
 
+                    @* Adminin sisäiset muistiinpanot — EI näytetä asiakkaalle.
+                       name="AdminNotes" = model binding sitoo QuoteRequestUpdateViewModel.AdminNotes:iin.
+                       rows="5" = isompi kenttä (sisäiset muistiinpanot voivat olla pitkiä).
+                       @Model.AdminNotes = esitäyttää kentän nykyisillä muistiinpanoilla. *@
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Muistiinpanot <span class="text-muted">(sisäiset)</span></label>
+                        <label class="form-label fw-semibold">
+                            Muistiinpanot <span class="text-muted">(sisäiset)</span>
+                        </label>
                         <textarea name="AdminNotes" class="form-control" rows="5"
                                   placeholder="Omat muistiinpanot tarjouksesta…">@Model.AdminNotes</textarea>
                     </div>
 
+                    @* Tallenna-painike koko levyinen (w-100). *@
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="bi bi-check-lg me-1"></i>Tallenna
                     </button>
@@ -108,7 +171,14 @@
     </div>
 </div>
 
+@* ── @functions-lohko ──
+   Samat apufunktiot kuin Requests.cshtml:ssä. Toistetaan koska @functions
+   on aina näkymäkohtainen — ei peritä eikä jaeta tiedostojen välillä.
+   (Yhteinen koodi voitaisiin siirtää HtmlHelper-laajennukseen tai PartialViewiin,
+    mutta tässä yksinkertaisempi ratkaisu on toistaa ne.) *@
 @functions {
+    @* StatusLabel: enum → suomenkielinen tilanimi.
+       switch expression (C# 8): jokainen rivi on "pattern => tulos". *@
     static string StatusLabel(QuoteRequestStatus s) => s switch
     {
         QuoteRequestStatus.Pending    => "Odottaa",
@@ -116,9 +186,11 @@
         QuoteRequestStatus.Sent       => "Lähetetty",
         QuoteRequestStatus.Accepted   => "Hyväksytty",
         QuoteRequestStatus.Declined   => "Hylätty",
-        _                             => s.ToString()
+        _                             => s.ToString()  @* fallback: englanninkielinen nimi *@
     };
 
+    @* BadgeClass: enum → Bootstrap-CSS-luokat tilaa vastaavaa väriä varten.
+       text-dark lisätään vaaleille taustoille (warning, info) luettavuuden vuoksi. *@
     static string BadgeClass(QuoteRequestStatus s) => s switch
     {
         QuoteRequestStatus.Pending    => "bg-warning text-dark",

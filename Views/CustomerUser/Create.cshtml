@@ -1,61 +1,93 @@
 @*
-    CustomerUser/Create.cshtml — Lomake uuden käyttäjän lisäämiseen
-    asiakasyritykseen. Customer-admin tai admin voi käyttää.
+    CustomerUser/Create.cshtml — Uuden käyttäjän lisäyslomake asiakasyritykseen.
+
+    Sekä admin että CustomerAdmin voivat käyttää tätä lomaketta,
+    mutta CustomerAdmin voi lisätä vain oman yrityksensä käyttäjiä
+    (kontrolleri tarkistaa me.CustomerId == model.CustomerId).
+
+    Salasana asetetaan tässä luonnin yhteydessä. Käyttäjä voi myöhemmin
+    vaihtaa sen ChangePassword-sivulla. EmailConfirmed asetetaan automaattisesti
+    todeksi (admin luo tilin, ei tarvita vahvistusviestiä).
+
+    Yhteys: CustomerUserController.Create (GET + POST).
 *@
+
+@* CustomerUserFormViewModel sisältää:
+   FullName, Email, Password, ConfirmPassword, IsCustomerAdmin (bool), CustomerId (int) *@
 @model HakaTech.Portal.Models.ViewModels.CustomerUserFormViewModel
+
 @{
+    @* Yrityksen tiedot otsikkoa varten. *@
     var customer = ViewBag.Customer as HakaTech.Portal.Models.Domain.Customer;
     ViewData["Title"] = L["CustomerUser.Add"].Value;
 }
 
+@* Otsikkorivi: Takaisin-linkki + otsikko. *@
 <div class="d-flex align-items-center gap-3 mb-4">
+    @* Takaisin käyttäjälistaan — asp-route-customerId välittää yrityksen ID:n. *@
     <a asp-action="Index" asp-route-customerId="@Model.CustomerId"
        class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
     </a>
     <div>
         <h2 class="mb-0">Lisää käyttäjä</h2>
+        @* Yrityksen nimi alaotsikkona — muistuttaa mihin yritykseen käyttäjä lisätään. *@
         <small class="text-muted">@customer?.CompanyName</small>
     </div>
 </div>
 
+@* Lomakekortti: rajoitettu leveys (col-lg-6 = max 50% leveällä näytöllä). *@
 <div class="row justify-content-center">
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
                 <form asp-action="Create" method="post">
                     @Html.AntiForgeryToken()
+
+                    @* CustomerId piilokenttänä — TÄRKEÄÄ turvallisuudelle.
+                       Kontrolleri vertaa tätä arvoa kirjautuneen käyttäjän yritykseen.
+                       IDOR-suojaus: CustomerAdmin ei voi vaihtaa tätä toiseksi yritykseksi. *@
                     <input type="hidden" asp-for="CustomerId" />
 
+                    @* asp-validation-summary="All" = näyttää KAIKKI virheet
+                       (sekä mallin että kenttien), ei vain ModelOnly.
+                       Tässä lomakkeessa toimii paremmin niin. *@
                     <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
 
+                    @* Koko nimi. *@
                     <div class="mb-3">
                         <label asp-for="FullName" class="form-label fw-medium"></label>
                         <input asp-for="FullName" class="form-control" placeholder="Etunimi Sukunimi" />
                         <span asp-validation-for="FullName" class="text-danger small"></span>
                     </div>
 
+                    @* Sähköposti — toimii myös kirjautumistunnuksena (UserName=Email). *@
                     <div class="mb-3">
                         <label asp-for="Email" class="form-label fw-medium"></label>
                         <input asp-for="Email" class="form-control" placeholder="kayttaja@esimerkki.fi" />
                         <span asp-validation-for="Email" class="text-danger small"></span>
                     </div>
 
+                    @* Salasana. *@
                     <div class="mb-3">
                         <label asp-for="Password" class="form-label fw-medium"></label>
                         <input asp-for="Password" class="form-control" autocomplete="new-password" />
+                        @* Vihjee salasanavaatimuksista. *@
                         <div class="form-text">Vähintään 8 merkkiä, iso kirjain ja numero.</div>
                         <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>
 
+                    @* Salasanan vahvistus. *@
                     <div class="mb-4">
                         <label asp-for="ConfirmPassword" class="form-label fw-medium"></label>
                         <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
                         <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
                     </div>
 
+                    @* Pääkäyttäjä-valinta. bg-light rounded = korostaa tätä osiota. *@
                     <div class="mb-4 p-3 bg-light rounded">
                         <div class="form-check">
+                            @* IsCustomerAdmin = true → käyttäjä voi hallinnoida yrityksen käyttäjiä. *@
                             <input asp-for="IsCustomerAdmin" class="form-check-input" />
                             <label asp-for="IsCustomerAdmin" class="form-check-label fw-medium">
                                 Yrityksen pääkäyttäjä
@@ -66,10 +98,12 @@
                         </div>
                     </div>
 
+                    @* Toimintopainikkeet. *@
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-person-plus me-1"></i>Luo käyttäjä
                         </button>
+                        @* Peruuta vie takaisin käyttäjälistaan. *@
                         <a asp-action="Index" asp-route-customerId="@Model.CustomerId"
                            class="btn btn-outline-secondary">Peruuta</a>
                     </div>
@@ -80,5 +114,7 @@
 </div>
 
 @section Scripts {
+    @* <partial name="..."> on lyhyempi tapa kuin @{ await Html.RenderPartialAsync(...); }
+       Molemmat toimivat; <partial> on suositeltava tapa ASP.NET Core 3.0+. *@
     <partial name="_ValidationScriptsPartial" />
 }

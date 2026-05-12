@@ -1,13 +1,24 @@
 @*
-    RemoteDesktop/Edit.cshtml — Etäyhteyden muokkauslomake. Salasana
-    näkyy tyhjänä — uusi syötetty salasana korvaa vanhan jos annetaan.
+    RemoteDesktop/Edit.cshtml — Etäyhteyden muokkauslomake (admin).
+
+    Sama rakenne kuin Create.cshtml mutta:
+      - Harmaa korttiotsikko (muokkaus)
+      - PlainPassword on tyhjä — jos käyttäjä jättää tyhjäksi, vanha salasana säilyy.
+        Kontrolleri tarkistaa onko uusi salasana annettu.
+      - asp-route-id = yhteyden ID URL:ssa (POST /RemoteDesktop/Edit/{id})
+      - RDP-asetukset esitäytetty nykyisillä arvoilla
+
+    Yhteys: RemoteDesktopController.Edit (GET + POST).
 *@
+
 @model HakaTech.Portal.Models.ViewModels.RemoteDesktopConnectionFormViewModel
 @using HakaTech.Portal.Models.Domain
+
 @{
     ViewData["Title"] = L["RemoteDesktop.EditTitle"].Value;
 }
 
+@* Takaisin hallintaan. *@
 <div class="mb-3">
     <a asp-action="Manage" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Takaisin hallintaan
@@ -17,15 +28,17 @@
 <div class="row justify-content-center">
     <div class="col-lg-7">
         <div class="card shadow-sm border-0">
+            @* Harmaa otsikko = muokkaus (vs. sininen luonti). *@
             <div class="card-header bg-secondary text-white py-3">
                 <h5 class="mb-0"><i class="bi bi-pencil me-2"></i>Muokkaa etäyhteyttä</h5>
             </div>
             <div class="card-body p-4">
+                @* asp-route-id="@Model.Id" = yhteyden ID URL:iin (POST /Edit/{id}). *@
                 <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
                     @Html.AntiForgeryToken()
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3" style="display:none"></div>
 
-                    @* Asiakas *@
+                    @* Asiakasvalitsin — esitäytetty nykyisellä asiakkaalla. *@
                     <div class="mb-3">
                         <label asp-for="CustomerId" class="form-label fw-medium"></label>
                         <select asp-for="CustomerId" asp-items="Model.CustomerOptions" class="form-select">
@@ -34,17 +47,18 @@
                         <span asp-validation-for="CustomerId" class="text-danger small"></span>
                     </div>
 
-                    @* Nimi *@
+                    @* Yhteyden nimi — esitäytetty. *@
                     <div class="mb-3">
                         <label asp-for="Name" class="form-label fw-medium"></label>
                         <input asp-for="Name" class="form-control" />
                         <span asp-validation-for="Name" class="text-danger small"></span>
                     </div>
 
-                    @* Protokolla + portti *@
+                    @* Protokolla + portti. *@
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label asp-for="Protocol" class="form-label fw-medium"></label>
+                            @* Nykyinen protokolla esivalittuna (asp-for hoitaa sen). *@
                             <select asp-for="Protocol"
                                     asp-items="Html.GetEnumSelectList<RemoteDesktopProtocol>()"
                                     class="form-select"
@@ -59,14 +73,14 @@
                         </div>
                     </div>
 
-                    @* Isäntänimi *@
+                    @* Isäntänimi — esitäytetty. *@
                     <div class="mb-3">
                         <label asp-for="Hostname" class="form-label fw-medium"></label>
                         <input asp-for="Hostname" class="form-control" />
                         <span asp-validation-for="Hostname" class="text-danger small"></span>
                     </div>
 
-                    @* Käyttäjätunnus + salasana *@
+                    @* Käyttäjätunnus + salasana. *@
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label asp-for="Username" class="form-label fw-medium"></label>
@@ -75,6 +89,9 @@
                         </div>
                         <div class="col-md-6">
                             <label asp-for="PlainPassword" class="form-label fw-medium"></label>
+                            @* Salasana AINA tyhjänä muokkauslomakkeessa — turvallisuus.
+                               Salasanoja ei lähetetä selaimelle HTML:ssä.
+                               placeholder = ohjeistaa käyttäjää. *@
                             <input asp-for="PlainPassword" class="form-control" type="password"
                                    autocomplete="new-password"
                                    placeholder="Jätä tyhjäksi pitääksesi nykyisen" />
@@ -82,11 +99,12 @@
                         </div>
                     </div>
 
-                    @* RDP-asetukset *@
+                    @* RDP-asetukset (Security, IgnoreCert) — JS piilottaa jos ei RDP. *@
                     <div id="rdpSettings" class="mb-3">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label asp-for="Security" class="form-label fw-medium"></label>
+                                @* Nykyinen arvo esivalittu asp-for:n kautta. *@
                                 <select asp-for="Security" class="form-select">
                                     <option value="any">any (automaattinen)</option>
                                     <option value="rdp">rdp</option>
@@ -103,7 +121,7 @@
                         </div>
                     </div>
 
-                    @* Guacamole-yhteyden ID *@
+                    @* Guacamolen yhteysnumero. *@
                     <div class="mb-3">
                         <label asp-for="GuacamoleConnectionId" class="form-label fw-medium"></label>
                         <input asp-for="GuacamoleConnectionId" class="form-control font-monospace"
@@ -115,19 +133,21 @@
                         <span asp-validation-for="GuacamoleConnectionId" class="text-danger small"></span>
                     </div>
 
-                    @* Muistiinpanot *@
+                    @* Muistiinpanot — esitäytetty. *@
                     <div class="mb-3">
                         <label asp-for="Notes" class="form-label fw-medium"></label>
+                        @* rows="2" tiiviimpi kenttä (muokkaus vs. luonti). *@
                         <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
                         <span asp-validation-for="Notes" class="text-danger small"></span>
                     </div>
 
-                    @* Aktiivinen *@
+                    @* Aktiivinen-valintaruutu — esitäytetty. *@
                     <div class="form-check mb-4">
                         <input asp-for="IsActive" class="form-check-input" type="checkbox" />
                         <label asp-for="IsActive" class="form-check-label">Aktiivinen (näkyy asiakkaalle)</label>
                     </div>
 
+                    @* Toimintopainikkeet. *@
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-floppy me-1"></i>Tallenna muutokset
@@ -143,14 +163,18 @@
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
     <script>
+        @* Muokkauslomakkeessa ei muuteta porttia oletusarvoksi (käyttäjä on asettanut sen).
+           Ainoastaan RDP-asetukset näytetään/piilotetaan protokollan mukaan. *@
         const proto  = document.getElementById('protocolSelect');
         const rdpDiv = document.getElementById('rdpSettings');
 
         function toggleRdp() {
+            @* proto.value === '0' = RDP on valittuna (enum Rdp = 0). *@
             rdpDiv.style.display = proto.value === '0' ? '' : 'none';
         }
 
         proto.addEventListener('change', toggleRdp);
+        @* Ajetaan heti: näyttää tai piilottaa RDP-asetukset nykyisen protokollan mukaan. *@
         toggleRdp();
     </script>
 }

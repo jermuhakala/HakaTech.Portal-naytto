@@ -1,15 +1,43 @@
 @*
-    Booking/SlotForm.cshtml — Adminin lomake aikaikkunan luomiseen ja
-    muokkaamiseen. Sama lomake palvelee molempia (Id > 0 = muokkaus).
+    Booking/SlotForm.cshtml — Adminin lomake aikaikkunan luomiseen ja muokkaamiseen.
+
+    Sama lomake palvelee kahta toimintoa:
+      - Id == 0 (tai oletusarvo) → uuden aikavälin luonti (CreateSlot)
+      - Id > 0 → olemassa olevan aikavälin muokkaus (EditSlot)
+
+    Kentät:
+      - Title (otsikko)
+      - SlotType (Huolto / Konsultointi / Etätuki)
+      - StartTime (alkamisaika datetime-local)
+      - DurationMinutes (kesto minuuteissa, 15–480, askelväli 15)
+      - MaxCapacity (enimmäisvarausmäärä)
+      - Description (vapaaehtoinen kuvaus asiakkaille)
+      - IsActive (julkaistu / ei näy asiakkaille)
+
+    Yhteys: BookingController.CreateSlot (GET + POST) ja EditSlot (GET + POST).
 *@
+
+@* BookingSlotFormViewModel sisältää: Id, Title, SlotType, StartTime,
+   DurationMinutes, MaxCapacity, Description, IsActive. *@
 @model HakaTech.Portal.Models.ViewModels.BookingSlotFormViewModel
 @using HakaTech.Portal.Models.Domain
+
 @{
+    @* isEdit = onko kyse muokkauksesta.
+       Model.Id > 0 = tietokantarivi löytyy (muokkaus), 0 = uusi. *@
     bool isEdit = Model.Id > 0;
+
+    @* Sivun otsikko lokalisoituna — eri teksti luonnille ja muokkaukselle.
+       .Value = puretaan ILocalizedString → string. *@
     ViewData["Title"] = (isEdit ? L["Booking.SlotEdit"] : L["Booking.SlotNew"]).Value;
+
+    @* formAction = POST-kohdereitti.
+       ViewBag.FormAction = kontrolleri voi ylikirjoittaa (joustava).
+       Varaventtiili: isEdit → "EditSlot", luonti → "CreateSlot". *@
     string formAction = ViewBag.FormAction as string ?? (isEdit ? "EditSlot" : "CreateSlot");
 }
 
+@* Otsikkorivi: Takaisin-nappi + sivun otsikko. *@
 <div class="d-flex align-items-center gap-3 mb-4">
     <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
@@ -17,20 +45,28 @@
     <h2 class="mb-0">@ViewData["Title"]</h2>
 </div>
 
+@* Lomake rajoitettu leveyttä ja keskitetty. *@
 <div class="row justify-content-center">
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
+                @* asp-action="@formAction" = muuttuja → joko "CreateSlot" tai "EditSlot". *@
                 <form asp-action="@formAction" method="post">
                     @Html.AntiForgeryToken()
+
+                    @* Id-piilokenttä vain muokkauslomakkeessa.
+                       Kontrolleri tarvitsee ID:n tietääkseen mitä riviä päivitetään.
+                       Luonnissa ei tarvita (tietokanta antaa uuden ID:n). *@
                     @if (isEdit)
                     {
                         <input type="hidden" asp-for="Id" />
                     }
 
+                    @* Palvelinpuolen virhekooste. *@
                     <div asp-validation-summary="ModelOnly"
                          class="alert alert-danger" role="alert"></div>
 
+                    @* Aikavälin nimi. *@
                     <div class="mb-3">
                         <label asp-for="Title" class="form-label fw-medium"></label>
                         <input asp-for="Title" class="form-control"
@@ -38,18 +74,28 @@
                         <span asp-validation-for="Title" class="text-danger small"></span>
                     </div>
 
+                    @* Palvelutyyppi. asp-for + <select> = Tag Helper generoi name-attribuutin
+                       ja esivalitsee muokkauksessa nykyisen arvon. *@
                     <div class="mb-3">
                         <label asp-for="SlotType" class="form-label fw-medium"></label>
                         <select asp-for="SlotType" class="form-select">
+                            @* value="@BookingSlotType.Maintenance" = enum-arvo merkkijonona URL-enkoodattuna.
+                               ASP.NET MVC osaa muuntaa sen takaisin enum-arvoksi model bindingissa. *@
                             <option value="@BookingSlotType.Maintenance">Huolto</option>
                             <option value="@BookingSlotType.Consulting">Konsultointi</option>
                             <option value="@BookingSlotType.RemoteSupport">Etätuki</option>
                         </select>
                     </div>
 
+                    @* Alkamisaika + kesto vierekkäin (row g-3). *@
                     <div class="row g-3 mb-3">
                         <div class="col-sm-7">
                             <label class="form-label fw-medium">Alkamisaika</label>
+                            @* type="datetime-local" = selaimen natiivia päivämäärä+aika -valitsin.
+                               name="StartTime" + id="StartTime" käsin — asp-for ei tue
+                               datetime-local:ia kaikissa tilanteissa luotettavasti.
+                               value="@Model.StartTime.ToString("yyyy-MM-ddTHH:mm")"
+                               = ISO 8601 -muoto jota datetime-local odottaa (T = erotin). *@
                             <input type="datetime-local"
                                    id="StartTime" name="StartTime"
                                    value="@Model.StartTime.ToString("yyyy-MM-ddTHH:mm")"
@@ -58,21 +104,31 @@
                         </div>
                         <div class="col-sm-5">
                             <label asp-for="DurationMinutes" class="form-label fw-medium"></label>
+                            @* input-group = kenttä + "min"-teksti vierekkäin (yhdistelmäkenttä). *@
                             <div class="input-group">
+                                @* min="15" = minimikesto 15 min.
+                                   max="480" = maksimi 8 tuntia.
+                                   step="15" = askelväli 15 min (vain 15, 30, 45... jne.). *@
                                 <input asp-for="DurationMinutes" class="form-control" type="number" min="15" max="480" step="15" />
+                                @* input-group-text = yhdistelmäkentän oikean puolen teksti. *@
                                 <span class="input-group-text">min</span>
                             </div>
                             <span asp-validation-for="DurationMinutes" class="text-danger small"></span>
                         </div>
                     </div>
 
+                    @* Maksimikapasiteetti (varausmäärä). *@
                     <div class="mb-3">
                         <label asp-for="MaxCapacity" class="form-label fw-medium"></label>
+                        @* min="1" = vähintään yksi paikka.
+                           max="50" = enintään 50 varaaajaa.
+                           max-width:120px = kapea kenttä (pieni numero). *@
                         <input asp-for="MaxCapacity" class="form-control" type="number" min="1" max="50" style="max-width:120px" />
                         <div class="form-text">Kuinka monta asiakasta voi varata saman aikavälin.</div>
                         <span asp-validation-for="MaxCapacity" class="text-danger small"></span>
                     </div>
 
+                    @* Kuvaus (vapaaehtoinen). *@
                     <div class="mb-4">
                         <label asp-for="Description" class="form-label fw-medium"></label>
                         <textarea asp-for="Description" class="form-control" rows="3"
@@ -80,9 +136,12 @@
                         <span asp-validation-for="Description" class="text-danger small"></span>
                     </div>
 
+                    @* Julkaistu-valintaruutu. *@
                     <div class="mb-4 p-3 bg-light rounded">
                         <div class="form-check">
                             <input asp-for="IsActive" class="form-check-input" />
+                            @* Muokkauslomakkeessa esitäytetty: jos IsActive = true,
+                               rasti on päällä heti sivun latautuessa. *@
                             <label asp-for="IsActive" class="form-check-label fw-medium">Julkaistu</label>
                         </div>
                         <div class="form-text mt-1">
@@ -90,10 +149,14 @@
                         </div>
                     </div>
 
+                    @* Toimintopainikkeet. *@
                     <div class="d-flex gap-2">
+                        @* bi-floppy = levyke-ikoni (tallenna).
+                           Otsikko vaihtelee: "Tallenna" (muokkaus) tai "Luo aikaväli" (luonti). *@
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-floppy me-1"></i>@(isEdit ? "Tallenna" : "Luo aikaväli")
                         </button>
+                        @* Peruuta = takaisin kalenterin pääsivulle. *@
                         <a asp-action="Index" class="btn btn-outline-secondary">Peruuta</a>
                     </div>
                 </form>
@@ -103,5 +166,6 @@
 </div>
 
 @section Scripts {
+    @* Asiakaspuolen kenttävalidointi. *@
     <partial name="_ValidationScriptsPartial" />
 }

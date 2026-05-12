@@ -1,7 +1,31 @@
 @*
     _ValidationScriptsPartial.cshtml — Lataa jQuery Validation -kirjastot
-    asiakaspuolen lomakkeiden validointia varten. Sisällytetään näkymiin
-    joissa on lomake, esim: @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    asiakaspuolen (client-side) lomakkeiden validointia varten.
+
+    Näin toimii:
+      1. jquery.validate.js = jQuery-pohjainen validointikirjasto.
+         Tarkistaa lomakekentät selaimessa ennen palvelimelle lähetystä.
+      2. jquery.validate.unobtrusive.js = Microsoftin lisäosa.
+         Lukee asp-validation-* -attribuutit (HTML5 data-val-*) automaattisesti
+         ja kytkee niihin validointisäännöt — ei tarvita erillistä JS-koodia.
+
+    Käyttö näkymissä (lisää @section Scripts -lohkoon):
+        @section Scripts {
+            @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+        }
+
+    Näin validointivirheet näkyvät heti kun käyttäjä poistuu kentältä
+    (blur-tapahtuma), ilman palvelimelle lähetystä → parempi käyttökokemus.
 *@
+
+@* jquery.validate.min.js = jQuery Validation -kirjasto tiivistemuodossa.
+   Ladataan paikallisesta lib-kansiosta (wwwroot/lib/jquery-validation/).
+   Riippuvuus: jQuery täytyy olla ladattu ensin (ladataan _Layout.cshtml:ssä). *@
 <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+
+@* jquery.validate.unobtrusive.min.js = Microsoftin Unobtrusive Validation.
+   Lukee ASP.NET Coren Tag Helpereiltä generoidut data-val-* -attribuutit
+   ja kääntää ne automaattisesti jQuery Validation -säännöiksi.
+   Esim. data-val-required="Kenttä on pakollinen." → required-sääntö.
+   Ladataan jquery-validation-unobtrusive-kansiosta. *@
 <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>

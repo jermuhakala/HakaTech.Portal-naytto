@@ -1,30 +1,48 @@
 @*
-    RemoteDesktop/Index.cshtml — Asiakkaalle näkyvä etäyhteyslista
-    (oman yrityksen yhteydet). Klikkaamalla yhteyttä avataan se
-    Guacamolen kautta selaimeen.
+    RemoteDesktop/Index.cshtml — Asiakkaan etäyhteyssivu.
+
+    Näyttää korttina oman yrityksen etäyhteydet (RDP/VNC/SSH).
+    Kortti sisältää:
+      - Yhteyden nimen
+      - Protokollan (värikoodattu badge)
+      - Isäntänimen ja portin
+      - Muistiinpanot
+      - "Yhdistä" -painike avaa Guacamolen uuteen välilehteen
+
+    Yhteys: RemoteDesktopController.Index.
 *@
+
+@* RemoteDesktopConnectionCardViewModel sisältää: Id, Name, Protocol,
+   Hostname, Port, Notes. *@
 @model IEnumerable<HakaTech.Portal.Models.ViewModels.RemoteDesktopConnectionCardViewModel>
 @using HakaTech.Portal.Models.Domain
+
 @{
     ViewData["Title"] = L["RemoteDesktop.IndexTitle"].Value;
 
+    @* ProtoStyle: palauttaa (Bootstrap-värinimi, ikoniluokka) protokollakohtaisesti.
+       static = apufunktio ei tarvitse instanssitietoja.
+       Tuple palautetaan: (string color, string icon). *@
     static (string color, string icon) ProtoStyle(RemoteDesktopProtocol p) => p switch {
-        RemoteDesktopProtocol.Rdp => ("primary", "bi-windows"),
-        RemoteDesktopProtocol.Vnc => ("warning",  "bi-display"),
-        RemoteDesktopProtocol.Ssh => ("success",  "bi-terminal"),
-        _                         => ("secondary","bi-display")
+        RemoteDesktopProtocol.Rdp => ("primary", "bi-windows"),  // Windows-logo RDP:lle
+        RemoteDesktopProtocol.Vnc => ("warning",  "bi-display"),  // näyttöikoni VNC:lle
+        RemoteDesktopProtocol.Ssh => ("success",  "bi-terminal"), // terminaali-ikoni SSH:lle
+        _                         => ("secondary","bi-display")   // oletusarvo
     };
 }
 
+@* Inline-CSS yhteyksien korteille. *@
 <style>
+    @* conn-card = hover-efekti: kortti nousee hieman ylös ja varjo voimistuu. *@
     .conn-card {
         transition: transform .15s ease, box-shadow .15s ease;
-        border-radius: 1rem !important;
+        border-radius: 1rem !important; @* Pyöristetyt kulmat kaikille puolille. *@
     }
     .conn-card:hover {
-        transform: translateY(-4px);
+        transform: translateY(-4px); @* Nostetaan 4px ylöspäin hoverissa. *@
         box-shadow: 0 .75rem 1.5rem rgba(0,0,0,.12) !important;
     }
+    @* conn-icon-wrap = pyöristetty neliö ikonin ympärillä. *@
     .conn-icon-wrap {
         width: 3.5rem; height: 3.5rem;
         border-radius: .75rem;
@@ -33,6 +51,7 @@
     }
 </style>
 
+@* Otsikkorivi. *@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="mb-0"><i class="bi bi-display me-2"></i>Etätyöpöytä</h2>
@@ -40,8 +59,10 @@
     </div>
 </div>
 
+@* Tyhjä tila: ei yhteyksiä asiakkaalle. *@
 @if (!Model.Any())
 {
+    @* alert-info = sininen tiedotelaatikko. *@
     <div class="alert alert-info">
         <i class="bi bi-info-circle me-1"></i>
         Sinulle ei ole vielä määritetty etäyhteyksiä.
@@ -50,34 +71,57 @@
 }
 else
 {
+    @* Korttien responsiivinen ruudukko:
+       row-cols-1 = mobiililla 1 sarake
+       row-cols-md-2 = ≥768px: 2 saraketta
+       row-cols-xl-3 = ≥1200px: 3 saraketta
+       g-4 = 24px välit. *@
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
         @foreach (var conn in Model)
         {
+            @* Dekonstruoi ProtoStyle-tuplen väri ja ikoniluokka. *@
             var (color, icon) = ProtoStyle(conn.Protocol);
             <div class="col">
+                @* h-100 = kortti täyttää kolumnin koko korkeuden (tasaisten rivien vuoksi). *@
                 <div class="card h-100 shadow-sm border-0 conn-card">
+                    @* d-flex flex-column gap-3 = pystysuuntainen flex, 16px välit elementtien välillä. *@
                     <div class="card-body p-4 d-flex flex-column gap-3">
                         <div class="d-flex align-items-start gap-3">
+                            @* Protokollaikonin pyöristetty neliö.
+                               bg-@(color)-subtle = Bootstrap 5.3: vaalea väritausta.
+                               text-@(color)-emphasis = ko. värin korostunut tekstiväri. *@
                             <div class="conn-icon-wrap bg-@(color)-subtle text-@(color)-emphasis">
                                 <i class="bi @icon"></i>
                             </div>
                             <div class="flex-grow-1">
+                                @* Yhteyden nimi. *@
                                 <h5 class="card-title fw-bold mb-1 fs-5">@conn.Name</h5>
+                                @* Protokollan badge: RDP / VNC / SSH isolla. *@
                                 <span class="badge bg-@(color)-subtle text-@(color)-emphasis text-uppercase small fw-semibold">
                                     @conn.Protocol.ToString()
                                 </span>
                             </div>
                         </div>
+                        @* Isäntänimi:portti harmaana. bi-hdd-network = verkkolevyikkoni. *@
                         <p class="text-muted small mb-0">
                             <i class="bi bi-hdd-network me-1"></i>@conn.Hostname:@conn.Port
                         </p>
+                        @* Muistiinpanot (vapaaehtoinen). *@
                         @if (!string.IsNullOrEmpty(conn.Notes))
                         {
                             <p class="text-muted small mb-0" style="line-height:1.5">@conn.Notes</p>
                         }
+                        @* Yhdistä-painike.
+                           w-100 = täyttää koko leveyden.
+                           mt-auto = työntyy kortin alaosaan (flex-column kanssa).
+                           target="_blank" = avaa uuteen välilehteen.
+                           rel="noopener noreferrer" = turvallisuus: uusi välilehti ei voi
+                           viitata takaisin tähän sivuun (window.opener) eikä lähettää
+                           Referer-otsikkoa. *@
                         <a asp-action="Connect" asp-route-id="@conn.Id"
                            class="btn btn-@color w-100 mt-auto"
                            target="_blank" rel="noopener noreferrer">
+                            @* bi-plug = pistoke-ikoni. *@
                             <i class="bi bi-plug me-2"></i>Yhdistä
                         </a>
                     </div>

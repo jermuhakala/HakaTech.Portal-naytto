@@ -1,32 +1,93 @@
 @*
-    _Button.cshtml — Yhtenäinen painike-elementti. Renderöi joko <a>-linkin
-    (jos Href annettu) tai <button>-elementin. Käytä:
-        <partial name="_Partials/_Button" model="new ButtonModel { Text = "Tallenna", Variant = ButtonVariant.Primary, Type = "submit" }" />
+    _Button.cshtml — Yhtenäinen painike-komponentti (partial).
+
+    Renderöi joko <a>-linkin tai <button>-elementin riippuen siitä,
+    onko Href-ominaisuus asetettu. Näin kaikilla painikkeilla on
+    yhtenäinen ulkoasu (btn-lnr -tyylisarjasta) riippumatta siitä
+    onko kyseessä navigointilinkki vai toimintopainike.
+
+    Käyttöesimerkki näkymässä:
+        <partial name="_Partials/_Button"
+                 model="new ButtonModel {
+                     Text    = "Tallenna",
+                     Variant = ButtonVariant.Primary,
+                     Type    = "submit",
+                     Icon    = "bi-check-lg"
+                 }" />
+
+    Tai linkkipainike:
+        <partial name="_Partials/_Button"
+                 model="new ButtonModel {
+                     Text = "Takaisin",
+                     Href = "/Ticket"
+                 }" />
 *@
+
+@* ButtonModel-luokka löytyy ViewModels.Ui-nimiavaruudesta.
+   Se sisältää kaikki painikkeen ominaisuudet: teksti, kuvake, tyyli jne. *@
 @model HakaTech.Portal.Models.ViewModels.Ui.ButtonModel
+
+@* Tuodaan ButtonVariant ja ButtonSize -enumit käyttöön:
+   ButtonVariant: Primary, Ghost, Danger, Success, ...
+   ButtonSize: Sm (pieni), Normal (oletus) *@
 @using HakaTech.Portal.Models.ViewModels.Ui
+
 @{
-    // Rakennetaan CSS-luokat variantin ja koon perusteella
+    @* Rakennetaan CSS-luokkanimi variantista.
+       Variant.ToString() → esim. "Primary", "Ghost", "Danger"
+       ToLowerInvariant() → muutetaan pieniksi kirjaimiksi: "primary"
+       Tulos: "variant-primary", "variant-ghost", jne.
+       Vastaavat CSS-säännöt löytyvät site.css:stä. *@
     var variantClass = "variant-" + Model.Variant.ToString().ToLowerInvariant();
+
+    @* Koko: pieni painike saa "size-sm" -luokan, normaalikokoisella ei lisäluokkaa.
+       Kaksoisyhtäläisyys (==) vertaa arvoihin turvallisesti. *@
     var sizeClass    = Model.Size == ButtonSize.Sm ? "size-sm" : "";
+
+    @* Kootaan lopulliset CSS-luokat: pohjaluokka + variantti + koko + mahdolliset lisäluokat.
+       CssClass = käyttäjän antamat lisäluokat (voi olla null → null-koalesenssi: "").
+       .Trim() = poistetaan ylimääräiset välilyönnit yhdisteltäessä. *@
     var cls          = ("btn-lnr " + variantClass + " " + sizeClass + " " + (Model.CssClass ?? "")).Trim();
+
+    @* isLink = true jos Href on asetettu → renderöidään <a>-elementti,
+       muuten renderöidään <button>-elementti.
+       IsNullOrEmpty tarkistaa sekä null- että tyhjän merkkijonon. *@
     var isLink       = !string.IsNullOrEmpty(Model.Href);
 }
+
+@* Haaraudutaan: linkki vai painike? *@
 @if (isLink)
 {
+    @* <a>-elementti = klikkaus navigoi URL:iin, ei lähetä lomaketta.
+       href = navigaatiokohdeosoite.
+       @(Model.Id != null ? "id=" + Model.Id : "") = lisätään id-attribuutti
+         vain jos se on annettu. Sulut + ternary-operaattori on Razor-tapa
+         ehdolliselle attribuutille.
+       title = tooltip teksti kun hiiri pysähtyy elementin päälle. *@
     <a href="@Model.Href"
        class="@cls"
        @(Model.Id != null ? "id=" + Model.Id : "")
        title="@Model.Title">
+        @* Ikoni (Bootstrap Icons) näytetään vain jos se on asetettu.
+           bi-luokka = "bi bi-{ikonin-nimi}", esim. "bi bi-check-lg". *@
         @if (!string.IsNullOrEmpty(Model.Icon))
         {
             <i class="bi @Model.Icon"></i>
         }
+        @* <span> käärii tekstin — mahdollistaa CSS-animaatiot ja
+           rail-tilan jossa teksti piilotetaan (vain ikoni näkyy). *@
         <span>@Model.Text</span>
     </a>
 }
 else
 {
+    @* <button>-elementti = lomakepainike tai toimintopainike.
+       type = "submit" lähettää lomakkeen, "button" ei tee mitään oletuksena.
+       Model.Type ?? "button" = jos tyyppiä ei ole asetettu, käytetään "button"
+         (turvallinen oletus, ei lähetä lomaketta vahingossa).
+       @(Model.Form != null ? "form=" + Model.Form : "") = kytkee painikkeen
+         ulkopuoliseen lomakkeeseen ID:n avulla (HTML5 form-attribuutti).
+         Näin "Tallenna"-nappi voi olla sivun yläpalkissa vaikka lomake on alempana. *@
     <button type="@(Model.Type ?? "button")"
             class="@cls"
             @(Model.Id != null ? "id=" + Model.Id : "")

@@ -1,24 +1,43 @@
 @*
     ServiceCatalog/Manage.cshtml — Adminin palvelukatalogin hallintasivu.
-    Listaa kaikki palvelut taulukkona ja sallii muokkauksen + poiston.
+
+    Rakenne:
+      - Otsikkorivi: "Hallinta"-otsikko + "Tarjouspyynnöt"- ja "Lisää palvelu"-painikkeet
+      - Palvelut taulukkona: Nimi, Kategoria, Kuvaus (katkaistuna), Lähtöhinta, Tila, Toiminnot
+      - Pehmytpoisto (soft delete): IsActive=false asettaa rivin harmaaaksi (table-secondary)
+        eikä Poista-painiketta näytetä inaktiivisille palveluille
+      - Muokkaa-painike on aina näkyvissä (myös inaktiivisille)
+
+    Yhteys: ServiceCatalogController.Manage (GET) ja Delete (POST).
 *@
+
+@* Malli = kaikki ServiceCatalogItem-oliot (sekä aktiiviset että inaktiiviset).
+   Admin näkee kaikki; asiakkaalle näytetään vain IsActive=true (Index-sivulla). *@
 @model IEnumerable<HakaTech.Portal.Models.Domain.ServiceCatalogItem>
+
 @{
+    @* Selaimen välilehden otsikko. *@
     ViewData["Title"] = L["Service.ManageTitle"].Value;
 }
 
+@* Otsikkorivi: vasemmalle otsikko, oikealle toimintopainikkeet.
+   justify-content-between = elementit venyvät otsikon ja painikkeiden väliin. *@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0"><i class="bi bi-gear me-2"></i>Palvelukatalogi – Hallinta</h2>
+    @* Toimintopainikkeet oikealla. gap-2 = 0.5rem väli. *@
     <div class="d-flex gap-2">
+        @* Tarjouspyynnöt-listaan siirtyminen. *@
         <a asp-action="Requests" class="btn btn-outline-secondary">
             <i class="bi bi-envelope-open me-1"></i>Tarjouspyynnöt
         </a>
+        @* Uuden palvelun lisääminen → ServiceCatalogController.Create (GET). *@
         <a asp-action="Create" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i>Lisää palvelu
         </a>
     </div>
 </div>
 
+@* Tyhjä tila: näytetään jos palveluja ei ole yhtäkään (edes inaktiivisia). *@
 @if (!Model.Any())
 {
     <div class="alert alert-info">
@@ -27,48 +46,87 @@
 }
 else
 {
+    @* table-responsive = vaakasuuntainen vieritys kapeilla näytöillä, ettei taulukko katkeile.
+       align-middle = taulukon sisältö tasataan pystysuunnassa rivien keskelle. *@
     <div class="table-responsive">
         <table class="table table-hover align-middle">
+            @* Taulukon otsikkorivi. table-light = vaalean harmaa tausta. *@
             <thead class="table-light">
                 <tr>
                     <th>Nimi</th>
                     <th>Kategoria</th>
                     <th>Kuvaus</th>
-                    <th class="text-end">Lähtöhinta</th>
-                    <th class="text-center">Tila</th>
-                    <th></th>
+                    <th class="text-end">Lähtöhinta</th>     @* oikealle tasattu (hinnat) *@
+                    <th class="text-center">Tila</th>        @* Aktiivinen/Poistettu badge *@
+                    <th></th>                                @* Toimintopainikkeet, ei otsikkoa *@
                 </tr>
             </thead>
             <tbody>
                 @foreach (var s in Model)
                 {
+                    @* Inaktiivinen palvelu himmennetään:
+                       table-secondary = harmaa taustasävy
+                       text-muted = vaalennettu teksti
+                       Yhdessä nämä signaloivat selkeästi "ei käytössä". *@
                     <tr class="@(!s.IsActive ? "table-secondary text-muted" : "")">
+
+                        @* Palvelun nimi lihavoituna. *@
                         <td class="fw-semibold">@s.Name</td>
+
+                        @* Kategoria — ?? "—" = null-kategoria näytetään ajatusviivana. *@
                         <td class="small">@(s.Category ?? "—")</td>
+
+                        @* Kuvaus katkaistuna pitkissä teksteissä:
+                           text-truncate = CSS overflow:hidden + text-overflow:ellipsis → "..."
+                           max-width:280px = maksimileveys, jonka jälkeen katkaistaan.
+                           Näin taulukko pysyy siistinä vaikka kuvaus olisi pitkä. *@
                         <td class="small text-truncate" style="max-width:280px;">@s.Description</td>
+
+                        @* Hinta oikealle tasattuna.
+                           s.Price.HasValue = tarkistaa onko nullable decimal asetettu.
+                           "N0" = tuhanserottimella, ei desimaaleja (esim. "1 500 €").
+                           : "—" = jos hintaa ei ole asetettu, näytetään ajatusviiva. *@
                         <td class="text-end small">
                             @(s.Price.HasValue ? s.Price.Value.ToString("N0") + " €" : "—")
                         </td>
+
+                        @* Tilamerkki (badge) keskitettynä. *@
                         <td class="text-center">
                             @if (s.IsActive)
                             {
+                                @* bg-success = vihreä. Aktiivinen palvelu. *@
                                 <span class="badge bg-success">Aktiivinen</span>
                             }
                             else
                             {
+                                @* bg-secondary = harmaa. Pehmytpoistettu (ei oikeasti poistettu tietokannasta). *@
                                 <span class="badge bg-secondary">Poistettu</span>
                             }
                         </td>
+
+                        @* Toimintopainikkeet (Muokkaa + Poista) oikealle. *@
                         <td class="text-end">
+                            @* Muokkaa — aina näkyvissä, myös inaktiivisille palveluille.
+                               asp-route-id = lisää ?id=X tai /id URL:iin riippuen reittimäärityksestä. *@
                             <a asp-action="Edit" asp-route-id="@s.Id"
                                class="btn btn-sm btn-outline-secondary me-1">
                                 <i class="bi bi-pencil"></i>
                             </a>
+
+                            @* Poista käytöstä — VAIN aktiivisille palveluille.
+                               Inaktiivisille ei näytetä, koska ne on jo poistettu. *@
                             @if (s.IsActive)
                             {
+                                @* Poisto on POST-pyyntö (ei GET), koska se muuttaa tietokantaa.
+                                   d-inline = form ei ota omaa tilaa, jää samalle riville Muokkaa-painikkeen kanssa.
+                                   onsubmit="return confirm(...)" = selain kysyy vahvistuksen ennen lähetystä.
+                                   Jos käyttäjä klikkaa "Peruuta", confirm() palauttaa false ja form ei lähetä. *@
                                 <form asp-action="Delete" asp-route-id="@s.Id" method="post" class="d-inline"
                                       onsubmit="return confirm('Poistetaanko palvelu käytöstä?')">
+                                    @* CSRF-suojaustunnus myös poistolomakkeeseen. *@
                                     @Html.AntiForgeryToken()
+                                    @* type="submit" = lähettää ylläolevan form-elementin.
+                                       btn-outline-danger = punainen reunapainike (varoittava). *@
                                     <button type="submit" class="btn btn-sm btn-outline-danger">
                                         <i class="bi bi-trash"></i>
                                     </button>

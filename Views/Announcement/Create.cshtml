@@ -1,53 +1,93 @@
 @*
-    Announcement/Create.cshtml — Uuden tiedotteen luontilomake (admin).
+    Announcement/Create.cshtml — Uuden tiedotteen luontilomake (vain admin).
+
+    Adminilla on mahdollisuus:
+      - Kirjoittaa otsikko ja sisältöteksti
+      - Valita tyyppi (Info / Huoltokatko / Varoitus)
+      - Rajoittaa näkyvyysaikaa (ValidFrom / ValidUntil)
+      - Julkaista heti tai tallentaa luonnokseksi (IsPublished-valinta)
+
+    Yhteys: AnnouncementController.Create (GET palauttaa tyhjän lomakkeen,
+    POST tallentaa ja ohjaa takaisin listaan).
 *@
+
+@* AnnouncementFormViewModel sisältää:
+     - Title, Content (merkkijonoja)
+     - Type (AnnouncementType-enum)
+     - ValidFrom, ValidUntil (DateTime? — valinnainen aikaraja)
+     - IsPublished (bool) *@
 @model HakaTech.Portal.Models.ViewModels.AnnouncementFormViewModel
+
+@* Tuodaan AnnouncementType käyttöön <option>-arvoihin. *@
 @using HakaTech.Portal.Models.Domain
+
 @{
     ViewData["Title"] = L["Announcement.Create.Title"].Value;
 }
 
+@* Otsikkorivi: Takaisin-linkki + otsikko. *@
 <div class="d-flex align-items-center gap-3 mb-3">
+    @* Takaisin tiedotelistaan. btn-outline-secondary btn-sm = pieni kehystetty painike. *@
     <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
     </a>
     <h2 class="mb-0"><i class="bi bi-megaphone me-2"></i>Uusi tiedote</h2>
 </div>
 
+@* Lomakekortti: max-leveys 680px jotta teksti pysyy luettavana. *@
 <div class="card shadow-sm border-0" style="max-width:680px;">
     <div class="card-body">
+        @* Lomake lähettää POST:in AnnouncementController.Create-metodille. *@
         <form asp-action="Create" method="post">
+            @* CSRF-suojaus: täytyy olla kaikissa POST-lomakkeissa. *@
             @Html.AntiForgeryToken()
+            @* Virheyhteenveto. small = pienempi fonttikoko virheilmoituksille. *@
             <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
 
+            @* Otsikko-kenttä. *@
             <div class="mb-3">
+                @* asp-for luo label-tekstin [Display(Name="...")]-attribuutista. *@
                 <label asp-for="Title" class="form-label fw-semibold"></label>
                 <input asp-for="Title" class="form-control" placeholder="Esim. Huoltokatko pe 23.5. klo 22–01" />
                 <span asp-validation-for="Title" class="text-danger small"></span>
             </div>
 
+            @* Sisältö-kenttä (pidempi selitysteksti). *@
             <div class="mb-3">
                 <label asp-for="Content" class="form-label fw-semibold"></label>
+                @* rows="4" = 4 tekstiriviä näkyvillä, mutta textarea venyy tarvittaessa. *@
                 <textarea asp-for="Content" class="form-control" rows="4"
                           placeholder="Kerro tarkemmin mitä tapahtuu, mitä vaikuttaa ja milloin…"></textarea>
                 <span asp-validation-for="Content" class="text-danger small"></span>
             </div>
 
+            @* Tyyppi-pudotusvalikko. *@
             <div class="mb-3">
                 <label asp-for="Type" class="form-label fw-semibold"></label>
                 <select asp-for="Type" class="form-select">
+                    @* @AnnouncementType.Info = Razor kirjoittaa enumin numeerisen arvon
+                       HTML:ään: value="0" (Info), value="1" (Maintenance), value="2" (Warning).
+                       ModelBinder osaa muuntaa numeron takaisin enumiksi palvelimella. *@
                     <option value="@AnnouncementType.Info">Tiedote</option>
                     <option value="@AnnouncementType.Maintenance">Huoltokatko</option>
                     <option value="@AnnouncementType.Warning">Varoitus</option>
                 </select>
             </div>
 
+            @* Aikarajojen rivi: kaksi kenttää vierekkäin (Bootstrap grid). *@
             <div class="row g-3 mb-3">
+                @* Alkamisaika (ValidFrom). *@
                 <div class="col-md-6">
                     <label asp-for="ValidFrom" class="form-label fw-semibold"></label>
+                    @* type="datetime-local" = selain näyttää päivämäärä+aikavalinnan.
+                       Syötetty arvo on muodossa "2025-05-23T22:00" (ISO 8601).
+                       ASP.NET muuntaa tämän automaattisesti DateTime?:ksi. *@
                     <input asp-for="ValidFrom" type="datetime-local" class="form-control" />
+                    @* Vihjee-teksti: mitä tapahtuu jos kenttä jätetään tyhjäksi. *@
                     <div class="form-text">Jätä tyhjäksi = näkyy heti.</div>
                 </div>
+
+                @* Päättymisaika (ValidUntil). *@
                 <div class="col-md-6">
                     <label asp-for="ValidUntil" class="form-label fw-semibold"></label>
                     <input asp-for="ValidUntil" type="datetime-local" class="form-control" />
@@ -55,17 +95,24 @@
                 </div>
             </div>
 
+            @* Julkaisutila-valintaruutu. *@
             <div class="mb-4">
                 <div class="form-check">
+                    @* asp-for="IsPublished" = type="checkbox" automaattisesti.
+                       Jos ruksattu = tiedote näkyy välittömästi etusivulla
+                       (aikarajojen puitteissa). *@
                     <input asp-for="IsPublished" class="form-check-input" type="checkbox" />
                     <label asp-for="IsPublished" class="form-check-label">Julkaistu (näkyy yhteenvedolla)</label>
                 </div>
             </div>
 
+            @* Toimintopainikkeet. *@
             <div class="d-flex gap-2">
+                @* Tallenna-painike. *@
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i>Tallenna
                 </button>
+                @* Peruuta-linkki vie takaisin listaan. *@
                 <a asp-action="Index" class="btn btn-outline-secondary">Peruuta</a>
             </div>
         </form>

@@ -1,34 +1,101 @@
 @*
-    _FormField.cshtml — Yhtenäinen lomakekenttä: label + input + virheteksti.
-    Renderöi joko <input>:n tai <textarea>:n Textarea-lipun mukaan,
-    näyttää validointivirheet automaattisesti ModelStatesta.
+    _FormField.cshtml — Yhtenäinen lomakekenttä (partial).
+
+    Yhdistää kolme asiaa yhteen komponenttiin:
+      1. Label (kenttäteksti)
+      2. Input tai Textarea (syöttökenttä)
+      3. Validointivirhe tai vihjee-teksti
+
+    Hyödyt yhtenäiseen käyttöön:
+      - Kaikki kentät näyttävät samanlaisilta (yhtenäinen design).
+      - Validointivirhe tulee automaattisesti is-invalid-tyylillä.
+      - Ikoni voidaan lisätä kenttään vasemmalle.
+      - Pakollinen-tähti (*) tulee automaattisesti Required=true.
+
+    Käyttöesimerkki näkymässä:
+        <partial name="_Partials/_FormField"
+                 model="new FormFieldModel {
+                     For         = \"Email\",
+                     Label       = \"Sähköpostiosoite\",
+                     InputType   = \"email\",
+                     Required    = true,
+                     Icon        = \"bi-envelope\",
+                     Placeholder = \"nimi@yritys.fi\"
+                 }" />
 *@
+
+@* FormFieldModel sisältää kaikki kentän asetukset:
+     - For (string):   kentän nimi (esim. "Email", "Customer.Name")
+     - Label (string?): labelteksti
+     - InputType (string): "text", "email", "password", "date", jne.
+     - Textarea (bool): jos true, renderöidään <textarea> eikä <input>
+     - Rows (int?):    textarea-rivien määrä (oletus 4)
+     - Placeholder, Value, Required, Disabled, MaxLength, Hint, Icon, CssClass *@
 @model HakaTech.Portal.Models.ViewModels.Ui.FormFieldModel
+
 @{
-    // Korvataan piste alaviivalla, koska HTML-id ei salli pistettä esim. "Customer.Name" → "Customer_Name"
+    @* Muunnetaan kenttänimi HTML:n id:ksi.
+       HTML ei salli pistettä id-attribuutissa, joten "Customer.Name" → "Customer_Name".
+       ASP.NET MVC käyttää tätä samaa muunnosta, joten arvot täsmäävät. *@
     var id   = Model.For.Replace(".", "_");
-    // Tarkistetaan onko kentällä validointivirhe — jos on, lisätään is-invalid -luokka
-    var err  = ViewData.ModelState.GetFieldValidationState(Model.For) == Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Invalid;
+
+    @* Tarkistetaan onko kentällä validointivirhe ModelStatessa.
+       ViewData.ModelState.GetFieldValidationState(Model.For) = kyselee EF/ModelState:lta
+       onko kyseiselle kentälle tullut validointivirhe palvelimen tarkistuksessa.
+       ModelValidationState.Invalid = kenttä on virheellinen. *@
+    var err  = ViewData.ModelState.GetFieldValidationState(Model.For)
+               == Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Invalid;
+
+    @* CSS-luokka syöttökentälle: is-invalid = Bootstrap lisää punaisen reunan
+       ja näyttää virheikoni-tyylin. *@
     var inputCls = "form-control" + (err ? " is-invalid" : "");
+
+    @* Haetaan ensimmäinen virheilmoitus kentältä (jos on virhe).
+       TryGetValue = haku sanakirjasta turvallisesti (ei poikkeus jos ei löydy).
+       Errors[0].ErrorMessage = ensimmäinen virheilmoitus (yleensä vain yksi). *@
     var errMsg = err && ViewData.ModelState.TryGetValue(Model.For, out var entry) && entry.Errors.Count > 0
         ? entry.Errors[0].ErrorMessage
         : null;
+
+    @* form-field + mahdolliset lisäluokat. *@
     var cls = ("form-field " + (Model.CssClass ?? "")).Trim();
 }
+
+@* Ulompi säiliö kentälle, labelille ja virheilmoitukselle. *@
 <div class="@cls">
+
+    @* Label näytetään vain jos se on annettu (kenttä voi olla ilman labelia). *@
     @if (!string.IsNullOrEmpty(Model.Label))
     {
+        @* for="@id" = kytkee labelin syöttökenttään ID:n kautta.
+           Klikkaamalla labelia fokusoituu kenttään — tärkeää käytettävyydelle. *@
         <label class="form-field-label" for="@id">
-            @Model.Label@(Model.Required ? Html.Raw("<span class=\"req\">*</span>") : null)
+            @Model.Label
+            @* Pakollinen-tähti: Html.Raw(...) = lisätään HTML sellaisenaan.
+               <span class="req"> on punainen tähti (*) CSS:ssä.
+               Ternary: Required=true → tähti, muuten null (ei tulosteta mitään). *@
+            @(Model.Required ? Html.Raw("<span class=\"req\">*</span>") : null)
         </label>
     }
+
+    @* Ikoni-säiliö (suhteellinen sijoitus) jotta ikoni voidaan sijoittaa
+       absoluuttisesti syöttökentän vasemmalle puolelle. *@
     <div class="form-field-input-wrap">
+        @* Ikoni näytetään vain jos se on annettu. CSS sijoittaa sen
+           kentän vasemmalle puolelle form-field-icon-tyylillä. *@
         @if (!string.IsNullOrEmpty(Model.Icon))
         {
             <i class="bi @Model.Icon form-field-icon"></i>
         }
+
+        @* Haaraudutaan: textarea vai tavallinen input? *@
         @if (Model.Textarea)
         {
+            @* Textarea-elementti moniriviseen tekstisyöttöön.
+               rows = rivien määrä; Model.Rows ?? 4 = oletus 4 riviä.
+               maxlength = merkkien enimmäismäärä (vain jos asetettu).
+               $"maxlength={Model.MaxLength.Value}" = C#-merkkijono-interpolointi.
+               @Model.Value = textarea-sisältö (ei value-attribuutti vaan sisältö). *@
             <textarea id="@id" name="@Model.For"
                       class="@inputCls"
                       rows="@(Model.Rows ?? 4)"
@@ -39,6 +106,10 @@
         }
         else
         {
+            @* Tavallinen input-kenttä.
+               type = kentän tyyppi: "text", "email", "password", "date" jne.
+               value = kentän arvo (esim. täytetään muokkaustilassa).
+               required-attribuutti ilman arvoa = HTML5 pakollinen-merkki. *@
             <input id="@id" name="@Model.For"
                    type="@Model.InputType"
                    value="@Model.Value"
@@ -49,10 +120,17 @@
                    @(Model.MaxLength.HasValue ? $"maxlength={Model.MaxLength.Value}" : null) />
         }
     </div>
+
+    @* Vihjee-teksti näytetään VAIN jos ei ole virhettä.
+       Kun virhe on, vihje katoaa ja tilalle tulee virheilmoitus.
+       Näin sivu ei näytä kahta eri tekstiä samaan aikaan. *@
     @if (!string.IsNullOrEmpty(Model.Hint) && !err)
     {
         <span class="form-field-hint">@Model.Hint</span>
     }
+
+    @* Virheilmoitus näytetään kun kenttä on virheellinen.
+       Väri ja tyyli tulee CSS:stä (form-field-error → punainen). *@
     @if (err)
     {
         <span class="form-field-error">@errMsg</span>

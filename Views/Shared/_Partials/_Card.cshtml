@@ -1,22 +1,59 @@
 @*
-    _Card.cshtml — Yhtenäinen korttilaatikko. Sisältää otsikon, kuvakkeen,
-    body-sisällön ja vapaaehtoisen alaosan. Käytä Linear/Vercel-tyylisten
-    sisältölaatikoiden renderöintiin.
+    _Card.cshtml — Yhtenäinen korttilaatikko (partial).
+
+    Renderöi sovelluksen peruskortin johon sisältö upotetaan.
+    Kortissa on kolme valinnaista osaa:
+      - Ylätunniste (header): otsikko + alaotsikko + toimintopainikkeet oikealla
+      - Runko (body): varsinainen sisältö (vapaaehtoinen RenderFragment)
+      - Alatunniste (footer): linkit, yhteenveto jne.
+
+    Käyttöesimerkki:
+        <partial name="_Partials/_Card"
+                 model="new CardModel {
+                     Title       = "Tiketit",
+                     Icon        = "bi-ticket-detailed",
+                     Subtitle    = \"5 avoinna\",
+                     Body        = ...,       // IHtmlContent
+                     Dense       = false
+                 }" />
 *@
+
+@* CardModel sisältää kaikki kortin ominaisuudet. *@
 @model HakaTech.Portal.Models.ViewModels.Ui.CardModel
+
 @{
+    @* Lopullinen CSS-luokka: pohjaluokka card-lnr + mahdolliset lisäluokat.
+       "card-lnr" = portaalin oma korttityyli (ei Bootstrapin card-luokka).
+       CssClass voi olla esim. "mb-4" tai null → "" varmistaa Trim-toimivuuden. *@
     var cls = ("card-lnr " + (Model.CssClass ?? "")).Trim();
+
+    @* Dense = tiivistetty (vähemmän padding). Valitaan sopiva bodyCls. *@
     var bodyCls = Model.Dense ? "card-lnr-body dense" : "card-lnr-body";
-    var hasHeader = !string.IsNullOrEmpty(Model.Title) || !string.IsNullOrEmpty(Model.Subtitle) || Model.HeaderActions != null;
+
+    @* hasHeader = onko jokin ylätunnisteosio tarpeen?
+       Ylätunniste renderöidään vain jos Title, Subtitle tai HeaderActions on asetettu. *@
+    var hasHeader = !string.IsNullOrEmpty(Model.Title)
+                 || !string.IsNullOrEmpty(Model.Subtitle)
+                 || Model.HeaderActions != null;
 }
+
+@* Ulompi korttisäiliö. *@
 <div class="@cls">
+
+    @* Ylätunniste renderöidään vain jos sille on sisältöä. *@
     @if (hasHeader)
     {
         <div class="card-lnr-header">
+            @* Vasen puoli: otsikko ja alaotsikko. *@
             <div>
+                @* Otsikko näytetään vain jos se on asetettu.
+                   <h3> = semanttisesti sivunotsikko (ei korkeinta tasoa). *@
                 @if (!string.IsNullOrEmpty(Model.Title))
                 {
                     <h3 class="card-lnr-title">
+                        @* Ikoni otsikon edessä vain jos asetettu.
+                           Bootstrap Icons: bi-luokka + nimi, esim. "bi bi-ticket-detailed".
+                           me-1 = margin-end (oikea väli) 0.25rem. *@
                         @if (!string.IsNullOrEmpty(Model.Icon))
                         {
                             <i class="bi @Model.Icon me-1"></i>
@@ -24,18 +61,31 @@
                         @Model.Title
                     </h3>
                 }
+
+                @* Alaotsikko (subtitle) näytetään vain jos se on asetettu.
+                   <p> = kappale-elementti. *@
                 @if (!string.IsNullOrEmpty(Model.Subtitle))
                 {
                     <p class="card-lnr-subtitle">@Model.Subtitle</p>
                 }
             </div>
+
+            @* Oikea puoli: toimintopainikkeet (esim. "Uusi" tai "Muokkaa").
+               HeaderActions on IHtmlContent — valmis HTML-sisältö.
+               Renderöidään vain jos asetettu. *@
             @if (Model.HeaderActions != null)
             {
                 <div class="card-lnr-actions">@Model.HeaderActions</div>
             }
         </div>
     }
+
+    @* Runko-osio: pakollinen — aina renderöidään.
+       @Model.Body = IHtmlContent-olio, joka voi sisältää mitä tahansa HTML:ää.
+       Razor renderöi tämän sellaisenaan ilman enkoodausta (koska IHtmlContent). *@
     <div class="@bodyCls">@Model.Body</div>
+
+    @* Alatunniste vain jos asetettu — esim. "Näytä kaikki →" -linkki. *@
     @if (Model.Footer != null)
     {
         <div class="card-lnr-footer">@Model.Footer</div>

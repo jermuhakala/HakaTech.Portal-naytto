@@ -1,80 +1,240 @@
 @*
-    _Layout.cshtml — Sovelluksen pääpohja, jonka jokainen näkymä periytyy.
-    Sisältää:
-      - HTML-sivun rungon (head, body)
-      - Sidebar-komponentin (vasen valikko)
-      - Topbar:n (leivänmurut + globaalihaku Ctrl+K)
-      - Tyylit, fontit ja JavaScript-skriptit
-    Yksittäinen näkymä asettaa <main>-osion sisällön RenderBody:n kautta.
+    _Layout.cshtml — Sovelluksen pääpohja (master layout), jonka jokainen näkymä periytyy.
+
+    Rakenne:
+      - <head>  : metatiedot, tyylitiedostot, fontit ja anti-flash-skripti
+      - Sidebar  : vasen navigointipalkki (ViewComponent)
+      - Topbar   : yläpalkki leivänmurulla, globaalihaulla (Ctrl+K) ja mobiilinäytön menupainikkeella
+      - <main>   : RenderBody() — yksittäinen näkymä täyttää tämän alueen
+      - <footer> : copyright
+      - Skriptit : jQuery, Bootstrap, sivuston omat JS-tiedostot, cmdk-haku ja teemavaihto
 *@
 <!DOCTYPE html>
+@*
+    lang-attribuutti kertoo selaimelle ja hakukoneille sivun kielen.
+    CultureInfo.CurrentUICulture.TwoLetterISOLanguageName = "fi", "en" tms. — asetetaan
+    AccountController.SetLanguage()-metodissa ja tallennetaan keksiin.
+    data-bs-theme="light" = Bootstrap 5:n teema-attribuutti; JavaScript voi vaihtaa sen "dark":ksi.
+*@
 <html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" data-bs-theme="light">
 <head>
+    @* Merkistökoodaus: UTF-8 tukee kaikkia kirjainmerkkejä, myös suomalaisia (ä, ö). *@
     <meta charset="utf-8" />
+    @*
+        viewport = "width=device-width, initial-scale=1.0"
+        Pakottaa selaimen käyttämään laitteen oikeaa leveyttä (ei zoomattua desktop-versiota).
+        Välttämätön responsiiviselle suunnittelulle (mobiililaitteet).
+    *@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @*
+        @ViewData["Title"] = yksittäinen näkymä asettaa sivun otsikon (esim. "Tiketit").
+        Jos näkymä ei aseta otsikkoa, se jää tyhjäksi — hyvä käytäntö on aina asettaa.
+        "– HakaTech Portal" lisätään kaikkien sivujen otsikkoon yhtenäisyyden vuoksi.
+    *@
     <title>@ViewData["Title"] – HakaTech Portal</title>
+    @* Kuvaus hakukoneita varten (SEO). *@
     <meta name="description" content="HakaTech asiakasportaali – hallinnoi tikettejä, laskuja ja asiakkuuksia." />
-    @* Estetään "vilkkuminen" sivun latauksessa: luetaan teema- ja
-       sidebar-asetukset localStoragesta JA otetaan ne käyttöön ENNEN
-       ensimmäistä piirtoa. Muuten sivu välkähtäisi vaaleasta tummaan. *@
+
+    @*
+        ── Anti-flash-skripti ────────────────────────────────────────────────
+        Ongelma: Jos teema (tumma/vaalea) ladattaisiin CSS:n kautta, sivu välkähtäisi
+                 aluksi vaaleana ja muuttuisi sitten tummaksi — huono käyttökokemus.
+        Ratkaisu: Tämä inline-skripti ajetaan HETI ennen sivun ensimmäistä piirtoa.
+                  Se lukee localStoragesta tallennetut asetukset ja asettaa ne suoraan
+                  <html>-elementtiin, ennen kuin selain piirtää yhtään pikseliä.
+
+        localStorage.getItem('hakatech-theme') = "dark" tai "light".
+        document.documentElement = <html>-elementti.
+        setAttribute('data-bs-theme', t) = Bootstrap 5 käyttää tätä teeman valintaan.
+
+        'hakatech-sidebar' = "collapsed" → sidebar on kavennettu.
+        classList.add('pre-sidebar-collapsed') = estetään sidebar-"nykäys" sivun latauksessa.
+
+        'hakatech-preset' = väripalettivalinta (tulevaa laajennusta varten).
+
+        try-catch: Jos localStorage ei ole käytettävissä (yksityinen selausikkuna, tietyissä
+        selaimissa), skripti ei kaadu — se yksinkertaisesti ohittaa tallennetut asetukset.
+    *@
     <script>(function(){try{var t=localStorage.getItem('hakatech-theme');if(t)document.documentElement.setAttribute('data-bs-theme',t);var sc=localStorage.getItem('hakatech-sidebar');if(sc==='collapsed')document.documentElement.classList.add('pre-sidebar-collapsed');var lp=localStorage.getItem('hakatech-preset');if(lp)document.documentElement.setAttribute('data-preset',lp);}catch(e){}})()</script>
+
+    @* Sivuston favicon (selaimen välilehden kuvake). *@
     <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    @*
+        Bootstrap 5.x — CSS-kehys joka tarjoaa grid-systeemin, komponentit ja teemat.
+        "~/" = wwwroot-kansion juuri (ASP.NET Coren staattisten tiedostojen sijainti).
+    *@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    @*
+        Bootstrap Icons — ikonikuvakevalikoima (1100+ kuvaketta).
+        Käytetään koko sovelluksessa: bi-ticket, bi-invoice, bi-speedometer2 jne.
+        CDN (Content Delivery Network) = haetaan suoraan netistä, ei omalta palvelimelta.
+    *@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    @*
+        Google Fonts -optimointi:
+        1. preconnect = kerrotaan selaimelle etukäteen, että fonts.googleapis.com:iin
+           avataan verkkoyhteys pian — nopeuttaa fonttien lataamista.
+        2. preload as="style" = ladataan fonttimäärittely taustalla jo sivun latausaikana.
+        3. href-linkki = varsinainen fonttitiedosto.
+
+        Inter = sovelluksen pääfontti (luettavuuteen optimoitu).
+        JetBrains Mono = koodinäytösfontti (tasalevyinen kirjasin).
+        wght@400;500;600;700 = ladataan vain tarvittavat paksuudet (normaali, medium, semibold, bold).
+        display=swap = teksti näkyy välittömästi varafontin kanssa, vaihtuu kun Inter latautuu.
+    *@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    @*
+        Sovelluksen oma CSS-tiedosto: site.css.
+        asp-append-version="true" = ASP.NET lisää tiedoston URL:iin version-hajautteen
+        (esim. site.css?v=abc123), joka pakottaa selaimen lataamaan uuden version
+        kun tiedosto muuttuu (cache-busting).
+    *@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
+@*
+    app-body = sovelluksen oman CSS:n pääluokka — asettaa mm. flex-asettelun
+    joka mahdollistaa sidebar + pääsisältö -rakenteen vierekkäin.
+*@
 <body class="app-body">
-    @* ── Sidebar via ViewComponent ─────────────────────────────────── *@
+    @*
+        ── Sidebar (ViewComponent) ───────────────────────────────────────────
+        Component.InvokeAsync("Sidebar") = kutsuu Hubs/ViewComponents/Sidebar-luokkaa.
+        ViewComponent hakee käyttäjätiedot ja navigaatiolinkit itse.
+        Tulos renderöidään Views/Shared/Components/Sidebar/Default.cshtml-näkymästä.
+        @await = odotetaan asynkroninen tulos (tietokantakutsu mahdollista ViewComponentissa).
+    *@
     @await Component.InvokeAsync("Sidebar")
 
-    @* ── Main wrapper ──────────────────────────────────────────────── *@
+    @*
+        ── Pääsisältöalue ────────────────────────────────────────────────────
+        main-wrapper = CSS-wrapper, joka pitää topbarin, sisällön ja footerin
+        pystysuunnassa peräkkäin sivebarin oikealla puolella.
+    *@
     <div class="main-wrapper">
-        @* Top bar (desktop + mobile) *@
+        @*
+            ── Yläpalkki (topbar) ────────────────────────────────────────────
+            role="banner" = ARIA-saavutettavuusrooli — ruudunlukijat tunnistavat sivuston otsikon.
+            topbar-lnr = sovelluksen oman CSS:n luokka yläpalkin tyylittelyyn.
+        *@
         <header class="topbar-lnr" role="banner">
+            @*
+                Mobiilinavigointipainike — näkyy vain pienillä näytöillä (d-sm-none = piilota >=576px).
+                Klikkaaminen avaa/sulkee sivebarin lisäämällä/poistamalla "open"-luokan.
+                aria-label = ruudunlukijalle luettava teksti (ei näkyvää tekstiä painikkeessa).
+            *@
             <button class="topbar-toggle d-sm-none" id="sidebarToggle" type="button"
                     aria-label="Menu"
                     onclick="document.getElementById('sidebar').classList.toggle('open')">
+                @* bi-list = kolmen viivan "hampurilaisvalikko"-kuvake Bootstrap Iconsista. *@
                 <i class="bi bi-list"></i>
             </button>
 
+            @*
+                ── Leivänmuru-navigaatio (ViewComponent) ────────────────────
+                Esim. "Etusivu > Tiketit > Tiketti #42"
+                Breadcrumbs-ViewComponent rakentaa polun automaattisesti
+                nykyisen URL:n controller/action-tiedoista.
+            *@
             @await Component.InvokeAsync("Breadcrumbs")
 
+            @* topbar-spacer = tyhjä alue joka työntää seuraavan elementin oikealle (flex: 1 1 auto). *@
             <div class="topbar-spacer"></div>
 
+            @*
+                Globaalihakupainike — näkyy vain kirjautuneille käyttäjille.
+                User.Identity?.IsAuthenticated == true = onko käyttäjä kirjautunut?
+                "?" = null-conditional: jos Identity on null (ei pitäisi tapahtua), ei kaadu.
+            *@
             @if (User.Identity?.IsAuthenticated == true)
             {
+                @*
+                    cmdk-trigger = hakupainike, joka avaa Ctrl+K-hakuvalikon.
+                    cmdk = "command palette" — macOS Command-K-tyylinen pikahakuikkuna.
+                    JavaScript-tiedosto cmdk.js kuuntelee tätä painiketta ja Ctrl+K-pikanäppäintä.
+
+                    L["UI.Search.OpenHint"] = käännettävä teksti (aria-label) lokalisoijasta.
+                    L["-"] = IHtmlLocalizer — hakee käännöksen Resources-kansion .resx-tiedostosta.
+                *@
                 <button type="button" class="cmdk-trigger" id="cmdkTrigger"
                         aria-label="@L["UI.Search.OpenHint"]">
                     <i class="bi bi-search"></i>
                     <span>@L["UI.Search.Placeholder"]</span>
+                    @*
+                        Näyttää pikanäppäinvihjeen "Ctrl K" painikkeen oikeassa reunassa.
+                        <kbd> = HTML-elementti näppäimistösyötteen esittämiseen (monokirjasin).
+                    *@
                     <span class="cmdk-kbd"><kbd>Ctrl</kbd><kbd>K</kbd></span>
                 </button>
             }
         </header>
 
+        @*
+            ── Pääsisältö ────────────────────────────────────────────────────
+            RenderBody() = pistää tähän kohtaan nykyisen näkymän HTML-sisällön.
+            Jokainen sivu (Ticket/Index.cshtml, Home/Index.cshtml jne.) täyttää tämän.
+            role="main" = ARIA — ruudunlukija kertoo käyttäjälle pääsisällön alun.
+        *@
         <main class="main-content" role="main">
             @RenderBody()
         </main>
 
+        @* Alatunniste: copyright-teksti ja tietosuojalinkki. *@
         <footer class="main-footer">
+            @*
+                &copy; = HTML-entiteetti tekijänoikeusmerkille ©.
+                &mdash; = pitkä yhdysmerkki (—).
+                asp-action, asp-controller = Tag Helper: rakentaa URL:n automaattisesti
+                (turvallisempi kuin kovakoodattu "/Home/Privacy").
+                L["Common.Privacy"] = käännetty teksti ("Tietosuoja" / "Privacy").
+            *@
             <span>&copy; 2026 HakaTech &mdash; <a asp-action="Privacy" asp-controller="Home">@L["Common.Privacy"]</a></span>
         </footer>
     </div>
 
-    @* ── Toast host (drains TempData → JS seed) ────────────────────── *@
+    @*
+        ── Toast-viestit ─────────────────────────────────────────────────────
+        _ToastHost-partial lukee TempData["SuccessMessage"] ja TempData["ErrorMessage"]
+        ja muuntaa ne JSON-muotoisiksi "siemeneksi" DOM:iin.
+        JavaScript-koodi (toast.js) lukee siemenet ja näyttää toast-ilmoitukset.
+        TempData säilyy vain yhden uudelleenohjauk sen yli — täydellinen flash-viesteille.
+    *@
     <partial name="_Partials/_ToastHost" />
 
+    @* jQuery — JavaScript-apukirjasto (Bootstrap tarvitsee tätä). *@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    @*
+        Bootstrap Bundle = Bootstrap JavaScript + Popper.js (tooltips, dropdownit).
+        bundle.min.js sisältää molemmat yhdessä tiedostossa.
+    *@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @*
+        Sivuston oma JavaScript: site.js.
+        asp-append-version="true" = cache-busting (ks. site.css selitys yllä).
+    *@
     <script src="~/js/site.js" asp-append-version="true"></script>
+    @* Toast-viestien JavaScript-käsittelijä. *@
     <script src="~/js/toast.js" asp-append-version="true"></script>
+
+    @*
+        ── Cmdk-haku ja navigaatiodata ──────────────────────────────────────
+        Alustetaan JavaScript-muuttujat vain kirjautuneille käyttäjille.
+        Kirjautumaton käyttäjä ei tarvitse navigaatiodataa tai hakua.
+    *@
     @if (User.Identity?.IsAuthenticated == true)
     {
+        @*
+            C#-koodiblokki (@{ ... }) — ajetaan palvelinpuolella, ei näy selaimessa.
+            Rakennettaan navigaatiolinkit listaksi jota JavaScript käyttää cmdk-haussa.
+        *@
         var isAdminUser = User.IsInRole("Admin");
+        @*
+            new List<object> = lista anonyymeja objekteja (nimi, URL, kuvake).
+            L["Nav.Overview"].Value = lokalisoitu teksti string-muodossa (.Value tarvitaan).
+            Url.Action("Index", "Home") = rakentaa URL:n /Home/Index (tai vain /).
+        *@
         var navItems = new List<object>
         {
             new { label = L["Nav.Overview"].Value,       url = Url.Action("Index", "Home"),           icon = "bi-speedometer2" },
@@ -85,17 +245,24 @@
             new { label = L["Nav.KnowledgeBase"].Value,  url = Url.Action("Index", "KnowledgeBase"),  icon = "bi-book" },
             new { label = L["Nav.Calendar"].Value,       url = Url.Action("Index", "Booking"),        icon = "bi-calendar3" }
         };
+        @* Admin-kohtaiset navigaatiolinkit lisätään vain admin-käyttäjälle. *@
         if (isAdminUser)
         {
-            navItems.Add(new { label = L["Nav.Customers"].Value,     url = Url.Action("Index", "Customer"),    icon = "bi-building" });
-            navItems.Add(new { label = L["Nav.Reports"].Value,       url = Url.Action("Index", "Report"),      icon = "bi-bar-chart-line" });
-            navItems.Add(new { label = L["Nav.Announcements"].Value, url = Url.Action("Index", "Announcement"),icon = "bi-megaphone" });
+            navItems.Add(new { label = L["Nav.Customers"].Value,     url = Url.Action("Index", "Customer"),       icon = "bi-building" });
+            navItems.Add(new { label = L["Nav.Reports"].Value,       url = Url.Action("Index", "Report"),         icon = "bi-bar-chart-line" });
+            navItems.Add(new { label = L["Nav.Announcements"].Value, url = Url.Action("Index", "Announcement"),   icon = "bi-megaphone" });
             navItems.Add(new { label = L["Nav.KBManage"].Value,      url = Url.Action("Manage", "KnowledgeBase"), icon = "bi-book-half" });
-            navItems.Add(new { label = L["Nav.AuditLog"].Value,      url = Url.Action("Index", "AuditLog"),    icon = "bi-journal-text" });
+            navItems.Add(new { label = L["Nav.AuditLog"].Value,      url = Url.Action("Index", "AuditLog"),       icon = "bi-journal-text" });
             navItems.Add(new { label = L["Dash.Quick.NewCustomer"].Value, url = Url.Action("Create", "Customer"), icon = "bi-building-add" });
         }
+        @* Uuden tiketin luonti on yhteinen kaikille. *@
         navItems.Add(new { label = L["Dash.Quick.NewTicket"].Value, url = Url.Action("Create", "Ticket"), icon = "bi-plus-lg" });
 
+        @*
+            Lokalisoidut käännöstekstit hakukäyttöliittymälle.
+            Nämä lähetetään JavaScriptille JSON-muodossa jotta cmdk.js
+            voi näyttää tekstit oikealla kielellä.
+        *@
         var i18n = new
         {
             placeholder   = L["UI.Search.Placeholder"].Value,
@@ -108,63 +275,108 @@
             groupKB       = L["UI.Search.Group.KB"].Value,
             groupActions  = L["UI.Search.Group.Actions"].Value
         };
+        @*
+            Serialisoidaan C#-objektit JSON-merkkijonoiksi JavaScript-muuttujiin.
+            @Html.Raw() = palauttaa merkkijonon sellaisenaan, ilman HTML-enkoodausta.
+              (Ilman Raw():ta & muuttuisi &amp; jne., mikä rikkoisi JSON:n.)
+            JsonSerializer.Serialize() = muuntaa C#-objektin JSON-muotoon.
+
+            window.__cmdkNav  = navigaatiolinkkien lista (for cmdk quick-nav).
+            window.__cmdkI18n = käännetyt tekstit cmdk-hakuun.
+            window.__i18n     = yleinen lokalisaatio-objekti (toast-viestit jne.).
+        *@
         <script>
             window.__cmdkNav  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(navItems));
             window.__cmdkI18n = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(i18n));
             window.__i18n = window.__i18n || {};
             window.__i18n.toastDismiss = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(L["UI.Toast.Dismiss"].Value));
         </script>
+        @* cmdk.js = hakupalkin JavaScript-logiikka (avautuu Ctrl+K). *@
         <script src="~/js/cmdk.js" asp-append-version="true"></script>
     }
+
+    @*
+        ── Inline-JavaScript: vahvistusikkuna ja teemavaihto ────────────────
+    *@
     <script>
-        // Data-confirm fallback
+        // ── Vahvistusikkuna poistotoiminnoille ────────────────────────────
+        // Kuunnellaan kaikkia klikkauksia dokumenttitasolla (event delegation).
+        // Haetaan klikatusta elementistä lähtien lähimpänä oleva [data-confirm]-attribuutti.
         document.addEventListener('click', function (e) {
             const btn = e.target.closest('[data-confirm]');
+            // Jos ei löydy data-confirm-attribuuttia, ei tehdä mitään.
             if (!btn) return;
+            // Näytetään selain-confirm-ikkuna, jossa on data-confirm-attribuutin teksti.
+            // Jos käyttäjä klikkaa "Peruuta", e.preventDefault() estää napin normaalin toiminnon.
             if (!confirm(btn.dataset.confirm)) e.preventDefault();
         });
 
-        // ── Theme toggle ──────────────────────────────────────────────
+        // ── Teemavaihto (vaalea/tumma tila) ──────────────────────────────
         function toggleTheme() {
-            var html = document.documentElement;
+            var html = document.documentElement; // <html>-elementti.
+            // Luetaan nykyinen teema — oletuksena "light" jos ei asetettu.
             var current = html.getAttribute('data-bs-theme') || 'light';
+            // Vaihdetaan teema toiseksi.
             var next = current === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-bs-theme', next);
+            html.setAttribute('data-bs-theme', next); // Päivitetään HTML-attribuutti.
+            // Tallennetaan valinta selaimen muistiin — säilyy seuraavilla sivulatauksilla.
             try { localStorage.setItem('hakatech-theme', next); } catch (e) {}
-            updateThemeIcon();
+            updateThemeIcon(); // Päivitetään ikonin ulkoasu.
         }
         function updateThemeIcon() {
             var current = document.documentElement.getAttribute('data-bs-theme') || 'light';
+            // Haetaan kaikki teemaikonit (saattaa olla useita) ja päivitetään niiden luokka.
+            // bi-sun = aurinkoikoni vaaleassa tilassa (vaihda tummaan), bi-moon = kuuikoni tummassa.
             document.querySelectorAll('#themeIcon').forEach(function (icon) {
                 icon.className = current === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
             });
         }
+        // Tehdään toggleTheme-funktio globaaliksi jotta sidebar-nappi voi kutsua sitä.
         window.toggleTheme = toggleTheme;
 
-        // ── Sidebar rail collapse ─────────────────────────────────────
+        // ── Sidebar-kaavennus (rail collapse) ────────────────────────────
+        // IIFE (Immediately Invoked Function Expression): ajetaan heti, ei "saastuta"
+        // globaalia muuttujatilaa väliaikaismuuttujilla.
         (function () {
             var root = document.documentElement;
             var body = document.body;
-            // apply pre-hydration flag from anti-flash script
+            // Sovelletaan anti-flash-skriptin asettama "pre-sidebar-collapsed"-lipuke.
+            // Anti-flash asetti sen ennen sivun piirtoa; tässä siirretään oikeaan paikkaan.
             if (root.classList.contains('pre-sidebar-collapsed')) {
                 body.classList.add('sidebar-collapsed');
                 var sb = document.getElementById('sidebar');
                 if (sb) sb.classList.add('is-collapsed');
-                root.classList.remove('pre-sidebar-collapsed');
+                root.classList.remove('pre-sidebar-collapsed'); // Poistetaan väliaikainen lipuke.
             }
+            // Sidebar-kaavennus-nappi.
             var btn = document.getElementById('sidebarRailToggle');
             if (btn) {
                 btn.addEventListener('click', function () {
                     var sb = document.getElementById('sidebar');
+                    // classList.toggle() lisää luokan jos se puuttuu, poistaa jos se on.
+                    // Palautusarvo = onko luokka nyt olemassa (true = kavennettu).
                     var collapsed = sb.classList.toggle('is-collapsed');
                     body.classList.toggle('sidebar-collapsed', collapsed);
+                    // Tallennetaan tila selaimen muistiin — säilyy sivulatauksien välissä.
                     try { localStorage.setItem('hakatech-sidebar', collapsed ? 'collapsed' : 'open'); } catch (e) {}
                 });
             }
         })();
 
+        // Päivitetään teemaikoni kun sivu on ladattu (anti-flash saattaa olla muuttanut teeman).
         document.addEventListener('DOMContentLoaded', updateThemeIcon);
     </script>
+
+    @*
+        RenderSectionAsync("Scripts", required: false) = yksittäinen näkymä voi lisätä
+        sivukohtaisia JavaScript-skriptejä tähän kohtaan (lomakkeen validointi jne.).
+        required: false = ei virhettä jos näkymä ei määrittele Scripts-osiota.
+
+        Käyttö näkymässä:
+            @section Scripts {
+                <script>alert('Hei!')</script>
+            }
+    *@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

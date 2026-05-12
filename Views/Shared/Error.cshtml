@@ -1,27 +1,56 @@
-﻿@*
-    Error.cshtml — Yleinen virhesivu. Näytetään kun käsittelemätön
-    poikkeus tapahtuu tuotannossa. RequestId auttaa lokien jäljittämisessä.
+@*
+    Error.cshtml — Yleinen virhesivu. Näytetään automaattisesti kun
+    sovelluksessa tapahtuu käsittelemätön poikkeus (esim. 500 Internal
+    Server Error) tuotantoympäristössä. Kehitysmoodissa näytetään tarkempi
+    kehittäjille tarkoitettu virhesivu (UseDeveloperExceptionPage).
+
+    RequestId auttaa lokien jäljittämisessä: admin tai kehittäjä voi
+    etsiä tällä ID:llä tarkan virheen palvelinlokista.
 *@
+
+@* Tämä näkymä saa parametrina ErrorViewModel-olion.
+   ErrorViewModel sisältää:
+     - RequestId (string): yksilöllinen pyyntötunnus loki-jäljitystä varten
+     - ShowRequestId (bool): näytetäänkö ID käyttäjälle *@
 @model ErrorViewModel
+
 @{
+    @* Asetetaan sivun otsikko selaimen välilehdelle (lokalisoitu).
+       L["Error.Title"] = lokalisointi, esim. "Virhe" suomeksi.
+       .Value = palauttaa merkkijonon (ei IHtmlContent-objektia). *@
     ViewData["Title"] = L["Error.Title"].Value;
 }
 
+@* Isot punaiset otsikot — käyttäjälle selkeä viesti siitä että jotain
+   meni pieleen. text-danger = Bootstrapin CSS-apuluokka, tekee tekstistä punaisen. *@
 <h1 class="text-danger">Error.</h1>
 <h2 class="text-danger">An error occurred while processing your request.</h2>
 
+@* Näytetään pyyntötunnus vain jos ShowRequestId on true.
+   ShowRequestId = true kun IHttpContextAccessor pystyy palauttamaan
+   pyyntötunnuksen (Activity.Current?.Id tai HttpContext.TraceIdentifier). *@
 @if (Model.ShowRequestId)
 {
     <p>
+        @* <strong> = lihavoitu teksti. <code> = kiinteälevyinen fontti
+           joka sopii teknisille arvoille kuten tunnuksille. *@
         <strong>Request ID:</strong> <code>@Model.RequestId</code>
     </p>
 }
 
+@* Seuraava ohjeteksti on staattinen (ei lokalisoitu) — se selittää
+   kehittäjälle kuinka saada lisätietoa virheestä. Tuotannossa tämä
+   näkyy käyttäjille, mutta se on tarkoituksellisesti epäspesifistä
+   tietoturvan kannalta (ei paljasteta pinoutumia/stack trace tms.). *@
 <h3>Development Mode</h3>
 <p>
+    @* <strong> = korostettu termi selitystekstissä. *@
     Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
 </p>
 <p>
+    @* Varoitus: kehitysympäristöä ei saa käyttää tuotannossa.
+       Syy: se näyttää pinoutumat ja tietokantakyselyt, jotka ovat
+       tietoturvariskin käyttäjille näytettynä. *@
     <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
     It can result in displaying sensitive information from exceptions to end users.
     For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>

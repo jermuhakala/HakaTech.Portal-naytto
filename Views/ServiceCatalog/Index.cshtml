@@ -1,15 +1,40 @@
 @*
     ServiceCatalog/Index.cshtml — Asiakkaalle näkyvä palvelukatalogi.
-    Listaa myytävät palvelut korttinäkymässä, klikkaamalla pyytää tarjouksen.
+
+    Rakenne:
+      - Palvelut ryhmitelty kategorian mukaan (GroupBy + OrderBy)
+      - Jokainen kategoria alkaa otsikkopalkkilla (badge + vaakaviiva)
+      - Palvelut korttinäkymässä (row-cols-1/2/3 responsiiviinen)
+      - Asiakkaalle: "Pyydä tarjous" -painike avaa Bootstrap-modalin
+      - Adminille: modal piilotettu, korteilla ei painikkeita
+
+    Bootstrap-modal (tarjouspyyntö):
+      - Avautuu data-bs-toggle="modal" data-bs-target="#quoteModal"
+      - data-service-id ja data-service-name siirtävät palvelun tiedot
+        JavaScript-tapahtumankäsittelijälle (show.bs.modal-tapahtuma)
+      - Lomake lähettää POST /ServiceCatalog/RequestQuote
+
+    Yhteys: ServiceCatalogController.Index (GET) ja RequestQuote (POST).
 *@
+
+@* Malli = kaikki aktiiviset ServiceCatalogItem-oliot. *@
 @model IEnumerable<HakaTech.Portal.Models.Domain.ServiceCatalogItem>
 @using HakaTech.Portal.Models.ViewModels
+
 @{
     ViewData["Title"] = L["Service.Index.Title"].Value;
+    @* User.IsInRole("Admin") = tarkistaa kirjautuneen käyttäjän roolin. *@
     bool isAdmin = User.IsInRole("Admin");
+
+    @* grouped = ryhmitelty ja järjestetty palveluiden kategorioiden mukaan.
+       GroupBy(s => s.Category ?? "Muut") = null-kategoriat ryhmitetään "Muut"-ryhmään.
+       OrderBy(g => g.Key) = ryhmät aakkosjärjestyksessä. *@
     var grouped = Model.GroupBy(s => s.Category ?? "Muut").OrderBy(g => g.Key);
 
-    // Kategoria → Bootstrap-väri ja ikoni
+    @* CategoryStyle: palauttaa (väri, ikoni) kategorianimen sisällön perusteella.
+       Käyttää "var c when c.Contains(...)" -patternia eli pattern matchingia
+       jossa c on paikallinen muuttuja ja Contains tarkistaa osamerkkijonon.
+       ToLower() tekee haun kirjainkoosta riippumattomaksi. *@
     static (string color, string icon) CategoryStyle(string cat) => cat.ToLower() switch {
         var c when c.Contains("infra") || c.Contains("palvelin") => ("primary",   "bi-server"),
         var c when c.Contains("tieto") || c.Contains("turva")    => ("danger",    "bi-shield-lock"),
@@ -21,7 +46,9 @@
     };
 }
 
+@* Inline-CSS palvelukorteille. *@
 <style>
+    @* Kortti nousee hieman hoverissa. *@
     .service-card {
         transition: transform .15s ease, box-shadow .15s ease;
         border-radius: 1rem !important;
@@ -30,6 +57,7 @@
         transform: translateY(-4px);
         box-shadow: 0 .75rem 1.5rem rgba(0,0,0,.12) !important;
     }
+    @* Kategoriaikonin pyöristetty neliö. *@
     .service-icon-wrap {
         width: 3.5rem;
         height: 3.5rem;
@@ -40,23 +68,28 @@
         font-size: 1.6rem;
         flex-shrink: 0;
     }
+    @* Hintalapun tyyli. *@
     .price-tag {
         font-size: 1.05rem;
         font-weight: 600;
     }
 </style>
 
+@* Otsikkorivi. *@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="mb-0"><i class="bi bi-grid me-2"></i>Palvelukatalogi</h2>
         <p class="text-muted mb-0 mt-1 small">Valitse palvelu ja pyydä tarjous suoraan portaalista.</p>
     </div>
+    @* Admin näkee hallintapainikkeet. *@
     @if (isAdmin)
     {
         <div class="d-flex gap-2">
+            @* Tarjouspyynnöt-lista. *@
             <a asp-action="Requests" class="btn btn-outline-secondary">
                 <i class="bi bi-envelope-open me-1"></i>Tarjouspyynnöt
             </a>
+            @* Palvelujen hallinta (lisää/muokkaa/poista). *@
             <a asp-action="Manage" class="btn btn-primary">
                 <i class="bi bi-gear me-1"></i>Hallinnoi palveluja
             </a>
@@ -64,6 +97,7 @@
     }
 </div>
 
+@* Tyhjä tila. *@
 @if (!Model.Any())
 {
     <div class="alert alert-info">
@@ -72,29 +106,43 @@
 }
 else
 {
+    @* Käydään ryhmät (kategoriat). *@
     @foreach (var group in grouped)
     {
+        @* Haetaan kategorian väri ja ikoni. *@
         var (color, icon) = CategoryStyle(group.Key);
+
+        @* Kategorian otsikkopalkki: badge + venyvä vaakaviiva (hr).
+           mt-5 = iso ylämaginaali erottamaan kategoriat. *@
         <div class="d-flex align-items-center gap-2 mt-5 mb-3">
+            @* rounded-pill = pillerivenyvä badge. px-3 py-2 = tilava badge. *@
             <span class="badge bg-@(color)-subtle text-@(color)-emphasis fs-6 px-3 py-2 rounded-pill fw-semibold">
                 <i class="bi @icon me-1"></i>@group.Key
             </span>
+            @* flex-grow-1 = vaakaviiva venyy loppuun asti. opacity-25 = himmeä. *@
             <hr class="flex-grow-1 my-0 opacity-25">
         </div>
+
+        @* Palvelukortit ruudukossa. *@
         <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-4 mb-2">
             @foreach (var service in group)
             {
                 <div class="col">
                     <div class="card h-100 shadow-sm border-0 service-card">
+                        @* d-flex flex-column gap-3 = elementit pystysuoraan. *@
                         <div class="card-body p-4 d-flex flex-column gap-3">
                             <div class="d-flex align-items-start gap-3">
+                                @* Kategoriaikoni. *@
                                 <div class="service-icon-wrap bg-@(color)-subtle text-@(color)-emphasis">
                                     <i class="bi @icon"></i>
                                 </div>
                                 <div class="flex-grow-1">
+                                    @* Palvelun nimi. *@
                                     <h5 class="card-title fw-bold mb-0 fs-5">@service.Name</h5>
+                                    @* Hinta jos asetettu, muuten "sopimuksen mukaan". *@
                                     @if (service.Price.HasValue)
                                     {
+                                        @* "N0" = ilman desimaaleja (esim. "1 500 €"). *@
                                         <span class="text-@(color)-emphasis price-tag">
                                             alkaen @service.Price.Value.ToString("N0") €
                                         </span>
@@ -105,9 +153,15 @@ else
                                     }
                                 </div>
                             </div>
+                            @* Palvelun kuvaus. flex-grow-1 = täyttää kasvutilan (tasainen alaosa). *@
                             <p class="card-text text-muted mb-0 flex-grow-1" style="line-height:1.6">
                                 @service.Description
                             </p>
+                            @* "Pyydä tarjous" -painike vain asiakkaille (ei adminille).
+                               data-bs-toggle="modal" + data-bs-target="#quoteModal" = Bootstrap 5:n
+                               tapahtumalinkki: klikkaus avaa #quoteModal -modalin.
+                               data-service-id ja data-service-name siirretään modaliin JS:ssä
+                               (show.bs.modal-tapahtuma, ks. Scripts-osio). *@
                             @if (!isAdmin)
                             {
                                 <button type="button"
@@ -127,7 +181,10 @@ else
     }
 }
 
-@* ── Tarjouspyyntö-modal (vain asiakkaille) ──────────────────── *@
+@* ── Tarjouspyyntö-modal — vain asiakkaille ──
+   Bootstrap 5 -modal: piilossa oletuksena, avataan data-bs-toggle:lla.
+   tabindex="-1" = elementti ei ole saavutettavissa Tab-näppäimellä kun piilotettu.
+   aria-labelledby + aria-hidden = esteettömyys. *@
 @if (!isAdmin)
 {
     <div class="modal fade" id="quoteModal" tabindex="-1" aria-labelledby="quoteModalLabel" aria-hidden="true">
@@ -137,23 +194,30 @@ else
                     <h5 class="modal-title" id="quoteModalLabel">
                         <i class="bi bi-send me-2"></i>Pyydä tarjous
                     </h5>
+                    @* btn-close = Bootstrap:n sulkemispainike (X).
+                       data-bs-dismiss="modal" = sulkee modalin. *@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
+                @* Tarjouspyyntölomake. POST /ServiceCatalog/RequestQuote. *@
                 <form asp-action="RequestQuote" method="post">
                     @Html.AntiForgeryToken()
                     <div class="modal-body">
+                        @* ServiceCatalogItemId piilokenttänä — JavaScript täyttää tämän. *@
                         <input type="hidden" name="ServiceCatalogItemId" id="modalServiceId" value="" />
+                        @* Palvelun nimi näytetään vahvistuksena — JavaScript täyttää id="modalServiceName". *@
                         <p class="mb-3">
                             Palvelu: <strong id="modalServiceName"></strong>
                         </p>
                         <div class="mb-3">
                             <label for="quoteMessage" class="form-label">Viesti / lisätietoja <span class="text-muted">(valinnainen)</span></label>
+                            @* maxlength="2000" = HTML5-rajoitus (palvelin validoi myös). *@
                             <textarea id="quoteMessage" name="Message" class="form-control" rows="4"
                                       placeholder="Kerro lisää tarpeistasi, aikatauluista tai muista toiveista…"
                                       maxlength="2000"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
+                        @* Peruuta-painike sulkee modalin ilman lähettämistä. *@
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Peruuta</button>
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-send me-1"></i>Lähetä tarjouspyyntö
@@ -167,8 +231,16 @@ else
 
 @section Scripts {
     <script>
+        @* Kuunnellaan modalin avaustapahtumaa.
+           '?' = optional chaining: getElementById palauttaa null jos elementtiä ei ole
+           (admin ei näe modalia → element on null → kuuntelija ei kaadu).
+           show.bs.modal = Bootstrap 5 -tapahtuma, laukeaa ENNEN modalin näkymistä.
+           event.relatedTarget = painike joka käynnisti modalin avauksen. *@
         document.getElementById('quoteModal')?.addEventListener('show.bs.modal', function (event) {
             const btn = event.relatedTarget;
+            @* Haetaan data-attribuutit painikkeen dataset-objektista.
+               btn.dataset.serviceId = data-service-id attribuutin arvo.
+               btn.dataset.serviceName = data-service-name attribuutin arvo. *@
             document.getElementById('modalServiceId').value = btn.dataset.serviceId;
             document.getElementById('modalServiceName').textContent = btn.dataset.serviceName;
         });

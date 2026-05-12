@@ -1,34 +1,58 @@
 @*
     RemoteDesktop/Connect.cshtml — Etätyöpöytäyhteyden avaussivu.
-    Renderöi Guacamole-iframen, jossa varsinainen RDP/VNC/SSH-istunto
-    pyörii. URL on kertakäyttöinen — tokenin elinikä on rajoitettu.
+
+    Toiminta:
+      1. Kontrolleri generoi Guacamole-URL:n (sisältää kertakäyttöisen tokenin)
+         ja asettaa sen ViewBag.GuacamoleUrl-kenttään.
+      2. Sivu näyttää nappikortin + avaa URL:n automaattisesti uuteen välilehteen
+         window.open()-kutsulla.
+      3. Jos GuacamoleUrl on null, Guacamole-integraatiota ei ole konfiguroitu
+         → näytetään virheviesti.
+
+    Yhteys: RemoteDesktopController.Connect.
 *@
+
 @{
+    @* guacUrl = kertakäyttöinen Guacamole-URL tai null jos ei konfiguroitu.
+       as string = turvallinen tyyppimuunnos (string? = nullable). *@
     string? guacUrl        = ViewBag.GuacamoleUrl as string;
+    @* connectionName = yhteyden nimi (esim. "Pääpalvelin (RDP)").
+       ?? "Etätyöpöytä" = oletusarvo jos ViewBag ei sisällä nimeä. *@
     string  connectionName = ViewBag.ConnectionName as string ?? "Etätyöpöytä";
+    @* Layout asetettu eksplisiittisesti (ei peritä _ViewStart.cshtml:ltä
+       jos se olisi eri arvo — varmistaa oikean layoutin). *@
     Layout = "_Layout";
+    @* Sivun otsikko = yhteyden nimi selaimelle. *@
     ViewData["Title"] = connectionName;
 }
 
+@* Takaisin yhteyksiin -linkki. *@
 <div class="mb-3">
     <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Takaisin yhteyksiin
     </a>
 </div>
 
+@* guacUrl on asetettu — yhteys on mahdollinen. *@
 @if (guacUrl is not null)
 {
     <div class="row justify-content-center mt-2">
         <div class="col-md-7">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4 text-center">
+                    @* bi-display-fill = täytetty näyttöikoni. display-3 = iso (3rem). *@
                     <i class="bi bi-display-fill display-3 text-primary mb-3"></i>
                     <h4 class="fw-bold">@connectionName</h4>
+                    @* Ohjeistus käyttäjälle ponnahdusikkunoiden sallimisesta. *@
                     <p class="text-muted mt-2 mb-4">
                         Etätyöpöytäyhteys avataan uuteen selainvälilehteen.<br />
                         Jos välilehti ei aukea, salli ponnahdusikkunat selaimessa.
                     </p>
+                    @* Varmuuspainike: jos window.open() blokattiin, käyttäjä voi klikata manuaalisesti.
+                       target="_blank" = uusi välilehti.
+                       href="@guacUrl" = Guacamole-URL tokeneineen. *@
                     <a href="@guacUrl" target="_blank" class="btn btn-primary btn-lg">
+                        @* bi-box-arrow-up-right = "avaa ulkoisesti" -ikoni. *@
                         <i class="bi bi-box-arrow-up-right me-2"></i>Avaa etätyöpöytä
                     </a>
                 </div>
@@ -37,16 +61,24 @@
     </div>
 
     <script>
-        // Avaa automaattisesti heti sivun latautuessa
+        @* Avaa Guacamole-URL automaattisesti heti sivun latautuessa.
+           Huomio: selaimet voivat blokata window.open():n jos kutsutaan
+           heti sivun latautuessa (ei käyttäjäelesteen yhteydessä).
+           Siksi nappi on varmuuspainike.
+           '@guacUrl' = Razor kirjoittaa URL:n suoraan JS-merkkijonoon.
+           TURVALLISUUS: URL tulee palvelimelta (ei käyttäjältä) joten XSS-riski pieni,
+           mutta URL voi sisältää erikoismerkkejä — kontrolleri sanitoi ne. *@
         window.open('@guacUrl', '_blank');
     </script>
 }
 else
 {
+    @* Guacamole-integraatiota ei ole konfiguroitu tai URL:n luonti epäonnistui. *@
     <div class="row justify-content-center mt-4">
         <div class="col-md-7">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4 text-center">
+                    @* Harmaa ikoni virhetilaan. *@
                     <i class="bi bi-display display-3 text-muted mb-3"></i>
                     <h4 class="fw-bold">Etätyöpöytäpalvelu ei ole käytössä</h4>
                     <p class="text-muted mt-2 mb-4">

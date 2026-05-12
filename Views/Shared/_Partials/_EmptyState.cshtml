@@ -1,15 +1,54 @@
 @*
-    _EmptyState.cshtml — Tyhjän tilan vihje. Näytetään listoissa kun
-    tietoa ei vielä ole, esim. "Ei tikettejä — luo ensimmäinen!"
+    _EmptyState.cshtml — Tyhjän tilan komponentti.
+
+    Näytetään listoissa ja taulukoissa kun tietoja ei vielä ole.
+    Antaa käyttäjälle selkeän viestin ja usein toimintakehotteen.
+
+    Esimerkkejä:
+      - Tikettilista tyhjä → "Ei tikettejä — luo ensimmäinen!"
+      - Tietopankki tyhjä → "Ei artikkeleita vielä."
+      - Hakutuloksia ei löydy → "Ei hakutuloksia haulle 'xxx'."
+
+    Käyttöesimerkki:
+        <partial name="_Partials/_EmptyState"
+                 model="new EmptyStateModel {
+                     Icon   = \"bi-ticket-perforated\",
+                     Title  = \"Ei tikettejä\",
+                     Body   = \"Kaikki ongelmat on ratkaistu!\",
+                     Action = ...    // IHtmlContent, esim. linkki
+                 }" />
 *@
+
+@* EmptyStateModel sisältää:
+     - Icon (string):   Bootstrap Icons -luokka, esim. "bi-inbox"
+     - Title (string):  Iso otsikko, esim. "Ei tikettejä"
+     - Body (string?):  Vapaaehtoinen selitysteksti
+     - Action (IHtmlContent?): Vapaaehtoinen toimintapainike *@
 @model HakaTech.Portal.Models.ViewModels.Ui.EmptyStateModel
+
+@* empty-state = CSS-säiliö joka keskittää sisällön pysty- ja vaakasuunnassa.
+   Käyttää flexbox-asettelua (flex-column) site.css:ssä. *@
 <div class="empty-state">
+
+    @* Suuri ikoni visuaalista tunnistamista varten.
+       Ikoni on Bootstrap Icons -kirjastosta, esim. "bi-ticket-perforated".
+       @Model.Icon sisältää vain luokan nimen (ilman "bi "), joten lisätään se:
+       class="bi @Model.Icon" → esim. class="bi bi-ticket-perforated" *@
     <div class="empty-state-icon"><i class="bi @Model.Icon"></i></div>
+
+    @* Otsikko — kertoo tilanteen lyhyesti. *@
     <h3 class="empty-state-title">@Model.Title</h3>
+
+    @* Selitysteksti näytetään vain jos se on annettu.
+       IsNullOrEmpty tarkistaa sekä null-arvon että tyhjän merkkijonon. *@
     @if (!string.IsNullOrEmpty(Model.Body))
     {
         <p class="empty-state-body">@Model.Body</p>
     }
+
+    @* Toimintapainike näytetään vain jos se on annettu.
+       Action on IHtmlContent, esim. "<a class='btn...' href='...'>Luo tiketti</a>".
+       Kääritään <div>:iin sopivaa marginaalia varten. *@
     @if (Model.Action != null)
     {
         <div>@Model.Action</div>
